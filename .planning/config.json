@@ -89,25 +89,6 @@
     "source_grounding": true,
     "source_grounding_authority": "grep"
   },
-  "resolve_model_ids": "omit",
-  "model_overrides": {
-    "gsd-planner": "openai/gpt-6.1-sol",
-    "gsd-plan-checker": "opencode-go/gemini-4-argon",
-    "gsd-code-reviewer": "openai/gpt-6.1-sol",
-    "gsd-security-auditor": "openai/gpt-6.1-sol",
-    "gsd-advisor-researcher": "openai/gpt-6.1-sol",
-    "gsd-executor": "opencode-go/deepseek-v4.1-flash",
-    "gsd-code-fixer": "opencode-go/deepseek-v4.1-flash",
-    "gsd-phase-researcher": "opencode-go/deepseek-v4.1-flash",
-    "gsd-verifier": "opencode-go/gpt-6-luna"
-  },
-  "model_profile_overrides": {
-    "opencode": {
-      "opus": "openai/gpt-6.1-sol",
-      "sonnet": "opencode-go/deepseek-v4.1-flash",
-      "haiku": "opencode-go/gpt-6-luna"
-    }
-  },
   "agent_tools": {
     "gsd-planner": [
       "WebSearch"
