@@ -11,8 +11,8 @@
   "perplexity": false,
   "jina": false,
   "git": {
-    "branching_strategy": "none",
-    "create_tag": true,
+    "branching_strategy": "phase",
+    "create_tag": false,
     "repo_tagging": "single",
     "phase_branch_template": "gsd/phase-{phase}-{slug}",
     "milestone_branch_template": "gsd/{milestone}-{slug}",

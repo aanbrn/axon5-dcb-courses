@@ -1,1 +1,6 @@
 /.idea/
+
+# Claude Code: track only project-owned files; GSD install and local settings stay untracked
+/.claude/*
+!/.claude/settings.json
+!/.claude/CLAUDE.md

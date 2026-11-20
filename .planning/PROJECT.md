@@ -96,7 +96,9 @@ Show convincingly — in working, tested, documented code — how DCB enforces b
 - **Tech stack (backend)**: Kotlin + Spring Boot + Axon Framework 5 — author's choice; idiomatic Kotlin over Java-style code
 - **Event store**: Axon Server (DCB-capable) — native AxonIQ store with DCB support, run in Docker
 - **Architecture**: multiple services split by CQRS role (command / query / automation) plus API gateway/BFF — makes CQRS and Axon location transparency visible
-- **Frontend**: React + TypeScript
+- **Frontend**: React + TypeScript, organised by Feature-Sliced Design (FSD) and enforced by Steiger
+- **Test build structure**: Gradle JVM Test Suites for test levels, Java Test Fixtures for shared test helpers
+- **Formatting**: every produced artifact is auto-formatted and style-checked (locally via pre-commit hook, enforced in CI)
 - **Runtime**: docker compose for local run of the entire system
 - **Quality bar**: "highest professional class" — every artifact (code, tests, docs, CI) must be reference quality
 - **Language**: all code, docs and repository artifacts in English
@@ -112,6 +114,22 @@ Show convincingly — in working, tested, documented code — how DCB enforces b
 | Aggregate comparison only in docs | Keeps scope manageable while preserving the "before/after" story | — Pending |
 | No auth in v1, demo role switcher | Keeps focus on DCB; auth deferred to v2 | — Pending |
 | AI-assisted process documented as part of the reference | Second learning goal of the author | — Pending |
+| Single source of truth for versions per ecosystem: Gradle version catalog for everything Gradle consumes (incl. tools, container images); `.java-version` for JDK; `.nvmrc` for Node.js; `packageManager` + lockfile for pnpm/npm; SHA in workflows for Actions | No duplicated versions; native mechanisms per ecosystem keep Renovate working | — Pending |
+| TypeID (type prefix + UUIDv7, base32) for entity IDs, stored as native `uuid` | Client-generatable, time-ordered, readable and type-safe in event explorer/logs; immutable in events, so decided up front | — Pending (verify Kotlin/TS library maturity in Phase 1) |
+| UI phasing: dedicated UI foundation phase, a UI slice with its own UI-SPEC in every feature phase, a dedicated DCB teaching-UI phase, final UI review | Every feature is demonstrable end to end; showcase UI gets its own design contract | — Pending |
+| Storybook + WCAG 2.2 AA (axe in component and E2E tests) | Component catalogue and accessibility are part of reference quality | — Pending |
+| Git workflow: branch per phase, PR via /gsd-ship, squash merge only, `main` protected by ruleset (PR required, checks, linear history, 0 approvals) | Fits GSD ship (built around squash), clean `main`, PR as review point for a solo author | — Pending |
+| release-please owns tags and releases; GSD `create_tag: false` | Avoid conflicting `vX.Y` (GSD) and `vX.Y.Z` (release-please) tags | ✓ Applied in config |
+| Upstream-first: report defects/gaps upstream, one record per case in `docs/upstream/`, workarounds marked by record ID with CI consistency check | Be useful to the products we depend on; keep local hacks visible and removable | — Pending |
+| CLI tools pinned via mise; documented tooling inventory and `doctor` check | Reproducible environment beyond Gradle-managed tools | — Pending |
+| Vetted, project-local Claude Code skills plus own project skills | Better AI-assisted development; skills are code and must be reviewed | — Pending |
+| Frontend and docs site as Gradle subprojects (Gradle Node plugin) | Explicit build graph: BFF OpenAPI → generated client → frontend build/test; one `./gradlew build` for the whole system | — Pending |
+| Cloud Native Buildpacks (Paketo) for all images: `bootBuildImage` for JVM, Web Servers buildpack for frontend | One consistent image approach; built-in SBOM, base-image rebase, JVM memory tuning; no Dockerfiles | — Pending (verify pnpm support in Paketo Node.js buildpack in Phase 1) |
+| JUnit 6 runner + Kotest Assertions/Property (no Kotest runner) | Native Spring Boot 4, Testcontainers and Gradle Test Suites support; suspend tests in JUnit 6; idiomatic Kotlin assertions and property testing | — Pending (verify Kotest/Kotlin 2.4 compatibility in Phase 1) |
+| Gradle JVM Test Suites + Java Test Fixtures | Clean separation of test levels; shared fixtures without duplication | — Pending |
+| FSD for frontend, enforced by Steiger | Explicit frontend architecture, symmetric to backend architecture tests | — Pending |
+| Auto-format and style-check all produced artifacts | Consistent reference-quality code regardless of author (human or AI) | — Pending |
+| Kotlin formatter with KDoc support (ktfmt) instead of ktlint; detekt `comments` rules; Dokka `failOnWarning` | ktlint does not format KDoc; KDoc quality is part of reference quality | — Pending (verify ktfmt KDoc behaviour in Phase 1) |
 
 ## Evolution
 
