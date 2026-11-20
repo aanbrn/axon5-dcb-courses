@@ -270,13 +270,162 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (filled by roadmap) | | |
+| INFRA-01 | Phase 1 | Pending |
+| INFRA-09 | Phase 1 | Pending |
+| INFRA-11 | Phase 1 | Pending |
+| INFRA-12 | Phase 1 | Pending |
+| INFRA-13 | Phase 1 | Pending |
+| INFRA-16 | Phase 1 | Pending |
+| INFRA-17 | Phase 6 | Pending |
+| INFRA-14 | Phase 1 | Pending |
+| INFRA-15 | Phase 6 | Pending |
+| INFRA-10 | Phase 1 | Pending |
+| INFRA-02 | Phase 2 | Pending |
+| INFRA-03 | Phase 2 | Pending |
+| INFRA-04 | Phase 2 | Pending |
+| INFRA-05 | Phase 2 | Pending |
+| INFRA-06 | Phase 2 | Pending |
+| INFRA-07 | Phase 6 | Pending |
+| INFRA-08 | Phase 5 | Pending |
+| COURSE-01 | Phase 3 | Pending |
+| COURSE-02 | Phase 3 | Pending |
+| COURSE-03 | Phase 8 | Pending |
+| COURSE-04 | Phase 8 | Pending |
+| COURSE-05 | Phase 8 | Pending |
+| COURSE-06 | Phase 8 | Pending |
+| STUD-01 | Phase 3 | Pending |
+| STUD-02 | Phase 3 | Pending |
+| SUBS-01 | Phase 3 | Pending |
+| SUBS-02 | Phase 3 | Pending |
+| SUBS-03 | Phase 3 | Pending |
+| SUBS-04 | Phase 8 | Pending |
+| SUBS-05 | Phase 3 | Pending |
+| SUBS-06 | Phase 3 | Pending |
+| SUBS-07 | Phase 3 | Pending |
+| XFER-01 | Phase 9 | Pending |
+| XFER-02 | Phase 9 | Pending |
+| XFER-03 | Phase 9 | Pending |
+| XFER-04 | Phase 9 | Pending |
+| WAIT-01 | Phase 10 | Pending |
+| WAIT-02 | Phase 10 | Pending |
+| WAIT-03 | Phase 10 | Pending |
+| WAIT-04 | Phase 10 | Pending |
+| WAIT-05 | Phase 10 | Pending |
+| WAIT-06 | Phase 10 | Pending |
+| READ-01 | Phase 4 | Pending |
+| READ-02 | Phase 4 | Pending |
+| READ-03 | Phase 4 | Pending |
+| READ-04 | Phase 4 | Pending |
+| READ-05 | Phase 4 | Pending |
+| READ-06 | Phase 4 | Pending |
+| IDEM-01 | Phase 3 | Pending |
+| IDEM-02 | Phase 3 | Pending |
+| IDEM-04 | Phase 2 | Pending |
+| IDEM-03 | Phase 4 | Pending |
+| RES-01 | Phase 6 | Pending |
+| RES-07 | Phase 6 | Pending |
+| RES-02 | Phase 4 | Pending |
+| RES-03 | Phase 5 | Pending |
+| RES-04 | Phase 6 | Pending |
+| RES-05 | Phase 12 | Pending |
+| RES-06 | Phase 7 | Pending |
+| API-01 | Phase 5 | Pending |
+| API-02 | Phase 5 | Pending |
+| API-03 | Phase 5 | Pending |
+| API-04 | Phase 5 | Pending |
+| UI-01 | Phase 13 | Pending |
+| UI-02 | Phase 7 | Pending |
+| UI-03 | Phase 7 | Pending |
+| UI-04 | Phase 11 | Pending |
+| UI-05 | Phase 11 | Pending |
+| UI-06 | Phase 7 | Pending |
+| UI-07 | Phase 7 | Pending |
+| UI-08 | Phase 7 | Pending |
+| UI-09 | Phase 7 | Pending |
+| DEMO-01 | Phase 3 | Pending |
+| DEMO-02 | Phase 11 | Pending |
+| DEMO-03 | Phase 11 | Pending |
+| DEMO-04 | Phase 11 | Pending |
+| DEMO-05 | Phase 11 | Pending |
+| DEMO-06 | Phase 11 | Pending |
+| TEST-01 | Phase 3 | Pending |
+| TEST-02 | Phase 3 | Pending |
+| TEST-03 | Phase 10 | Pending |
+| TEST-04 | Phase 4 | Pending |
+| TEST-05 | Phase 6 | Pending |
+| TEST-06 | Phase 3 | Pending |
+| TEST-07 | Phase 12 | Pending |
+| TEST-08 | Phase 3 | Pending |
+| TEST-16 | Phase 7 | Pending |
+| TEST-17 | Phase 7 | Pending |
+| TEST-09 | Phase 1 | Pending |
+| TEST-10 | Phase 1 | Pending |
+| TEST-18 | Phase 5 | Pending |
+| TEST-11 | Phase 2 | Pending |
+| TEST-12 | Phase 2 | Pending |
+| TEST-13 | Phase 1 | Pending |
+| TEST-14 | Phase 2 | Pending |
+| TEST-15 | Phase 3 | Pending |
+| CICD-01 | Phase 1 | Pending |
+| CICD-02 | Phase 6 | Pending |
+| CICD-10 | Phase 6 | Pending |
+| CICD-03 | Phase 1 | Pending |
+| CICD-04 | Phase 1 | Pending |
+| CICD-05 | Phase 6 | Pending |
+| CICD-06 | Phase 1 | Pending |
+| CICD-07 | Phase 12 | Pending |
+| CICD-08 | Phase 1 | Pending |
+| CICD-09 | Phase 2 | Pending |
+| OBS-01 | Phase 12 | Pending |
+| OBS-02 | Phase 12 | Pending |
+| OBS-03 | Phase 12 | Pending |
+| DOC-01 | Phase 13 | Pending |
+| DOC-02 | Phase 13 | Pending |
+| DOC-03 | Phase 2 | Pending |
+| DOC-04 | Phase 13 | Pending |
+| DOC-05 | Phase 3 | Pending |
+| DOC-06 | Phase 11 | Pending |
+| DOC-07 | Phase 13 | Pending |
+| DOC-08 | Phase 13 | Pending |
+| DOC-09 | Phase 13 | Pending |
+| DOC-10 | Phase 11 | Pending |
+| DOC-11 | Phase 13 | Pending |
+| DOC-12 | Phase 10 | Pending |
+| GH-01 | Phase 13 | Pending |
+| GH-02 | Phase 13 | Pending |
+| GH-03 | Phase 13 | Pending |
+| GH-08 | Phase 1 | Pending |
+| GH-09 | Phase 13 | Pending |
+| GH-10 | Phase 13 | Pending |
+| GH-11 | Phase 1 | Pending |
+| GH-12 | Phase 2 | Pending |
+| GH-13 | Phase 13 | Pending |
+| GH-04 | Phase 7 | Pending |
+| GH-05 | Phase 12 | Pending |
+| GH-06 | Phase 1 | Pending |
+| GH-07 | Phase 1 | Pending |
+| UPS-01 | Phase 2 | Pending |
+| UPS-02 | Phase 2 | Pending |
+| UPS-03 | Phase 2 | Pending |
+| UPS-04 | Phase 2 | Pending |
+| TOOL-01 | Phase 1 | Pending |
+| TOOL-02 | Phase 1 | Pending |
+| TOOL-03 | Phase 2 | Pending |
+| TOOL-04 | Phase 2 | Pending |
+| AIDEV-01 | Phase 2 | Pending |
+| AIDEV-02 | Phase 8 | Pending |
+| AIDEV-03 | Phase 2 | Pending |
+| AIDEV-04 | Phase 2 | Pending |
+| AIDEV-05 | Phase 1 | Pending |
+| AIDEV-06 | Phase 1 | Pending |
+| AIDEV-07 | Phase 2 | Pending |
+| AIDEV-08 | Phase 1 | Pending |
 
 **Coverage:**
 - v1 requirements: 150 total
-- Mapped to phases: 0
-- Unmapped: 150 ⚠️
+- Mapped to phases: 150
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-11-20*
-*Last updated: 2026-11-20 after initial definition*
+*Last updated: 2026-11-21 after roadmap creation (traceability filled)*
