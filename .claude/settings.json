@@ -12,6 +12,9 @@
       "Edit(/CODEOWNERS)",
       "Edit(/governance/**)",
       "Edit(/scripts/governance/**)",
+      "Edit(/build-logic/src/main/kotlin/courses.governance.gradle.kts)",
+      "Edit(/build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/governance/**)",
+      "Edit(/scripts/apply-github-settings.sh)",
       "Bash(*config-set*)"
     ]
   }

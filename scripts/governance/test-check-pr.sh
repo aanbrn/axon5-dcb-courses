@@ -461,6 +461,38 @@ run_case "G9 an inner carriage return fails closed instead of splitting the entr
   "line 1: $NOT_PRINTABLE" \
   GOVERNED_PATHS_FILE="$inner_cr" PR_FILES_JSON="$docs_only" PR_LABELS_JSON="$LABEL_NONE"
 
+# --- governed boundary (WR-01) ------------------------------------------------------------------
+# These cases run against the real governance/governed-paths.txt, so they also prove that the
+# commented file is read as plan 01-16's grammar defines.
+
+# boundary_case <path> <governed|ungoverned>
+# A one-file pull request touching <path> by a human, without the label: it must be blocked when the
+# path is governed and pass when it is not.
+boundary_case() {
+  local path=$1 expectation=$2 files
+  files=$(touch_json "boundary-$((passed + failed))" "$path")
+  case "$expectation" in
+  governed)
+    run_case "boundary: $path is governed and needs the label" 1 "touches governed files" \
+      PR_FILES_JSON="$files" PR_LABELS_JSON="$LABEL_NONE"
+    ;;
+  ungoverned)
+    run_case "boundary: $path is ungoverned and passes without the label" 0 \
+      "no governed file is touched" PR_FILES_JSON="$files" PR_LABELS_JSON="$LABEL_NONE"
+    ;;
+  *)
+    echo "boundary_case: unknown expectation '$expectation'" >&2
+    exit 2
+    ;;
+  esac
+}
+
+boundary_case build-logic/src/main/kotlin/courses.governance.gradle.kts governed
+boundary_case \
+  build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/governance/ConfigPolicyCheck.kt governed
+boundary_case scripts/apply-github-settings.sh governed
+boundary_case build-logic/src/main/kotlin/courses.kotlin-library.gradle.kts ungoverned
+
 # --- head branch naming -------------------------------------------------------------------------
 
 run_case "a same-repository branch outside the allowed names fails" 1 "feature/x" \

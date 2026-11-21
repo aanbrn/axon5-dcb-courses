@@ -8,3 +8,6 @@ renovate.json5
 CODEOWNERS
 governance/**
 scripts/governance/**
+build-logic/src/main/kotlin/courses.governance.gradle.kts
+build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/governance/**
+scripts/apply-github-settings.sh
