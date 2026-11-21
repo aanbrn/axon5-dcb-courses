@@ -39,7 +39,21 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Every push and pull request runs a GitHub Actions workflow with SHA-pinned actions. It builds, tests and analyses the code, lints workflows and scripts (actionlint, zizmor, shellcheck) and scans the full history for leaked secrets. Renovate proposes grouped updates with a minimum release age for every version source (catalog, `.java-version`, `mise.toml`, Actions).
   4. `main` changes only through squash-merged pull requests from `gsd/phase-*` branches that pass the required checks. The ruleset enforces linear history and blocks force-push, and head branches are deleted after merge. The PR template mirrors the `/gsd-ship` body, and labels are synced from `labels.yml`. Secret scanning with push protection, Dependabot alerts, private vulnerability reporting, CodeQL and OpenSSF Scorecard are active.
   5. A pull request fails CI if it changes `.planning/config.json` against the declared policy or touches governance files without the `governance-approved` label. The agent must ask for confirmation before it edits governance files or runs GSD `config-set`.
-**Plans**: TBD
+**Plans:** 11 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Build skeleton tracer: wrapper, catalog, build-logic conventions, `:platform`, sample module, ktfmt/detekt/Dokka, TestKit (wave 1)
+- [ ] 01-02-PLAN.md — Pinned CLI tools: package-legitimacy gate, `mise.toml`/`mise.lock`, `.nvmrc`, `docs/tooling.md` (wave 1)
+- [ ] 01-03-PLAN.md — One-command formatting (Prettier, shell SPDX), `.editorconfig`, `.gitattributes`, `.gitignore`, REUSE, minimal README (wave 2)
+- [ ] 01-04-PLAN.md — Governance checks in build-logic: config policy, build-script lint, daemon JVM, tooling inventory (wave 3)
+- [ ] 01-05-PLAN.md — lefthook pre-commit hook and gradle-profiler scenarios with baseline (wave 3)
+- [ ] 01-06-PLAN.md — PR governance gate: `governance-approved` label, Renovate exemption, head-branch naming (wave 3)
+- [ ] 01-07-PLAN.md — Labels as code and the `/gsd-ship` PR template with `checkPrTemplate` (wave 4)
+- [ ] 01-08-PLAN.md — Renovate configuration: every version source, cooldown, grouping, narrow automerge (wave 3)
+- [ ] 01-09-PLAN.md — CI workflows: `ci.yml` (`ci-success`), CodeQL (actions + Kotlin spike), Scorecard, ADR-lite notes (wave 5)
+- [ ] 01-10-PLAN.md — GitHub settings as code, apply/drift scripts, Claude Code ask rules (wave 6)
+- [ ] 01-11-PLAN.md — Approval-gated application of GitHub settings, label and secrets; author-only steps (wave 7)
+
 **Research**: Light. Topics: ktfmt KDoc formatting behaviour, isolated-projects compatibility, Spotless and REUSE header integration.
 **Approval gates**: GitHub repository settings (GH-06, GH-07) are applied via `gh` only after explicit author approval at execution time.
 
@@ -246,7 +260,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Repository, Build & CI Foundation | 0/TBD | Not started | - |
+| 1. Repository, Build & CI Foundation | 0/11 | Planned | - |
 | 2. Runtime Infrastructure & DCB Spikes | 0/TBD | Not started | - |
 | 3. Command Walking Skeleton | 0/TBD | Not started | - |
 | 4. Read Side & Live Queries | 0/TBD | Not started | - |
