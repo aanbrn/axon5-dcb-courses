@@ -3,11 +3,18 @@ name: Governance
 # Pull request policy: governed files need the `governance-approved` label and same-repository
 # branches follow the GSD or bot naming. The check needs the pull request context, so it lives in
 # its own workflow; the single `governance-success` job is the stable context the ruleset requires.
+# The file list comes from the list-pr-files.sh script, and an unusable `gh` result fails the step
+# instead of reading as an empty list.
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled, edited]
 
 permissions: {}
+
+# GitHub runs an explicit `bash` with `-e -o pipefail`; the default shell has no pipefail.
+defaults:
+  run:
+    shell: bash
 
 concurrency:
   group: governance-${{ github.event.pull_request.number }}
@@ -29,11 +36,10 @@ jobs:
       - name: List changed files
         env:
           GH_TOKEN: ${{ github.token }}
+          PR_BASE_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.repository }}
-        run: |
-          gh api --paginate "repos/${REPO}/pulls/${PR_NUMBER}/files" \
-            | jq -s 'add // []' > "${RUNNER_TEMP}/pr-files.json"
+          PR_FILES_JSON: ${{ runner.temp }}/pr-files.json
+        run: scripts/governance/list-pr-files.sh
 
       - name: Check governance policy
         env:
