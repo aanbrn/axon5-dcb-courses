@@ -42,18 +42,17 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 17/17 plans executed
 
 Plans:
-- [x] 01-15-PLAN.md
-- [x] 01-16-PLAN.md
-- [x] 01-17-PLAN.md
-
 **Wave 1**
+- [x] 01-15-PLAN.md
 - [x] 01-01-PLAN.md — Build skeleton tracer: wrapper, catalog, `build-logic` settings and module conventions, `:platform` with every stack BOM and the explicit Kotlin override, sample module, `.gitignore` (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
+- [x] 01-16-PLAN.md
 - [x] 01-02-PLAN.md — Quality conventions and TestKit: ktfmt + SPDX, detekt, Dokka, daemon JVM criteria, `functionalTest` suite (wave 2)
 - [x] 01-03-PLAN.md — Pinned CLI tools: package-legitimacy gate, `mise.toml`/`mise.lock` (incl. shfmt, taplo), `.nvmrc`, `docs/tooling.md` (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
+- [x] 01-17-PLAN.md
 - [x] 01-04-PLAN.md — Prettier formatting (JSON, JSON5, YAML, Markdown) with Node verified against `.nvmrc`, and `.editorconfig` (wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
