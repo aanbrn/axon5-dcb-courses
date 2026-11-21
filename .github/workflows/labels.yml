@@ -1,0 +1,60 @@
+name: Labels
+
+# Labels as code (GH-11): `.github/labels.yml` is validated in dry-run mode on pull requests and
+# synced to the repository from `main` and on manual dispatch. The sync is exact, so labels that
+# are not listed in the file are deleted. Only the sync job may write to issues.
+on:
+  push:
+    branches: [main]
+    paths: [.github/labels.yml]
+  pull_request:
+    paths: [.github/labels.yml]
+  workflow_dispatch:
+
+permissions: {}
+
+# Serialise syncs; never cancel one that is already changing labels.
+concurrency:
+  group: labels-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate labels
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: read # the dry run lists the existing labels
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Dry-run the label sync
+        uses: crazy-max/ghaction-github-labeler@548a7c3603594ec17c819e1239f281a3b801ab4d # v6.0.0
+        with:
+          yaml-file: .github/labels.yml
+          skip-delete: false
+          dry-run: true
+
+  sync:
+    name: Sync labels
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write # create, update and delete labels
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Sync labels
+        uses: crazy-max/ghaction-github-labeler@548a7c3603594ec17c819e1239f281a3b801ab4d # v6.0.0
+        with:
+          yaml-file: .github/labels.yml
+          skip-delete: false
+          dry-run: false
