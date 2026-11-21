@@ -3,15 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Repository, Build & CI Foundation
 status: executing
-stopped_at: Phase 1 context gathered
-last_updated: "2026-11-21T08:15:56.205Z"
-last_activity: "2026-11-21: Roadmap created (13 phases, 150/150 v1 requirements mapped)"
-state_head: bb6f3e93eef4e082b704508122174c8fdda8b97a
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-11-21T08:49:58.198Z"
+last_activity: 2026-11-21
+last_activity_desc: Phase 01 execution started
+state_head: 4c13be0d7453beea9d65ed76d78a9f679c4f386a
 progress:
   total_phases: 13
   completed_phases: 0
   total_plans: 14
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -22,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-20)
 
 **Core value:** Show convincingly, in working, tested and documented code, how DCB enforces business invariants that span multiple entities without aggregates, and why that beats the aggregate-based approach.
-**Current focus:** Phase 1: Repository, Build & CI Foundation
+**Current focus:** Phase 01 — Repository, Build & CI Foundation
 
 ## Current Position
 
-Phase: 01 (Repository, Build & CI Foundation) — READY TO EXECUTE
-Plan: 0 of TBD in current phase
+Phase: 01 (Repository, Build & CI Foundation) — EXECUTING
+Plan: 2 of 14
 Status: Ready to execute
-Last activity: 2026-11-21: Roadmap created (13 phases, 150/150 v1 requirements mapped)
+Last activity: 2026-11-21 — Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -51,6 +52,11 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01 P01 | 7 min | 2 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -64,6 +70,8 @@ Recent decisions affecting current work:
 - [Roadmap]: Schedules (Phase 8) come before transfer (Phase 9) and the waiting list (Phase 10); decision records are stamped from Phase 3
 - [Roadmap]: Idempotency and resilience land where first needed (P3, P4, P5, P6, P7); resilience tests, load test and signed releases come in Phase 12
 - [Roadmap]: Cross-cutting conventions (ROADMAP.md) carry standing obligations such as ADRs, Event Modeling per slice, test naming and UI-SPEC per UI phase
+- [Phase 01]: Kotlin override is the only api constraint in :platform in Phase 1 (api(libs.kotlin.stdlib), catalog Kotlin 2.4.21 over Boot-managed 2.3.21); later non-BOM libraries and pins get their own catalog-referenced api constraints
+- [Phase 01]: Gradle dependency locking and verification-metadata.xml deferred to Phase 6 (CICD-05); Jackson BOM pinned to 3.1.8 as declared by spring-boot-dependencies 4.1.3
 
 ### Pending Todos
 
@@ -86,6 +94,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T00:37:23.095Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-repository-build-ci-foundation/01-CONTEXT.md
+Last session: 2026-11-21T08:49:58.172Z
+Stopped at: Completed 01-01-PLAN.md
+Resume file: None
