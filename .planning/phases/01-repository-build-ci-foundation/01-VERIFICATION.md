@@ -1,9 +1,10 @@
 ---
 phase: 01-repository-build-ci-foundation
-verified: 2026-11-21T14:00:00Z
-status: gaps_found
-score: 2/5 must-haves verified
+verified: 2026-11-21T21:45:00Z
+status: human_needed
+score: 3/5 must-haves verified
 covered_files:
+  - .claude/settings.json
   - .github/rulesets/main.json
   - .github/workflows/ci.yml
   - .github/workflows/governance.yml
@@ -35,37 +36,41 @@ covered_files:
   - .planning/phases/01-repository-build-ci-foundation/01-13-SUMMARY.md
   - .planning/phases/01-repository-build-ci-foundation/01-14-PLAN.md
   - .planning/phases/01-repository-build-ci-foundation/01-14-SUMMARY.md
-  - build.gradle.kts
+  - .planning/phases/01-repository-build-ci-foundation/01-15-PLAN.md
+  - .planning/phases/01-repository-build-ci-foundation/01-15-SUMMARY.md
+  - .planning/phases/01-repository-build-ci-foundation/01-16-PLAN.md
+  - .planning/phases/01-repository-build-ci-foundation/01-16-SUMMARY.md
+  - .planning/phases/01-repository-build-ci-foundation/01-17-PLAN.md
+  - .planning/phases/01-repository-build-ci-foundation/01-17-SUMMARY.md
+  - build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/governance/AskRulesCheck.kt
+  - build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/governance/GovernedPaths.kt
   - governance/governed-paths.txt
-  - gradle/libs.versions.toml
   - mise.toml
   - renovate.json5
   - scripts/governance/check-pr.sh
-  - settings.gradle.kts
-covered_digest: "v4:sha256:5feabadb94e08ac893b494713da0abbb197cf30043e90273f55296b123645824"
+  - scripts/governance/list-pr-files.sh
+  - scripts/governance/test-check-pr.sh
+  - scripts/governance/test-list-pr-files.sh
+covered_digest: "v4:sha256:837e1fd713897a98189c2d15b8fdcfdd6c12beedbf37e1fc83192aa4e2f4f154"
 behavior_unverified: 0
 overrides_applied: 0
-gaps:
-  - truth: "A pull request fails CI if it touches governance files without the `governance-approved` label (Success Criterion 5, AIDEV-06; the gate is designed to fail closed)"
-    status: partial
-    reason: >-
-      CR-01 (confirmed): the `List changed files` step in governance.yml pipes `gh api --paginate` into
-      `jq -s 'add // []'` with no `shell:` key, so GitHub runs `bash -e {0}` without pipefail. If `gh api`
-      emits nothing (network blip, TLS or DNS failure, timeout), jq slurps empty input to `[]`, the step
-      exits 0, and check-pr.sh prints "no governed file is touched" and exits 0, so `governance-success`
-      goes green for a PR that may touch `.github/**`, `mise.toml` etc. without the label. Reproduced
-      locally: `cat /dev/null | jq -s 'add // []'` under `bash -e` gives step exit 0 and `[]`, and
-      check-pr.sh then exits 0 on that file. test-check-pr.sh (39 cases) never covers this step because it
-      feeds the script a hand-made file.
-    artifacts:
-      - path: ".github/workflows/governance.yml"
-        issue: "Lines 34-36: pipeline without pipefail and with a `// []` default makes the file-list step fail open"
-    missing:
-      - "Make the step fail on any gh failure: `shell: bash` (adds -o pipefail) plus `set -euo pipefail`, drop the `// []` default, and assert `jq -e 'type == \"array\"'` on the result (or write gh output to a temp file first and check its exit status)"
+re_verification:
+  previous_status: gaps_found
+  previous_score: 2/5
+  gaps_closed:
+    - "CR-01: the governance file-list step failed open on empty `gh api` output (closed by plan 01-15)"
+  gaps_remaining: []
+  regressions: []
 human_verification:
+  - test: "Decide on WR-05 (reproduced): `check-pr.sh` reads the file list through a `jq` process substitution whose exit status is never read, so a mid-stream `jq` failure drops the remaining entries and the gate exits 0. Either fix it (write the records to a temp file, check `jq`'s status, assert the loop saw every entry) or record the residual in ADR-0001"
+    expected: "A decision by the author. Reproduced here: a two-entry list whose second entry is `.github/workflows/ci.yml` with a NUL in its patch prints a `jq` error, then `governance: no governed file is touched`, exit 0, no label. Judged non-blocking in this report (see Anti-Patterns), flagged as `unverified-prohibition` against the plan 01-15 prohibition 'MUST NOT let governance-success pass a pull request whose complete changed-file list the gate did not evaluate'"
+    why_human: "Judgment-tier prohibition with a reproduced counter-example on a narrow path. Whether the real files API can ever emit a NUL inside a patch string (git treats NUL-bearing files as binary and sends no patch, but only the first 8000 bytes are sniffed) can only be settled by the author or a hosted experiment"
+  - test: "Decide on WR-06 and WR-07, then apply the ruleset. WR-06: `governance.yml` runs on `pull_request` and executes `check-pr.sh`, `list-pr-files.sh` and `governed-paths.txt` from the PR's own merge ref, so a PR can edit the gate that is meant to hold it. WR-07: alternate Renovate config names (`renovate.json`, `.renovaterc*`) and the tracked `.mise/locks/**` are outside the governed list"
+    expected: "Either the author fixes them (base-ref checkout or `pull_request_target`, a real CODEOWNERS with code-owner review, extra governed entries plus matching `Edit(/...)` ask rules) or records the accepted residual for a one-maintainer repository in ADR-0001"
+    why_human: "Design-level trade-offs; the requirement text (AIDEV-06) lists governance files and the label, not tamper-resistance against a PR that rewrites the gate. WR-02 (sticky label) was deferred by the author on the same grounds"
   - test: "Open the phase PR and let ci.yml and governance.yml run on GitHub"
-    expected: "ci-success (build, lint, secrets jobs) and governance-success are green; the PR carries `governance-approved` because it touches .github/**, mise.toml, renovate.json5 and governance/**; the head branch name passes the naming rule"
-    why_human: "Nothing has run on GitHub yet (no push, no hosted CI run). Hosted-run behaviour (setup-java/setup-node/mise-action/setup-gradle wiring, encrypted config cache with GRADLE_ENCRYPTION_KEY, runner jq/gh) can only be proven by the first run"
+    expected: "ci-success (build, lint, secrets jobs) and governance-success are green; the PR carries `governance-approved` because it touches .github/**, mise.toml, renovate.json5, governance/** and the governed build files; the head branch name passes the naming rule; the `List changed files` step prints `governance: listed N changed files`"
+    why_human: "Nothing has run on GitHub yet beyond the author's applied repository and security settings. Hosted behaviour (mise-action, setup-java/setup-node, setup-gradle with the encrypted configuration cache, runner `jq` and `gh`, real files-API pagination) is only provable by the first run"
   - test: "After ci-success and governance-success are green on the phase PR, apply the ruleset (`scripts/apply-github-settings.sh --apply --only ruleset`), confirm the printed bypass actor is the repository admin role, delete the SETTINGS_DRIFT_SECTIONS variable, then run `--check` for all sections"
     expected: "Ruleset `main` is live with required contexts ci-success and governance-success bound to the GitHub Actions app (integration_id 15368), squash-only, linear history, no force-push or deletion, admin-only bypass; `--check` reports no drift"
     why_human: "The ruleset is deliberately deferred by the author until both contexts are green; applying it is an author action (GH-06, Success Criterion 4)"
@@ -77,82 +82,105 @@ human_verification:
     why_human: "Renovate reads renovate.json5 from main only after the merge; CICD-04 stays pending in REQUIREMENTS.md for this reason"
   - test: "In a clone, run `mise install`, `lefthook install`, stage a Kotlin file with bad formatting and a synthetic GitHub token and run `git commit`"
     expected: "The format job re-stages the formatted Kotlin file; the gitleaks job blocks the commit on the token; the reuse, actionlint, zizmor and shellcheck jobs run on matching staged files only"
-    why_human: "The author has not run `lefthook install` in a checkout (no pre-commit hook in the shared hooks directory); the hook wiring (lefthook.yml to scripts/format-staged.sh) is present and shellchecked but its commit-time behaviour was not exercised in this verification"
+    why_human: "The hook wiring (lefthook.yml to scripts/format-staged.sh) is present and shellcheck-clean, but its commit-time behaviour was not exercised in this verification"
   - test: "Register the repository at api.reuse.software"
     expected: "The README REUSE badge shows `compliant`"
-    why_human: "Registration sends the project name to a third party and is an author action; local `reuse lint` is already compliant (128/128 files)"
+    why_human: "Registration sends the project name to a third party and is an author action; local `reuse lint` is already compliant (139/139 files)"
 ---
 
 # Phase 1: Repository, Build & CI Foundation Verification Report
 
 **Phase Goal:** A contributor can clone the repository, install pinned tools, and build and check the whole multi-project build (no domain code yet) with one command. Every commit and pull request is automatically formatted, analysed, licence-checked and governed.
-**Verified:** 2026-11-21T14:00:00Z
-**Status:** gaps_found
-**Re-verification:** No, initial verification
+**Verified:** 2026-11-21T21:45:00Z
+**Status:** human_needed
+**Re-verification:** Yes, after gap closure (plans 01-15, 01-16, 01-17)
 
 ## Goal Achievement
 
-The local half of the goal (clone, pinned tools, one-command build and check, formatting, analysis, licence check) is achieved and was proven by running the build and the CI lint commands in this worktree. The "every pull request is governed" half has one real defect (CR-01: the governance gate can fail open), and several roadmap criteria can only be proven by the first hosted run or by author actions that are still pending. No hosted-only item was treated as a code gap.
+The one blocking gap from the first verification (CR-01) is closed and was re-proven by running the new code, not by reading the SUMMARY. No roadmap truth is FAILED. Three roadmap truths are fully proven in the repository (SC1, SC2, SC5). Two (SC3, SC4) are code-complete but can only be finished by the first hosted run and by author actions that are still pending, and those are classified as human verification, not code gaps.
+
+The re-review found three new warnings (WR-05, WR-06, WR-07). I judged that none of them breaks a must-have, but WR-05 is a real, reproduced fail-open path in the same gate as CR-01, so it is carried as a flagged judgment-tier prohibition for the author to decide on, together with WR-06 and WR-07. The reasoning is under "Anti-Patterns Found".
+
+### Gap-closure check (previous gap: CR-01)
+
+| Check | Evidence | Result |
+| --- | --- | --- |
+| The workflow no longer pipes `gh api` into `jq` | `.github/workflows/governance.yml` step `List changed files` runs `scripts/governance/list-pr-files.sh` with `GH_TOKEN`, `PR_BASE_REPO`, `PR_NUMBER`, `PR_FILES_JSON`. The workflow sets `defaults.run.shell: bash` (pipefail), so `governance-success`'s `jq -e` is also pipefail-protected | VERIFIED |
+| The listing script fails closed | `list-pr-files.sh` reads the status of `gh api --paginate` directly, rejects an empty output file, checks `jq -s 'add'`, requires `type == "array"`, writes to a same-directory temp file and renames atomically; a stale destination is removed first; an EXIT trap removes temp files | VERIFIED |
+| The original reproduction now fails | Fake `gh` that prints nothing and exits 0, run against the real script: `governance: gh printed nothing for the pull request files; an empty output is never read as an empty list`, exit 1, no destination file left (only the fake `bin` directory remained) | VERIFIED (run here) |
+| Regression tests exist and pass | `bash scripts/governance/test-list-pr-files.sh`: 25 passed, 0 failed. `bash scripts/governance/test-check-pr.sh`: 80 passed, 0 failed (was 39). CI's `lint` job discovers both through `git ls-files -z -- 'scripts/*/test-*.sh'` (ci.yml line 145) | VERIFIED |
+| WR-03 (3000-file cap), WR-04 (two parsers), WR-01 (enforcement code ungoverned) closed | `FILES_API_LIMIT` rule in `check-pr.sh`; one grammar in `load_globs` and `GovernedPaths.parse` with twin case tables (80 shell cases, `GovernedPathsFormatFunctionalTest`); `governed-paths.txt` now has 29 entries and `.claude/settings.json` has 29 `Edit(/...)` rules plus `Bash(*config-set*)`, and `checkClaudeAskRules` passes in the build | VERIFIED |
 
 ### Observable Truths (ROADMAP Success Criteria)
 
 | # | Truth | Status | Evidence |
 | --- | --- | --- | --- |
-| 1 | `mise install` then `./gradlew build` succeeds with configuration cache, `build-logic` conventions (TestKit-tested), `:platform`, version catalog; every tool listed in `docs/tooling.md`; version literal or `.java-version`/daemon-JVM drift fails the build | VERIFIED | `mise x -- ./gradlew build --no-build-cache --rerun-tasks` exited 0: 35 of 35 tasks executed, BUILD SUCCESSFUL in 2m 37s, "Configuration cache entry reused", working tree clean afterwards. 78 TestKit and unit test cases, 0 failures, 0 errors (read from result XML). `gradle.properties` sets configuration-cache + `problems=fail`, build cache, parallel, isolated-projects, vfs.watch. `:platform` imports 8 BOMs from catalog aliases with the Kotlin override. `courses.governance` wires `checkBuildScripts` (version literals, eager APIs), `checkDaemonJvm`, `checkToolingInventory` into `check`; each has a functional test that proves the failure (BuildScriptLint 8, DaemonJvm 9, ToolingTable 10 cases). docs/tooling.md lists 17 mise tools (matches mise.toml via `checkToolingInventory`) plus Gradle, JDK, Node, git, Docker engine and a "Planned tools" table for pnpm, pack, trivy, grype, syft, cosign, Structurizr, act, docker compose. The literal "fresh clone" run was not repeated (it needs network and a clean machine); the equivalent full-rerun build was. |
-| 2 | One command formats every artifact type; pre-commit hook formats staged files; CI fails on formatting/`.editorconfig` violations, detekt, broken KDoc refs, missing SPDX header, non-normalised tree | VERIFIED (hook behaviour is a human item) | `spotlessCheck` runs 6 Spotless tasks (Kotlin, KotlinGradle, Misc, Shell, Toml, Prettier) in the full build and `spotlessApply` leaves the tree clean. detekt (`dev.detekt` 2.0.0-alpha.6, `comments` rules active, no baseline) and Dokka `failOnWarning` run in `check` for the sample module and for `build-logic`. Local runs of the CI lint commands: `editorconfig-checker` exit 0, `reuse lint` compliant (128/128 files, REUSE 3.3), `actionlint` exit 0, `zizmor --offline` no findings, `gitleaks git` 79 commits no leaks, `git ls-files --eol` shows no non-LF index entries. ci.yml `lint` job runs the same commands plus index renormalisation. `lefthook.yml` and `scripts/format-staged.sh` exist and are wired to Spotless; see Human Verification item 5 for the commit-time behaviour. |
-| 3 | Every push and PR runs a workflow with SHA-pinned actions that builds, tests, analyses, lints workflows/scripts and scans full history; Renovate proposes grouped updates with minimum release age for every version source | UNCERTAIN (code verified, hosted run pending) | ci.yml: `build`, `lint`, `secrets` (`fetch-depth: 0`, `gitleaks git`) aggregated by `ci-success` with `if: always()` and a jq check that rejects `skipped`. All `uses:` lines across 6 workflows are pinned to 40-character SHAs with version comments (grep found no unpinned line); workflow-level `permissions: {}` everywhere with minimal job grants and `persist-credentials: false`. `renovate-config-validator --strict renovate.json5` passes ("Config validated successfully"). renovate.json5 sets `minimumReleaseAge: "7 days"` at top level, groups (kotlin, junit, kotest, spring-boot, axon, testcontainers, formatting, github-actions, dev tools), custom managers for `.java-version`, annotated catalog versions and mise `min_version`; the catalog, wrapper, mise tools, `.nvmrc` and Actions come from built-in managers. Exactly 3 `automerge: true` rules. Nothing has run on GitHub, so the workflows' hosted behaviour and Renovate's actual PRs are unproven (Human Verification items 1 and 4). |
-| 4 | `main` changes only through squash-merged PRs from `gsd/phase-*` branches that pass required checks; ruleset enforces linear history, blocks force-push, head branches deleted; PR template mirrors `/gsd-ship`; labels synced; secret scanning + push protection, Dependabot alerts, PVR, CodeQL, Scorecard active | UNCERTAIN (declared and partly live; ruleset deferred) | `.github/rulesets/main.json` declares deletion, non_fast_forward, required_linear_history, PR with squash-only, required contexts `ci-success` and `governance-success` bound to integration 15368, admin-only bypass (`RepositoryRole` 5, mode `pull_request`). It is NOT live (deliberately deferred by the author). Live repository and security settings: `scripts/apply-github-settings.sh --check --only repository --only security` reported "no drift" (run by this verifier, read-only): squash only, PR_TITLE/PR_BODY, delete head branches, auto-merge, secret scanning, push protection, Dependabot alerts, private vulnerability reporting on. PR template carries the `/gsd-ship` sections in order and `checkPrTemplate` (10 test cases) guards drift. `labels.yml` + `labels.yml` workflow (dry-run on PR, sync on main, `issues: write` only in sync). CodeQL (actions language; Kotlin deferred by ADR-0002) and Scorecard workflows exist and run only from main/schedule. `check-pr.sh` branch rule accepts `gsd/phase-<n>-<slug>` (current branch `gsd/phase-01-execution` passes). Ruleset apply and first CodeQL/Scorecard runs are author or post-merge actions (Human Verification items 2 and 3). |
-| 5 | A PR fails CI if it changes `.planning/config.json` against the declared policy or touches governance files without the `governance-approved` label; the agent must ask before editing governance files or running GSD `config-set` | FAILED (partial) | Config policy: `checkGsdConfigPolicy` in `check`; `.planning/config.json` is semantically equal to `governance/gsd-config-policy.json` (verified by diff); 8 functional test cases. Ask rules: `.claude/settings.json` has `ask` entries for all 10 governed paths plus `Bash(*config-set*)`; `checkClaudeAskRules` is in `check` (15 test cases). Label gate: check-pr.sh is careful and well tested (39 cases pass, including fork, Unicode, Renovate version-only exemption). BUT the workflow step that feeds it can fail open (CR-01, reproduced): an empty `gh api` output yields `[]` and a green `governance-success` without evaluating any file. See Gaps. |
+| 1 | `mise install` then `./gradlew build` succeeds with configuration cache, `build-logic` conventions (TestKit-tested), `:platform`, version catalog; every tool listed in `docs/tooling.md`; version literal or `.java-version`/daemon-JVM drift fails the build | VERIFIED | Re-run at HEAD: `mise x -- ./gradlew build --no-build-cache --rerun-tasks` exited 0, "BUILD SUCCESSFUL in 2m 54s", 35 of 35 tasks executed, "Configuration cache entry reused", working tree clean afterwards. Result XML: 86 tests, 0 failures, 0 errors, 0 skipped. `checkBuildScripts`, `checkDaemonJvm`, `checkToolingInventory`, `checkGsdConfigPolicy`, `checkPrTemplate`, `checkClaudeAskRules` all executed in `check`. The literal "fresh clone" run needs a clean machine and network; the equivalent full-rerun build was done |
+| 2 | One command formats every artifact type; pre-commit hook formats staged files; CI fails on formatting/`.editorconfig` violations, detekt, broken KDoc refs, missing SPDX header, non-normalised tree | VERIFIED (hook commit-time behaviour is a human item) | Build ran `spotlessMisc/KotlinGradle/Shell/Toml/Kotlin/Prettier` checks, `detekt` (sample module and `build-logic`) and `dokkaGeneratePublicationHtml` (both). `editorconfig-checker` exit 0, `reuse lint` compliant (139/139 files, REUSE 3.3), `actionlint` exit 0, `shellcheck` of `scripts/**/*.sh` exit 0, `zizmor --offline` no findings (2 suppressed), `gitleaks git` 101 commits no leaks, `git ls-files --eol` shows no non-LF index entries |
+| 3 | Every push and PR runs a workflow with SHA-pinned actions that builds, tests, analyses, lints workflows/scripts and scans full history; Renovate proposes grouped updates with minimum release age for every version source | UNCERTAIN (code verified, hosted run pending) | All 23 `uses:` lines across the workflows are pinned to 40-character SHAs with a version comment (grep for an unpinned line returned none). `ci.yml` has `build`, `lint`, `secrets` aggregated by `ci-success`. `renovate-config-validator --strict renovate.json5` passes; exactly 3 `automerge: true` rules. Nothing has run on GitHub, so hosted behaviour and Renovate's real PRs are unproven (Human Verification items 3 and 6) |
+| 4 | `main` changes only through squash-merged PRs from `gsd/phase-*` branches that pass required checks; ruleset enforces linear history, blocks force-push, head branches deleted; PR template mirrors `/gsd-ship`; labels synced; secret scanning + push protection, Dependabot alerts, PVR, CodeQL, Scorecard active | UNCERTAIN (declared and partly live; ruleset deferred) | `.github/rulesets/main.json` declares the full rule set but is deliberately not applied (author action, item 4). Repository and security settings were verified live with no drift in the first verification; this pass did not repeat that read and no settings file changed since. PR template guarded by `checkPrTemplate`, labels as code, CodeQL (actions language) and Scorecard workflows exist and run from main/schedule only |
+| 5 | A PR fails CI if it changes `.planning/config.json` against the declared policy or touches governance files without the `governance-approved` label; the agent must ask before editing governance files or running GSD `config-set` | VERIFIED (with warnings WR-05, WR-06, WR-07) | Config policy: `checkGsdConfigPolicy` in `check` passed. Ask rules: 29 `Edit(/...)` rules match the 29 governed entries one to one (counted here) plus `Bash(*config-set*)`, `checkClaudeAskRules` passed. Label gate: `check-pr.sh` 80 cases pass; the file-list feeder now fails closed (CR-01 closed, re-run here). Three residual hardening paths remain, none of which a routine (non-crafted) PR can trigger; see Anti-Patterns |
 
-**Score:** 2/5 roadmap truths verified (SC1, SC2); SC3 and SC4 are code-verified but need the hosted run or author action; SC5 failed on CR-01.
+**Score:** 3/5 roadmap truths verified (SC1, SC2, SC5); SC3 and SC4 are code-verified and wait on the hosted run or author action. No truth is FAILED. 0 behavior-dependent truths are left unexercised: the fail-closed behaviour of the listing and the gate is exercised by named shell cases (25 and 80 cases, run here).
 
-Plan-level must-haves (the 14 PLAN frontmatter blocks) were read; none reduces or contradicts the roadmap criteria above. Those that are locally checkable are covered by the evidence in the rows above (platform BOMs, `.java-version` as the only JDK source, SPDX header via Spotless, daemon JVM generated from `.java-version`, mise pins with `mise.lock`, Prettier/taplo/shfmt as cache inputs, REUSE.toml aggregate precedence, `.gitattributes` rules, label groups, Renovate extraction, ruleset and repository-settings files).
+Plan-level must-haves (the 17 PLAN frontmatter blocks) were read. Plans 01-15 to 01-17 add truths about the listing script, the 3000-file rule, the shared grammar and the widened boundary; every locally checkable one is covered by the table above and the gap-closure table. None reduces the roadmap criteria.
+
+### Prohibitions (ADR-550 D3/D4, judgment tier)
+
+All prohibitions in plans 01-15 to 01-17 are judgment-tier with `status: resolved`. Verdicts are NON-AUTHORITATIVE.
+
+| Prohibition | Verdict | Note |
+| --- | --- | --- |
+| 01-15: MUST NOT let `governance-success` pass a PR whose complete changed-file list the gate did not evaluate; any failure to obtain or interpret the list fails the check | `unverified-prohibition` (human review recommended) | Holds for every failure of obtaining the list (CR-01 path, re-run here). Does not hold for one failure of interpreting it: WR-05, reproduced here. Flagged, not silently passed |
+| 01-15: MUST NOT add any way to pass without the label other than the Renovate version-only exemption; a list at the API limit is never exempt | judgment: holds | `check_files_api_limit` never consults the exemption; boundary values 2999/3000/3001 are tested |
+| 01-16: MUST NOT leave any input on which one parser keeps a governed entry and the other drops, rewrites or rejects it | judgment: holds | Re-review compared the grammar line by line; twin tables G1-G9 and K1-K9 pass; I found no divergence |
+| 01-17: MUST NOT remove or narrow any of the ten original entries, their ask rules or `config-set` rule | judgment: holds | All ten original entries are still present in `governed-paths.txt`; `Bash(*config-set*)` still in `.claude/settings.json` |
+| 01-17: MUST NOT add an entry that makes a D-12 automerge flow need the label | judgment: holds | The catalog, module conventions and Actions workflows (other than `.github/**` already governed) remain outside; the exclusions are argued in the file header |
+| 01-15/16/17: MUST NOT perform any GitHub-side write | judgment: holds | Commit history of the gap plans touches repository files only; no GitHub write is evidenced |
 
 ### Deferred Items
 
-None. The CR-01 gap and the warnings below are not addressed by any later roadmap phase.
+None. WR-05, WR-06 and WR-07 are not addressed by any later roadmap phase (later phases cover domain, frontend and observability).
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 | --- | --- | --- | --- |
-| `gradle/libs.versions.toml`, `platform/build.gradle.kts`, `build-logic/**`, `settings.gradle.kts`, `gradle.properties` | Version catalog, `:platform`, convention plugins, build speed settings | VERIFIED | Present, substantive, used by the passing build; the sample module applies `courses.kotlin-library`. |
-| `build-logic/src/functionalTest/**` | TestKit tests incl. configuration cache | VERIFIED | 11 classes, 77 `@Test` methods, all passing; `a second run reuses the configuration cache` present. |
-| `mise.toml`, `mise.lock`, `.mise/locks/**`, `.nvmrc`, `.java-version`, `docs/tooling.md` | Pinned tools and inventory | VERIFIED | `locked = true`; inventory enforced by `checkToolingInventory`. |
-| `.editorconfig`, `.prettierrc.yaml`, `.taplo.toml`, `.gitattributes`, `.gitignore`, `REUSE.toml`, `LICENSES/*` | Formatting, normalisation, REUSE | VERIFIED | `editorconfig-checker`, `reuse lint` and the Spotless tasks pass. |
-| `lefthook.yml`, `scripts/format-staged.sh` | Pre-commit hook | VERIFIED (static) | Present, shellcheck-clean, wired; commit-time behaviour is a human item. |
-| `.github/workflows/{ci,governance,codeql,scorecard,labels,settings-drift}.yml` | CI, governance, security analysis | PARTIAL | All pass actionlint and zizmor and are SHA-pinned; `governance.yml` has the CR-01 defect. |
-| `governance/**`, `scripts/governance/**`, build-logic governance checks | Governance gate | PARTIAL | Substantive and heavily tested; fail-open feeder step (CR-01), plus WR-01..WR-04 hardening gaps. |
-| `.github/rulesets/main.json`, `.github/repository-settings.json`, `scripts/apply-github-settings.sh` | Settings as code | VERIFIED (declared); ruleset not applied | Repository and security sections verified live with no drift; ruleset deferred by the author. |
-| `renovate.json5` | Renovate config | VERIFIED (static) | Validates under `--strict`. |
-| `.github/PULL_REQUEST_TEMPLATE.md`, `.github/labels.yml` | PR template, labels | VERIFIED | Guarded by `checkPrTemplate`; `governance-approved` description in labels.yml matches the live label. |
+| `scripts/governance/list-pr-files.sh` | Fail-closed listing, `per_page=100` | VERIFIED | Exists, substantive, wired from `governance.yml`, 25 cases |
+| `scripts/governance/test-list-pr-files.sh` | Fake-`gh` tests (`FAKE_GH_LOG`) | VERIFIED | 25 passed; picked up by the CI glob |
+| `.github/workflows/governance.yml` | Runs the listing script under bash with pipefail | VERIFIED | Contains `scripts/governance/list-pr-files.sh` and `defaults.run.shell: bash` |
+| `scripts/governance/check-pr.sh` | Label gate with `FILES_API_LIMIT` and shared grammar | VERIFIED (WR-05 open) | 80 cases pass |
+| `GovernedPaths.kt`, `AskRulesCheck.kt`, `GovernedPathsFormatFunctionalTest.kt` | Kotlin side of the grammar and its TestKit cases | VERIFIED | Compiled and tested in the build (86 tests, 0 failures); `AskRulesCheck` calls `GovernedPaths.parse` |
+| `governance/governed-paths.txt`, `.claude/settings.json` | 29 entries and 29 ask rules plus `config-set`, documented boundary | VERIFIED | Counted here: 29 non-comment entries, 29 `Edit(/` rules; `checkClaudeAskRules` green |
+| `gradle/libs.versions.toml`, `platform/**`, `build-logic/**`, `settings.gradle.kts`, `gradle.properties`, `mise.toml`, `mise.lock`, `.editorconfig`, `.gitattributes`, `REUSE.toml`, `lefthook.yml`, the six workflows, `renovate.json5`, `.github/rulesets/main.json`, PR template, `labels.yml`, `docs/tooling.md` | Phase 1 foundation | VERIFIED | Exercised by the passing build and lint commands above; unchanged since the first verification except the governance files |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 | --- | --- | --- | --- | --- |
-| `build.gradle.kts` | `courses.governance` / `courses.root` | plugin ids | WIRED | Six governance checks are dependencies of `check`. |
-| `courses.kotlin-library` | `:platform` | `platform(project(":platform"))` on every `implementation`/`*Implementation` configuration | WIRED | Applied by `configurations.matching{...}.configureEach`; covers main and test. Only the `implementation` family is covered, which is all that exists today. |
-| `courses.kotlin-library` | `.java-version` | `providers.fileContents` to `JavaLanguageVersion` | WIRED | Functional test proves editing the file invalidates the configuration cache. |
-| `governed-paths.txt` | `check-pr.sh`, `AskRulesCheck`, `.claude/settings.json` | single source list | WIRED | All 10 entries covered by ask rules; see WR-04 for the parser mismatch. |
-| `governance.yml` file-list step | `check-pr.sh` | `pr-files.json` via `PR_FILES_JSON` | PARTIAL | Wired, but the step can hand over an empty list on `gh` failure (CR-01). |
-| `ci.yml` jobs | `ci-success` | `needs` + `if: always()` | WIRED | Aggregator rejects any non-`success` result. |
-| `.github/rulesets/main.json` | `ci-success`, `governance-success` job names | required contexts | WIRED (declared) | Job names match; not applied yet. |
-| `lefthook.yml` | `scripts/format-staged.sh` / Gradle `spotlessApply` | `mise x --` | WIRED (static) | Not installed in a checkout yet. |
+| `governance.yml` `List changed files` | `list-pr-files.sh` | step `run:` with env contract | WIRED | Script is executable and takes only environment inputs |
+| `list-pr-files.sh` | `check-pr.sh` | validated array renamed onto `PR_FILES_JSON` (`runner.temp/pr-files.json`) | WIRED | Both steps use the same path; chain cases in `test-list-pr-files.sh` |
+| `governed-paths.txt` | `check-pr.sh` (`load_globs`), `AskRulesCheck` (`GovernedPaths.parse`), `.claude/settings.json` | single list, one grammar | WIRED | 29 / 29 / 29 |
+| `ci.yml` jobs | `ci-success` | `needs` + `if: always()` | WIRED | Unchanged |
+| `.github/rulesets/main.json` | `ci-success`, `governance-success` | required contexts | WIRED (declared) | Not applied yet (author action) |
+| `check-pr.sh` | `jq` producer of the per-file records | process substitution `< <(jq --raw-output0 ...)` | PARTIAL | Producer status is never read (WR-05, reproduced) |
+| `lefthook.yml` | `scripts/format-staged.sh` / Spotless | `mise x --` | WIRED (static) | Not installed in a checkout yet |
 
 ### Data-Flow Trace (Level 4)
 
-Not applicable: no component renders dynamic data; the phase delivers build, CI and governance configuration. The one data pipeline that matters, PR file list to governance verdict, is traced under CR-01.
+Not applicable: nothing renders dynamic data. The one pipeline that matters, PR file list to governance verdict, was traced: `gh api` (status read) to `list-pr-files.sh` (validated, atomic) to `check-pr.sh` (validated shape, then per-file loop). The weak point on that chain is the per-file loop's producer (WR-05).
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 | --- | --- | --- | --- |
-| Whole build with every task re-executed and no build cache | `mise x -- ./gradlew build --no-build-cache --rerun-tasks` | exit 0, 35/35 tasks executed, 2m 37s, tree clean afterwards | PASS |
-| Governance gate shell tests | `mise x -- bash scripts/governance/test-check-pr.sh` | 39 passed, 0 failed | PASS |
-| Settings script tests | `mise x -- bash scripts/test-apply-github-settings.sh` | 88 passed, 0 failed | PASS |
-| Live repository and security settings | `mise x -- scripts/apply-github-settings.sh --check --only repository --only security` | no drift | PASS |
-| Governance step with empty `gh` output | `cat /dev/null \| jq -s 'add // []'` under `bash -e`, then `check-pr.sh` | step exit 0, `[]`, gate exit 0 ("no governed file is touched") | FAIL (confirms CR-01) |
+| Whole build, every task re-executed, no build cache | `mise x -- ./gradlew build --no-build-cache --rerun-tasks` | exit 0, 35/35 executed, 2m 54s, tree clean | PASS |
+| TestKit and unit tests | result XML under `build-logic/build/test-results` | 86 tests, 0 failures, 0 errors, 0 skipped | PASS |
+| Gate shell tests | `mise x -- bash scripts/governance/test-check-pr.sh` | 80 passed, 0 failed | PASS |
+| Listing script tests | `mise x -- bash scripts/governance/test-list-pr-files.sh` | 25 passed, 0 failed | PASS |
+| CR-01 reproduction (fake `gh`, empty output, exit 0) | `list-pr-files.sh` with a stub `gh` | exit 1, error message, no destination file | PASS |
+| WR-05 reproduction (NUL in a governed entry's patch) | `bash /tmp/p01-verify/run-wr05.sh` (real `check-pr.sh`, no label, list with `.github/workflows/ci.yml`) | `jq: error ... Cannot dump a string containing NUL`, then "no governed file is touched", exit 0 | FAIL (confirms WR-05) |
+| Linters | `actionlint`, `shellcheck`, `zizmor --offline`, `editorconfig-checker`, `reuse lint`, `renovate-config-validator --strict`, `gitleaks git` | all clean | PASS |
 
 ### Probe Execution
 
@@ -160,64 +188,62 @@ SKIPPED: the phase declares no `probe-*.sh` scripts and none exist under `script
 
 ### Requirements Coverage
 
-All 25 IDs in the ROADMAP phase line appear in PLAN frontmatter and in REQUIREMENTS.md traceability as Phase 1. No orphaned Phase 1 requirement exists.
+All 25 IDs in the ROADMAP phase line appear in PLAN frontmatter and in REQUIREMENTS.md as Phase 1. No orphaned Phase 1 requirement exists (INFRA-15 maps to Phase 6, not here).
 
-| Requirement | Source Plan(s) | Description (short) | Status | Evidence |
-| --- | --- | --- | --- | --- |
-| INFRA-01 | 01-01 | One-command build, convention plugins, catalog | SATISFIED | Full build green |
-| INFRA-09 | 01-01, 01-02, 01-03, 01-07, 01-11 | Versions pinned in one place per ecosystem | SATISFIED | Catalog, `.java-version`, `.nvmrc`, mise.lock, SHA pins; `checkBuildScripts`, `checkDaemonJvm` |
-| INFRA-10 | 01-01, 01-02, 01-07, 01-08, 01-12 | Build speed mechanisms | SATISFIED | gradle.properties, build-logic included build, gradle-profiler scenarios in `performance.scenarios` and `docs/performance.md`; hosted cache behaviour pending |
-| INFRA-11 | 01-01, 01-02 | `:platform` alignment point | SATISFIED | 8 BOMs plus Kotlin constraint |
-| INFRA-12 | 01-02 | build-logic first-class | SATISFIED | Spotless, detekt, Dokka and TestKit apply to build-logic |
-| INFRA-13 | 01-06, 01-12 | `.gitattributes` and normalisation check | SATISFIED | File content plus CI renormalise step; `git ls-files --eol` clean |
-| INFRA-14 | 01-01, 01-04, 01-05, 01-06 | `.gitignore` and `.editorconfig` | SATISFIED | `editorconfig-checker` passes |
-| INFRA-16 | 01-05, 01-06 | REUSE compliance | SATISFIED | `reuse lint` compliant; badge in README; hosted registration pending (human) |
-| TEST-09 | 01-02, 01-04, 01-05, 01-08 | One-command formatting, hook, CI check | SATISFIED | Spotless tasks, lefthook, CI; hook behaviour is a human item |
-| TEST-10 | 01-02 | KDoc via ktfmt, detekt comments, Dokka failOnWarning | SATISFIED | detekt config and Dokka in `check` |
-| TEST-13 | 01-02 | Static analysis fails build | SATISFIED | detekt in `check`; Biome part of the requirement belongs to the frontend phase (no TS yet) |
-| CICD-01 | 01-12 | Actions build and test on push and PR | SATISFIED (code); hosted run pending | ci.yml |
-| CICD-03 | 01-11, 01-12 | Actions pinned by SHA | SATISFIED | All `uses:` pinned; no container base images exist yet |
-| CICD-04 | 01-11, 01-14 | Renovate with grouping and min age | NEEDS HUMAN | Config valid; Renovate reads it from `main` only after merge. Correctly still pending in REQUIREMENTS.md |
-| CICD-06 | 01-08, 01-12 | Secret leak detection (history and PRs) | SATISFIED | ci.yml `secrets` job full history; gitleaks pre-commit job; local scan clean |
-| CICD-08 | 01-08, 01-12 | actionlint, zizmor, shellcheck locally and in CI | SATISFIED | Run locally, zero findings; `docker compose config` part is moot (no compose file yet) |
-| TOOL-01 | 01-03, 01-10 | Tool inventory in docs/tooling.md | SATISFIED | Inventory plus planned tools; `checkToolingInventory` |
-| TOOL-02 | 01-03, 01-10, 01-11 | CLI tools pinned in mise.toml, Renovate | SATISFIED | mise.toml + mise.lock; Renovate extraction configured |
-| GH-06 | 01-12, 01-13, 01-14 | Repository security settings and ruleset | NEEDS HUMAN | Security settings live, no drift; ruleset deferred; CodeQL/Scorecard first run after merge. Correctly still pending in REQUIREMENTS.md |
-| GH-07 | 01-09, 01-13, 01-14 | GSD workflow repository config | SATISFIED | Squash only, PR title/body, delete branches live, no drift; branch naming enforced by check-pr.sh |
-| GH-08 | 01-10 | PR template mirrors `/gsd-ship` | SATISFIED | Template and `checkPrTemplate` |
-| GH-11 | 01-10 | Labels as code | SATISFIED | labels.yml and labels workflow |
-| AIDEV-05 | 01-07 | `.planning/config.json` policy | SATISFIED | `checkGsdConfigPolicy`; config equals policy |
-| AIDEV-06 | 01-09, 01-14 | Governance files need the label | PARTIAL | Gate logic is correct and tested; CR-01 lets it fail open on a transient `gh` failure; REQUIREMENTS.md marks it complete, which overstates this until CR-01 is fixed |
-| AIDEV-08 | 01-13 | Claude ask rules for governance files and `config-set` | SATISFIED | `.claude/settings.json` and `checkClaudeAskRules` |
+| Requirement | Source Plan(s) | Status | Evidence |
+| --- | --- | --- | --- |
+| INFRA-01 | 01-01 | SATISFIED | Full build green |
+| INFRA-09 | 01-01, 01-02, 01-03, 01-07, 01-11 | SATISFIED | Catalog, `.java-version`, `.nvmrc`, `mise.lock`, SHA pins; `checkBuildScripts`, `checkDaemonJvm` in the green build |
+| INFRA-10 | 01-01, 01-02, 01-07, 01-08, 01-12 | SATISFIED | Configuration cache reused, build-logic included build, `gradle.properties`; hosted cache behaviour pending |
+| INFRA-11 | 01-01, 01-02 | SATISFIED | `:platform` with the stack BOMs and Kotlin override |
+| INFRA-12 | 01-02 | SATISFIED | Spotless, detekt, Dokka and TestKit apply to `build-logic` (ran in build) |
+| INFRA-13 | 01-06, 01-12 | SATISFIED | `.gitattributes`; `git ls-files --eol` clean |
+| INFRA-14 | 01-01, 01-04, 01-05, 01-06 | SATISFIED | `editorconfig-checker` exit 0 |
+| INFRA-16 | 01-05, 01-06 | SATISFIED | `reuse lint` compliant 139/139; hosted registration pending (human) |
+| TEST-09 | 01-02, 01-04, 01-05, 01-08 | SATISFIED | Spotless tasks, lefthook, CI; commit-time hook behaviour is a human item |
+| TEST-10 | 01-02 | SATISFIED | detekt `comments` rules and Dokka `failOnWarning` in `check` |
+| TEST-13 | 01-02 | SATISFIED | detekt fails the build; the Biome half belongs to the frontend phase (no TypeScript yet) |
+| CICD-01 | 01-12 | SATISFIED (code); hosted run pending | `ci.yml` |
+| CICD-03 | 01-11, 01-12 | SATISFIED | All 23 `uses:` pinned; no container base images exist yet |
+| CICD-04 | 01-11, 01-14 | NEEDS HUMAN | Config valid under `--strict`; Renovate reads it from `main` after the merge. Correctly still pending |
+| CICD-06 | 01-08, 01-12 | SATISFIED | `secrets` job with full history; gitleaks clean locally |
+| CICD-08 | 01-08, 01-12 | SATISFIED | actionlint, zizmor, shellcheck clean; the `docker compose config` part is moot (no compose file yet) |
+| TOOL-01 | 01-03, 01-10 | SATISFIED | `docs/tooling.md`, `checkToolingInventory` |
+| TOOL-02 | 01-03, 01-10, 01-11 | SATISFIED | `mise.toml` + `mise.lock`; Renovate extraction configured |
+| GH-06 | 01-12, 01-13, 01-14 | NEEDS HUMAN | Ruleset deferred by the author; CodeQL/Scorecard first run after merge. Correctly still pending |
+| GH-07 | 01-09, 01-13, 01-14 | SATISFIED | Squash-only, PR title/body, delete branches (verified live, no drift, in the first pass); branch naming in `check-pr.sh` |
+| GH-08 | 01-10 | SATISFIED | PR template and `checkPrTemplate` |
+| GH-11 | 01-10 | SATISFIED | `labels.yml` and labels workflow |
+| AIDEV-05 | 01-07 | SATISFIED | `checkGsdConfigPolicy` green; `.planning/config.json` equals the policy |
+| AIDEV-06 | 01-09, 01-14, 01-15, 01-16, 01-17 | SATISFIED (warnings WR-05, WR-06, WR-07) | Label gate, fail-closed feeder, widened boundary all verified; hosted binding waits on the ruleset (GH-06). The earlier "Complete" mark in REQUIREMENTS.md is now supportable |
+| AIDEV-08 | 01-13, 01-16, 01-17 | SATISFIED | 29 ask rules plus `config-set`; `checkClaudeAskRules` green |
+
+Bookkeeping note for the orchestrator: REQUIREMENTS.md still shows `Gaps Found` in the traceability table for 20 of these IDs and unchecked boxes for all but AIDEV-06 and AIDEV-08. That reflects the first verification and should be refreshed by whoever owns the state update; this report did not touch it. CICD-04 and GH-06 should stay `Pending` until the human items above are done.
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 | --- | --- | --- | --- | --- |
-| `.github/workflows/governance.yml` | 34-36 | Pipeline without pipefail, `// []` default (CR-01) | BLOCKER | Governance gate fails open on empty `gh` output |
-| `governance/governed-paths.txt` | 1-10 | Enforcement code not governed (WR-01) | WARNING | A PR can edit `courses.governance.gradle.kts`, the `buildlogic/governance/**` checks or `scripts/apply-github-settings.sh` without the label; the listed governance files of AIDEV-06 are all covered, so this is hardening beyond the requirement text |
-| `scripts/governance/check-pr.sh` | 206-209 | Sticky approval label, not bound to a commit (WR-02) | WARNING | Later pushes to an approved PR still pass; ruleset has `dismiss_stale_reviews_on_push: false` and 0 reviews. Accept and document in ADR-0001, or bind to head SHA |
-| `.github/workflows/governance.yml`, `check-pr.sh` | 35-36, 81-84 | 3000-file API cap not detected (WR-03) | WARNING | A PR with 3000 or more files can push a governed file out of the list |
-| `check-pr.sh` / `AskRulesCheck.kt` | 74-76 / 46 | Governed-paths parsed differently (WR-04) | WARNING | A padded entry would be silently ungoverned in CI while Gradle passes; latent, no current entry is padded |
-| `check-pr.sh` | 24-26 | Branch pattern vs policy milestone template (IN-01) | INFO | Unreachable while `branching_strategy` is `phase` |
-| `ToolingTableCheck.kt` | 79-90 | Cannot see `[tools.<name>]` sub-tables (IN-02) | INFO | Latent |
-| `ci.yml`, build-logic plugins | various | Duplicated mise-version step and JDK parse (IN-03) | INFO | Maintainability |
-| `.gitattributes`, `.editorconfig` | various | Redundant or anticipatory entries (IN-04) | INFO | Cosmetic |
-| `governance.yml`, `docs/tooling.md` | 25-46 / 80 | Governance job uses runner `jq` and `gh`, not mise-pinned (IN-05) | INFO | Behaviour could drift with a runner image change; fails closed on missing features |
+| `scripts/governance/check-pr.sh` | 226-260 | WR-05: exit status of `jq` process substitution never read; a mid-stream `jq` failure ends the loop quietly and `touched` stays empty | WARNING (reproduced, judged non-blocking) | Gate exits 0 for a list whose governed entry could not be evaluated. Trigger needs a string with a NUL in a patch or filename; git treats files with NUL as binary and the API sends no patch for them, so a routine PR or a transient failure cannot trigger it. The crafted case is strictly harder to exploit than WR-06, which already allows editing the gate itself. Small fix (temp file plus status check plus `seen == count`) recommended before the ruleset makes `governance-success` binding |
+| `.github/workflows/governance.yml` | 8-10, 32-34 | WR-06: gate runs from the PR's own merge ref, so a PR can change the gate that holds it | WARNING (design) | Maintainer-approval contract is guarded against accidents and against an agent that does not tamper with the gate, not against a PR that rewrites it. No CODEOWNERS file exists and the ruleset requires 0 reviews. Record in ADR-0001 or fix with a base-ref checkout |
+| `governance/governed-paths.txt` | 41-44 | WR-07: `renovate.json`, `.renovaterc*` and tracked `.mise/locks/**` not governed | WARNING | A new root `renovate.json` would take precedence over the governed `renovate.json5` without the label. Add five entries plus matching ask rules, or accept |
+| `scripts/governance/check-pr.sh` | 266-269 | WR-02: approval label sticky, not bound to a commit | WARNING (deferred by the author) | Later pushes to an approved PR still pass |
+| `GovernedPathsFormatFunctionalTest.kt` | 55, 84 | IN-06: literal NBSP and BOM in Kotlin source | INFO | Test fragility only; spell them as Kotlin unicode escapes (NBSP U+00A0, BOM U+FEFF) |
+| `check-pr.sh`, `ToolingTableCheck.kt`, `ci.yml`, `.gitattributes`, `docs/tooling.md` | various | IN-01 to IN-05 | INFO | Latent or cosmetic, unchanged from the first review |
 
-No `TBD`, `FIXME`, `XXX`, `TODO` or `HACK` markers in non-planning files. Review dispositions for all 10 findings are still `open` in 01-REVIEW-DISPOSITION.md. 01-VALIDATION.md still has `status: draft` and `nyquist_compliant: false` (informational; not a goal criterion).
+No `TBD`, `FIXME`, `XXX`, `TODO` or `HACK` markers in non-planning files (grep found none). Review dispositions: CR-01, WR-01, WR-03, WR-04 `fixed`; WR-02 `deferred`; WR-05, WR-06, WR-07, IN-01 to IN-06 `open`; none critical. `01-VALIDATION.md` still has `status: draft` (informational, not a goal criterion).
+
+Why WR-05 is not a gap: CR-01 was a blocker because the trigger was routine, a transient `gh` failure, and the result was a green gate with no evaluation. WR-05's trigger is a crafted NUL in API data. It stays flagged because it is the same fail-open shape in the same gate and the plan 01-15 prohibition says any failure to interpret the list must fail the check. If the author wants that prohibition to hold without exception, the fix is about ten lines and should land with WR-06 and WR-07 as one "gate integrity" change before the ruleset is applied.
 
 ### Human Verification Required
 
-See the `human_verification` frontmatter list: first hosted run of ci.yml and governance.yml with the `governance-approved` label; applying the deferred ruleset after both required contexts are green; CodeQL, Scorecard and label sync after merge; Renovate onboarding PR #1 and first grouped PRs; commit-time behaviour of the lefthook pre-commit hook; REUSE registration.
+See the `human_verification` frontmatter list: the WR-05 decision (flagged prohibition), the WR-06/WR-07 decision, the first hosted run of `ci.yml` and `governance.yml`, applying the deferred ruleset, post-merge CodeQL/Scorecard/label sync, Renovate onboarding PR #1 and first grouped PRs, commit-time behaviour of the lefthook hook, and REUSE registration.
 
 ### Gaps Summary
 
-One code gap blocks "every pull request is governed": CR-01. The governance workflow's file-list step can produce an empty list when `gh api` fails to print anything, and the gate then reports "no governed file is touched" and goes green. The fix is small (set `shell: bash`, drop the `// []` default, validate that the result is an array) and the fix should come with a test for the empty-output case. Because the phase PR itself touches `.github/**` and `mise.toml`, and the ruleset that makes `governance-success` binding is still deferred, the exposure today is limited, but the gate is the control that Success Criterion 5 and AIDEV-06 rely on once the ruleset is applied. WR-01 to WR-04 are hardening of the same gate; the author may fix them in the same round or record them as accepted (WR-02 in particular is a documentation decision for ADR-0001).
-
-Everything else that can be checked in the repository holds: the full build is green with every task re-executed, 78 TestKit and unit tests pass, formatters, detekt, Dokka, REUSE, editorconfig, actionlint, zizmor and gitleaks are clean, all actions are SHA-pinned, Renovate's configuration validates, the 25 requirement IDs are all accounted for, and the live repository and security settings match the declared files. CICD-04 and GH-06 are correctly left pending in REQUIREMENTS.md until the hosted run and the author actions listed above.
+No code gap blocks the phase goal. CR-01 is closed and proven by running the new listing script against the original failure and by 105 passing shell cases (25 plus 80). The full build is green with every task re-executed, 86 TestKit and unit tests pass, and every linter is clean. What remains is author or hosted work: the first PR run, the deferred ruleset, post-merge security workflows, Renovate's first PRs, the hook's commit-time behaviour, REUSE registration, and a decision on WR-05, WR-06 and WR-07 (fix or record in ADR-0001).
 
 ---
 
-_Verified: 2026-11-21T14:00:00Z_
+_Verified: 2026-11-21T21:45:00Z_
 _Verifier: Claude (gsd-verifier)_
