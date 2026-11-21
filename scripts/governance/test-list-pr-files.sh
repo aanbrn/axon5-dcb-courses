@@ -35,6 +35,7 @@ CASE_DIR=''
 OUT=''
 CODE=0
 PROBLEMS=''
+SEED=''
 
 # fixture <name>: stores standard input as $TMP/fixtures/<name> and prints the path.
 fixture() {
@@ -44,11 +45,17 @@ fixture() {
 
 # run_list [VAR=value | !VAR ...]: runs the real listing script in a clean environment and a fresh
 # case directory. The defaults describe a valid call; a case overrides a variable by naming it again
-# and removes one with a leading "!". Sets CASE_DIR, OUT (combined output) and CODE.
+# and removes one with a leading "!". A non-empty SEED is written to the destination first, as a
+# list left behind by an earlier run, and is cleared afterwards. Sets CASE_DIR, OUT (combined
+# output) and CODE.
 run_list() {
   cases=$((cases + 1))
   CASE_DIR="$TMP/case-$cases"
   mkdir -p "$CASE_DIR"
+  if [[ -n $SEED ]]; then
+    printf '%s\n' "$SEED" >"$CASE_DIR/pr-files.json"
+    SEED=''
+  fi
   PROBLEMS=''
   local -a assignments=(
     "PR_BASE_REPO=owner/repo"
@@ -114,6 +121,13 @@ expect_call_count() {
   [[ $actual -eq $1 ]] || problem "gh called $actual times, expected $1"
 }
 
+# expect_no_temp_files: no temporary file named after the destination is left in its directory.
+expect_no_temp_files() {
+  local leftovers
+  leftovers=$(find "$CASE_DIR" -name 'pr-files.json.*' -print)
+  [[ -z $leftovers ]] || problem "temporary files left behind: $leftovers"
+}
+
 # report <name>: prints the verdict of the case and counts it.
 report() {
   if [[ -z $PROBLEMS ]]; then
@@ -172,6 +186,116 @@ expect_call_count 1
 grep -Fq -- "api --paginate repos/owner/repo/pulls/7/files?per_page=100" "$CASE_DIR/gh.log" ||
   problem "call is not the paginated files endpoint"
 report "the listing makes one paginated call to the pull request files endpoint"
+
+# --- results: pages, empty lists and every way the API answer can be unusable ------------------
+
+PAGE_A='[{"filename": "docs/a.md", "status": "added"}]'
+PAGE_B='[{"filename": "docs/b.md", "status": "added"}]'
+two_pages=$(fixture two-pages <<<"$PAGE_A$PAGE_B")
+empty_page=$(fixture empty-page <<<'[]')
+error_body=$(fixture error-body <<<'{"message": "Not Found"}')
+truncated=$(fixture truncated <<<'[{"filename": "docs/a.md"')
+array_then_object=$(fixture array-then-object <<<"$PAGE_A"'{"message": "Not Found"}')
+
+both_pages=$(jq -cn --argjson a "$PAGE_A" --argjson b "$PAGE_B" '$a + $b')
+
+# (f) two pages combine in order.
+run_list FAKE_GH_STDOUT="$two_pages"
+expect_exit_and_output 0 "listed 2 changed files"
+expect_destination "$both_pages"
+expect_no_temp_files
+report "two pages combine into one list in page order"
+
+# (g) a successful empty page is a valid empty list.
+run_list FAKE_GH_STDOUT="$empty_page"
+expect_exit_and_output 0 "listed 0 changed files"
+expect_destination '[]'
+report "a [] page from a successful gh is a valid empty list"
+
+# (h) an HTTP error: gh prints the error body and exits non-zero.
+run_list FAKE_GH_STDOUT="$error_body" FAKE_GH_EXIT=1
+expect_exit_and_output 1 "gh exited with status 1"
+expect_destination absent
+report "a failing gh with an error body fails the listing"
+
+# (i) a broken pagination: one good page, then a failure.
+run_list FAKE_GH_STDOUT="$page_one" FAKE_GH_EXIT=1
+expect_exit_and_output 1 "gh exited with status 1"
+expect_destination absent
+report "a failing gh after a valid page fails the listing"
+
+# (j) a successful gh printing an object instead of pages.
+run_list FAKE_GH_STDOUT="$error_body"
+expect_exit_and_output 1 "did not combine into one JSON array"
+expect_destination absent
+report "a JSON object instead of an array fails the listing"
+
+# (k) truncated JSON.
+run_list FAKE_GH_STDOUT="$truncated"
+expect_exit_and_output 1 "not valid JSON"
+expect_destination absent
+report "truncated JSON fails the listing"
+
+# (l) an array page followed by an object page.
+run_list FAKE_GH_STDOUT="$array_then_object"
+expect_exit_and_output 1 "governance: "
+expect_destination absent
+report "an array page followed by an object page fails the listing"
+
+# (m) a stale destination does not survive a failed listing.
+SEED='[]'
+run_list FAKE_GH_EXIT=1
+expect_exit_and_output 1 "gh exited with status 1"
+expect_destination absent
+report "a failed listing removes a stale destination"
+
+# (n) a failed listing leaves no temporary file behind.
+run_list FAKE_GH_STDOUT="$page_one" FAKE_GH_EXIT=1
+expect_exit_and_output 1 "gh exited with status 1"
+expect_no_temp_files
+report "a failed listing leaves no temporary file next to the destination"
+
+# --- inputs: strict validation before any gh call ----------------------------------------------
+
+# reject_input <name> <output regex> [VAR=value | !VAR ...]: the listing refuses the input and gh
+# is never called.
+reject_input() {
+  local name=$1 regex=$2
+  shift 2
+  run_list FAKE_GH_STDOUT="$page_one" "$@"
+  expect_exit_and_output 1 "$regex"
+  expect_call_count 0
+  expect_destination absent
+  report "$name"
+}
+
+# (o) to (r) the pull request number.
+reject_input "a non-numeric PR_NUMBER is rejected" "governance: PR_NUMBER" PR_NUMBER=abc
+reject_input "PR_NUMBER zero is rejected" "governance: PR_NUMBER" PR_NUMBER=0
+reject_input "a PR_NUMBER with a path suffix is rejected" "governance: PR_NUMBER" 'PR_NUMBER=7/../../x'
+reject_input "an unset PR_NUMBER is rejected" "governance: PR_NUMBER" '!PR_NUMBER'
+
+# (s) to (v) the repository name.
+reject_input "a PR_BASE_REPO with three parts is rejected" "governance: PR_BASE_REPO" \
+  PR_BASE_REPO=owner/repo/extra
+reject_input "a PR_BASE_REPO owner of dots is rejected" "governance: PR_BASE_REPO" PR_BASE_REPO=../repo
+reject_input "a PR_BASE_REPO repository of dots is rejected" "governance: PR_BASE_REPO" \
+  PR_BASE_REPO=owner/..
+reject_input "an empty PR_BASE_REPO is rejected" "governance: PR_BASE_REPO" PR_BASE_REPO=
+
+# (w) the destination path.
+reject_input "an unset PR_FILES_JSON is rejected" "governance: PR_FILES_JSON" '!PR_FILES_JSON'
+
+# (x) a destination in a directory that does not exist.
+run_list FAKE_GH_STDOUT="$page_one" "PR_FILES_JSON=$TMP/no-such-dir/pr-files.json"
+expect_exit_and_output 1 "governance: PR_FILES_JSON"
+expect_call_count 0
+report "a destination in a missing directory is rejected"
+
+# A repository name that starts with a dot is a real GitHub name and stays valid.
+run_list FAKE_GH_STDOUT="$page_one" PR_BASE_REPO=owner/.github
+expect_exit_and_output 0 "listed 1 changed files"
+report "a repository named .github is accepted"
 
 echo "$passed passed, $failed failed"
 [[ $failed -eq 0 ]]
