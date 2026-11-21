@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package io.github.aanbrn.courses.buildlogic
 
+import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import org.gradle.testkit.runner.BuildResult
@@ -68,6 +69,27 @@ class GradleFixture(private val projectDir: Path) {
     /** Runs Gradle with [args] under the same flags as [run] and expects the build to fail. */
     fun runAndFail(vararg args: String): BuildResult = runner(*args).buildAndFail()
 
+    /**
+     * Runs Gradle with [args] like [run], in an environment whose `PATH` has no directory that
+     * contains an executable named [tool].
+     */
+    fun runWithout(tool: String, vararg args: String): BuildResult =
+        runner(*args).withEnvironment(environmentWithout(tool)).build()
+
+    /** Like [runWithout], but expects the build to fail. */
+    fun runAndFailWithout(tool: String, vararg args: String): BuildResult =
+        runner(*args).withEnvironment(environmentWithout(tool)).buildAndFail()
+
+    private fun environmentWithout(tool: String): Map<String, String> {
+        val path =
+            System.getenv("PATH")
+                .orEmpty()
+                .split(File.pathSeparator)
+                .filterNot { directory -> File(directory, tool).exists() }
+                .joinToString(File.pathSeparator)
+        return System.getenv() + ("PATH" to path)
+    }
+
     private fun runner(vararg args: String): GradleRunner =
         GradleRunner.create()
             .withProjectDir(projectDir.toFile())
@@ -111,14 +133,17 @@ class GradleFixture(private val projectDir: Path) {
          * repository's own `:platform` project, and a `:lib` project that applies
          * `courses.kotlin-library` and declares no dependencies of its own.
          *
-         * The shared Spotless header, the shared detekt and Prettier configuration, `.nvmrc`, and a
-         * JDK 25 `.java-version` are copied or written as the real repository has them.
+         * The shared Spotless header, the shared detekt, Prettier, taplo and editor configuration,
+         * `.nvmrc`, and a JDK 25 `.java-version` are copied or written as the real repository has
+         * them.
          */
         fun standard(projectDir: Path): GradleFixture =
             GradleFixture(projectDir).apply {
                 copyFromRepo("config/spotless/license-header.txt")
                 copyFromRepo("config/detekt/detekt.yml")
                 copyFromRepo(".prettierrc.yaml")
+                copyFromRepo(".taplo.toml")
+                copyFromRepo(".editorconfig")
                 copyFromRepo(".nvmrc")
                 file(".java-version", "25\n")
                 file("build.gradle.kts", "$HEADER\nplugins { id(\"courses.root\") }\n")

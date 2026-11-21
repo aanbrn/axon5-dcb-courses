@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import io.github.aanbrn.courses.buildlogic.VerifyFormatterBinary
 import io.github.aanbrn.courses.buildlogic.VerifyNodeVersion
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 
@@ -49,6 +50,35 @@ val verifyNodeVersion =
         outputs.upToDateWhen { false }
     }
 
+/** The absolute path of [tool] on `PATH`, or an empty string when it is not installed. */
+fun pathOf(tool: String): Provider<String> =
+    providers
+        .exec {
+            commandLine("sh", "-c", "command -v $tool")
+            isIgnoreExitValue = true
+        }
+        .standardOutput
+        .asText
+        .map { it.trim() }
+
+// Spotless runs the formatter binaries pinned in `mise.toml`. A missing binary fails only the
+// formatting tasks of that file type, with a `mise install` hint, never the configuration, so a
+// Gradle run that does not format (such as the CodeQL compile) works without mise.
+val taploConfig = layout.projectDirectory.file(".taplo.toml")
+val taploPath = pathOf("taplo")
+
+fun registerBinaryCheck(tool: String, path: Provider<String>) =
+    tasks.register<VerifyFormatterBinary>("verify${tool.replaceFirstChar { it.uppercase() }}") {
+        toolName.set(tool)
+        executable.set(path)
+        output.set(layout.buildDirectory.file("verify-formatter-binary/$tool.txt"))
+        // The result depends on the environment, not on declared inputs, so it is checked on every
+        // build.
+        outputs.upToDateWhen { false }
+    }
+
+val verifyTaplo = registerBinaryCheck("taplo", taploPath)
+
 // The one tracked file under `.claude` that is project-owned; the rest of `.claude` and all of
 // `.planning` belong to GSD and stay outside the formatting contract.
 val claudeSettings: FileTree =
@@ -74,7 +104,30 @@ spotless {
         )
         prettier(mapOf("prettier" to libs.versions.prettier.get())).configFile(".prettierrc.yaml")
     }
+    format("toml") {
+        target(sources("**/*.toml"))
+        // `mise.lock` is generated and its extension is `.lock`, so it is never matched. Spotless
+        // hashes the executable when the configuration cache is stored, so a missing taplo is
+        // replaced by an existing file that is never run: `verifyTaplo` fails first, with the hint.
+        nativeCmd(
+            "taplo",
+            taploPath.get().ifEmpty { taploConfig.asFile.absolutePath },
+            listOf("fmt", "--config", taploConfig.asFile.absolutePath, "-"),
+        )
+    }
 }
+
+// The binary and its version, and the configuration file taplo reads, are inputs of every TOML
+// task, so a cached result never survives a change to either.
+tasks
+    .matching { it.name.startsWith("spotlessToml") }
+    .configureEach {
+        inputs.files(verifyTaplo.flatMap { it.output })
+        inputs
+            .file(taploConfig)
+            .withPropertyName("taploConfig")
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    }
 
 // The verified Node major is an input of every Prettier task, so a cached result never survives a
 // Node switch.

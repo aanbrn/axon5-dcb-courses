@@ -8,7 +8,10 @@ import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
-/** Proves the repository-wide formatting beyond Kotlin: Prettier and the Node.js version guard. */
+/**
+ * Proves the repository-wide formatting beyond Kotlin: Prettier, the Node.js version guard, taplo,
+ * shfmt and the generic text formats.
+ */
 class FormattingFunctionalTest {
     @TempDir lateinit var projectDir: Path
 
@@ -55,5 +58,35 @@ class FormattingFunctionalTest {
 
         result.task(":verifyNodeVersion")?.outcome shouldBe TaskOutcome.SUCCESS
         result.task(":spotlessPrettierCheck")?.outcome shouldBe TaskOutcome.SUCCESS
+    }
+
+    @Test
+    fun `unformatted TOML fails spotlessCheck and spotlessApply fixes it`() {
+        val fixture = GradleFixture.standard(projectDir)
+        fixture.run("spotlessApply")
+        fixture.file("data/messy.toml", "name   =   \"x\"\nitems = [\n      1,\n 2]\n")
+
+        val failed = fixture.runAndFail("spotlessTomlCheck")
+        failed.output shouldContain "messy.toml"
+
+        fixture.run("spotlessApply")
+
+        fixture.read("data/messy.toml") shouldBe "name = \"x\"\nitems = [1, 2]\n"
+        fixture.run("spotlessTomlCheck").task(":spotlessTomlCheck")?.outcome shouldBe
+            TaskOutcome.SUCCESS
+    }
+
+    @Test
+    fun `a missing taplo fails the TOML tasks with a mise install hint but not configuration`() {
+        val fixture = GradleFixture.standard(projectDir)
+        fixture.file("data/messy.toml", "name   =   \"x\"\n")
+
+        val help = fixture.runWithout("taplo", "help")
+        help.task(":help")?.outcome shouldBe TaskOutcome.SUCCESS
+
+        val result = fixture.runAndFailWithout("taplo", "spotlessTomlCheck")
+
+        result.output shouldContain "mise install"
+        result.task(":verifyTaplo")?.outcome shouldBe TaskOutcome.FAILED
     }
 }
