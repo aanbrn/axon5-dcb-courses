@@ -135,9 +135,10 @@ run_case "a non-ASCII file under .github without the label fails" 1 "ünïcode" 
 # --- fixtures for the Renovate exemption ---------------------------------------------------------
 
 # patch_file <name>: stores standard input as $TMP/<name>.patch and prints the path. A patch is the
-# `patch` field of the files API: hunks only, with no file header lines.
+# `patch` field of the files API: hunks only, with no file header lines. A context line starts with
+# one space, which would trip the indentation checks on this file, so fixtures write it as "~".
 patch_file() {
-  cat >"$TMP/$1.patch"
+  sed 's/^~/ /' >"$TMP/$1.patch"
   echo "$TMP/$1.patch"
 }
 
@@ -166,12 +167,12 @@ SHA_NEW=9f8e7d6c5b4a39281706f5e4d3c2b1a098765432
 workflow_bump=$(
   patch_file workflow-bump <<EOF
 @@ -22,7 +22,7 @@ jobs:
-     timeout-minutes: 5
-     steps:
+~    timeout-minutes: 5
+~    steps:
 -      - uses: actions/checkout@$SHA_OLD # v7.0.1
 +      - uses: actions/checkout@$SHA_NEW # v7.0.2
-         with:
-           persist-credentials: false
+~        with:
+~          persist-credentials: false
 EOF
 )
 workflow_bump_files=$(files_of workflow-bump "$(entry .github/workflows/ci.yml modified "$workflow_bump")")
@@ -179,11 +180,11 @@ workflow_bump_files=$(files_of workflow-bump "$(entry .github/workflows/ci.yml m
 mise_bump=$(
   patch_file mise-bump <<'EOF'
 @@ -15,7 +15,7 @@ locked = true
-
- [tools]
+~
+~[tools]
 -gitleaks = "8.30.1"
 +gitleaks = "8.30.2"
- "aqua:rhysd/actionlint" = "1.7.12"
+~"aqua:rhysd/actionlint" = "1.7.12"
 EOF
 )
 mise_bump_files=$(files_of mise-bump "$(entry mise.toml modified "$mise_bump")")
@@ -193,63 +194,63 @@ mise_bump_files=$(files_of mise-bump "$(entry mise.toml modified "$mise_bump")")
 real_lock=$(
   patch_file real-lock <<'EOF'
 @@ -226,32 +226,32 @@
- url = "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5.1%2B2/OpenJDK25U-jdk_x64_mac_hotspot_25.0.5.1_2.tar.gz"
-
- [[tools.jq]]
+~url = "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5.1%2B2/OpenJDK25U-jdk_x64_mac_hotspot_25.0.5.1_2.tar.gz"
+~
+~[[tools.jq]]
 -version = "1.8.2"
 +version = "1.8.1"
- backend = "aqua:jqlang/jq"
+~backend = "aqua:jqlang/jq"
 -specifiers = ["1.8.2"]
 +specifiers = ["1.8.1"]
-
- [tools.jq."platforms.linux-arm64"]
+~
+~[tools.jq."platforms.linux-arm64"]
 -checksum = "sha256:8b85c817833814ddca00a144c33705546355afccf0cf39b188f3cdb48b852309"
 -url = "https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-linux-arm64"
 -url_api = "https://api.github.com/repos/jqlang/jq/releases/assets/453012756"
 +checksum = "sha256:6bc62f25981328edd3cfcfe6fe51b073f2d7e7710d7ef7fcdac28d4e384fc3d4"
 +url = "https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-arm64"
 +url_api = "https://api.github.com/repos/jqlang/jq/releases/assets/268981481"
- provenance = "github-attestations"
-
- [tools.jq."platforms.linux-x64"]
+~provenance = "github-attestations"
+~
+~[tools.jq."platforms.linux-x64"]
 -checksum = "sha256:b1c22172dd303f3be49e935aa56aa48a8b7a46e0bc838b4997d3bb451495870f"
 -url = "https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-linux-amd64"
 -url_api = "https://api.github.com/repos/jqlang/jq/releases/assets/453012752"
 +checksum = "sha256:020468de7539ce70ef1bceaf7cde2e8c4f2ca6c3afb84642aabc5c97d9fc2a0d"
 +url = "https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-amd64"
 +url_api = "https://api.github.com/repos/jqlang/jq/releases/assets/268981484"
- provenance = "github-attestations"
-
- [tools.jq."platforms.macos-arm64"]
+~provenance = "github-attestations"
+~
+~[tools.jq."platforms.macos-arm64"]
 -checksum = "sha256:2d75340ba57a4b4b4c8708a21c2dc8e958a48aaa8bba13b27f77f6e4c0eca07e"
 -url = "https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-macos-arm64"
 -url_api = "https://api.github.com/repos/jqlang/jq/releases/assets/453012783"
 +checksum = "sha256:a9fe3ea2f86dfc72f6728417521ec9067b343277152b114f4e98d8cb0e263603"
 +url = "https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-macos-arm64"
 +url_api = "https://api.github.com/repos/jqlang/jq/releases/assets/268981506"
- provenance = "github-attestations"
-
- [tools.jq."platforms.macos-x64"]
+~provenance = "github-attestations"
+~
+~[tools.jq."platforms.macos-x64"]
 -checksum = "sha256:e94b266e3c26690550006abe63152b782280f4e14374accdf04cbde844f00bc0"
 -url = "https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-macos-amd64"
 -url_api = "https://api.github.com/repos/jqlang/jq/releases/assets/453012782"
 +checksum = "sha256:e80dbe0d2a2597e3c11c404f03337b981d74b4a8504b70586c354b7697a7c27f"
 +url = "https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-macos-amd64"
 +url_api = "https://api.github.com/repos/jqlang/jq/releases/assets/268981505"
- provenance = "github-attestations"
-
- [[tools.lefthook]]
+~provenance = "github-attestations"
+~
+~[[tools.lefthook]]
 EOF
 )
 real_lock_toml=$(
   patch_file real-lock-toml <<'EOF'
 @@ -30,5 +30,5 @@
- # transitively; that release was published manually by the Yarn lead maintainer without provenance
- # (3.2.0 had it), which trips trustPolicy=no-downgrade. Remove once renovate no longer pulls it.
- "npm:renovate" = { version = "44.239.1", trust_policy_excludes = ["@yarnpkg/libzip@3.2.2"] }
+~# transitively; that release was published manually by the Yarn lead maintainer without provenance
+~# (3.2.0 had it), which trips trustPolicy=no-downgrade. Remove once renovate no longer pulls it.
+~"npm:renovate" = { version = "44.239.1", trust_policy_excludes = ["@yarnpkg/libzip@3.2.2"] }
 -jq = "1.8.2"
 +jq = "1.8.1"
- gh = "2.104.0"
+~gh = "2.104.0"
 EOF
 )
 real_lock_files=$(files_of real-lock \
@@ -258,8 +259,8 @@ real_lock_files=$(files_of real-lock \
 new_tool=$(
   patch_file new-tool <<'EOF'
 @@ -30,5 +30,6 @@
- jq = "1.8.2"
- gh = "2.104.0"
+~jq = "1.8.2"
+~gh = "2.104.0"
 +evil-tool = "1.0.0"
 EOF
 )
@@ -268,7 +269,7 @@ new_tool_files=$(files_of new-tool "$(entry mise.toml modified "$new_tool")")
 timeout_change=$(
   patch_file timeout-change <<'EOF'
 @@ -10,7 +10,7 @@ jobs:
-   governance:
+~  governance:
 -    timeout-minutes: 30
 +    timeout-minutes: 60
 EOF
