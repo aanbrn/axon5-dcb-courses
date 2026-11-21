@@ -45,7 +45,7 @@ findings:
     title: "The governance gate and shell tests depend on unpinned runner tools"
   - id: WR-05
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`check-pr.sh` ignores the exit status of the `jq` process substitution, so a mid-stream `jq` failure drops files and the gate passes"
   - id: WR-06
     severity: warning
@@ -59,7 +59,7 @@ findings:
     severity: info
     disposition: open
     title: "Invisible characters are written literally in the Kotlin test source"
-open: 9
+open: 8
 total: 14
 recorded: 2026-11-21T16:30:00.000Z
 ---
@@ -78,7 +78,7 @@ recorded: 2026-11-21T16:30:00.000Z
 | IN-03 | info | open | 01-REVIEW.md |
 | IN-04 | info | open | 01-REVIEW.md |
 | IN-05 | info | open | 01-REVIEW.md |
-| WR-05 | warning | open | 01-REVIEW.md — re-review after gap closure |
+| WR-05 | warning | fixed | 01-REVIEW.md — re-review after gap closure; fixed by plan 01-18 |
 | WR-06 | warning | open | 01-REVIEW.md — re-review after gap closure |
 | WR-07 | warning | open | 01-REVIEW.md — re-review after gap closure |
 | IN-06 | info | open | 01-REVIEW.md — re-review after gap closure |
