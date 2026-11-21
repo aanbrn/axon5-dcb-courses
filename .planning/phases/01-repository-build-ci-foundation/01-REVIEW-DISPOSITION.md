@@ -13,7 +13,7 @@ findings:
     title: "Governed paths do not cover the code that enforces governance"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: deferred
     title: "The approval label is sticky and is not bound to a commit"
   - id: WR-03
     severity: warning
@@ -43,7 +43,7 @@ findings:
     severity: info
     disposition: open
     title: "The governance gate and shell tests depend on unpinned runner tools"
-open: 10
+open: 9
 total: 10
 recorded: 2026-11-21T13:05:00.000Z
 ---
@@ -54,7 +54,7 @@ recorded: 2026-11-21T13:05:00.000Z
 |---------|----------|-------------|--------|
 | CR-01 | critical | open | 01-REVIEW.md |
 | WR-01 | warning | open | 01-REVIEW.md |
-| WR-02 | warning | open | 01-REVIEW.md |
+| WR-02 | warning | deferred | 01-REVIEW.md — deferred by the author at gap planning (2026-11-21): binding the approval label to a commit or dismissing it on push needs a separate design decision (workflow permissions or a new verification mechanism); not part of the gap-closure scope |
 | WR-03 | warning | open | 01-REVIEW.md |
 | WR-04 | warning | open | 01-REVIEW.md |
 | IN-01 | info | open | 01-REVIEW.md |
