@@ -3,6 +3,7 @@ package io.github.aanbrn.courses.buildlogic.governance
 
 import io.github.aanbrn.courses.buildlogic.GradleFixture
 import io.kotest.assertions.withClue
+import io.kotest.matchers.collections.shouldBeIn
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -29,7 +30,7 @@ class ConfigPolicyCheckFunctionalTest {
 
         val result = fixture(reordered).run("checkGsdConfigPolicy")
 
-        result.task(":checkGsdConfigPolicy")?.outcome shouldBe TaskOutcome.SUCCESS
+        result.task(":checkGsdConfigPolicy")?.outcome shouldBeIn GradleFixture.PASSED
     }
 
     @Test
@@ -121,9 +122,9 @@ class ConfigPolicyCheckFunctionalTest {
         val POLICY =
             """
             {
-              "workflow": { "research": true, "auto_advance": false },
-              "git": { "create_tag": false, "phase_branch_template": "gsd/phase-{phase}-{slug}" },
-              "mode": "interactive"
+                "workflow": { "research": true, "auto_advance": false },
+                "git": { "create_tag": false, "phase_branch_template": "gsd/phase-{phase}-{slug}" },
+                "mode": "interactive"
             }
             """
                 .trimIndent()

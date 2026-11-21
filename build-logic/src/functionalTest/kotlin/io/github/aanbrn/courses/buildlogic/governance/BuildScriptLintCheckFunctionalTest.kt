@@ -3,10 +3,10 @@ package io.github.aanbrn.courses.buildlogic.governance
 
 import io.github.aanbrn.courses.buildlogic.GradleFixture
 import io.kotest.assertions.withClue
+import io.kotest.matchers.collections.shouldBeIn
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
-import io.kotest.matchers.string.shouldNotContain
 import java.nio.file.Path
 import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.Test
@@ -17,6 +17,14 @@ class BuildScriptLintCheckFunctionalTest {
     @TempDir lateinit var projectDir: Path
 
     private val fixture by lazy { GradleFixture.governance(projectDir) }
+
+    /** The `path:line: [rule]` prefix of every finding in the report, in report order. */
+    private fun findings(): List<String> =
+        fixture
+            .read("build/reports/governance/build-scripts.txt")
+            .lines()
+            .filter { it.isNotEmpty() }
+            .map { it.split(" ").take(2).joinToString(" ") }
 
     @Test
     fun `a build without version literals passes`() {
@@ -37,14 +45,21 @@ class BuildScriptLintCheckFunctionalTest {
 
         val result = fixture.run("checkBuildScripts")
 
-        result.task(":checkBuildScripts")?.outcome shouldBe TaskOutcome.SUCCESS
+        result.task(":checkBuildScripts")?.outcome shouldBeIn GradleFixture.PASSED
     }
 
     @Test
     fun `a dependency with a literal version is reported with its line`() {
         fixture.file(
             "lib/build.gradle.kts",
-            "plugins {}\n\ndependencies {\n    implementation(\"com.example:lib:1.2.3\")\n}\n",
+            """
+            plugins {}
+
+            dependencies {
+                implementation("com.example:lib:1.2.3")
+            }
+            """
+                .trimIndent(),
         )
 
         val output = fixture.runAndFail("checkBuildScripts").output
@@ -66,12 +81,15 @@ class BuildScriptLintCheckFunctionalTest {
                 .trimIndent(),
         )
 
-        val output = fixture.runAndFail("checkBuildScripts").output
+        fixture.runAndFail("checkBuildScripts")
 
-        listOf(1, 2, 3, 4).forEach { line ->
-            output shouldContain "lib/build.gradle.kts:$line: [version-literal]"
-        }
-        output shouldNotContain "lib/build.gradle.kts:5:"
+        findings() shouldBe
+            listOf(
+                "lib/build.gradle.kts:1: [version-literal]",
+                "lib/build.gradle.kts:2: [version-literal]",
+                "lib/build.gradle.kts:3: [version-literal]",
+                "lib/build.gradle.kts:4: [version-literal]",
+            )
     }
 
     @Test
@@ -82,10 +100,13 @@ class BuildScriptLintCheckFunctionalTest {
             "package demo\n\nval dependency = \"org.example:thing:9.9\"\n",
         )
 
-        val output = fixture.runAndFail("checkBuildScripts").output
+        fixture.runAndFail("checkBuildScripts")
 
-        output shouldContain "gradle.properties:2: [version-literal]"
-        output shouldContain "build-logic/src/main/kotlin/Plugin.kt:3: [version-literal]"
+        findings() shouldBe
+            listOf(
+                "build-logic/src/main/kotlin/Plugin.kt:3: [version-literal]",
+                "gradle.properties:2: [version-literal]",
+            )
     }
 
     @Test
@@ -103,35 +124,52 @@ class BuildScriptLintCheckFunctionalTest {
                 .trimIndent(),
         )
 
-        val output = fixture.runAndFail("checkBuildScripts").output
+        fixture.runAndFail("checkBuildScripts")
 
-        listOf(1, 2, 3).forEach { line ->
-            output shouldContain "lib/build.gradle.kts:$line: [eager-api]"
-        }
-        listOf(4, 5, 6).forEach { line ->
-            output shouldContain "lib/build.gradle.kts:$line: [cross-project]"
-        }
+        findings() shouldBe
+            listOf(
+                "lib/build.gradle.kts:1: [eager-api]",
+                "lib/build.gradle.kts:2: [eager-api]",
+                "lib/build.gradle.kts:3: [eager-api]",
+                "lib/build.gradle.kts:4: [cross-project]",
+                "lib/build.gradle.kts:5: [cross-project]",
+                "lib/build.gradle.kts:6: [cross-project]",
+            )
     }
 
     @Test
     fun `findings are written sorted by path and then numeric line`() {
         val literal = "implementation(\"com.example:lib:1.2.3\")"
         fixture.file("b/build.gradle.kts", "$literal\n")
-        fixture.file("a/build.gradle.kts", "\n".repeat(9) + "$literal\n\n$literal\n")
+        // The first literal sits on line 10, so a textual sort would place it after line 12.
+        fixture.file(
+            "a/build.gradle.kts",
+            """
+            // padding
+            // padding
+            // padding
+            // padding
+            // padding
+            // padding
+            // padding
+            // padding
+            // padding
+            $literal
+
+            $literal
+            """
+                .trimIndent(),
+        )
         fixture.file("a/other.gradle.kts", "$literal\n")
 
         fixture.runAndFail("checkBuildScripts")
-        val findings =
-            fixture.read("build/reports/governance/build-scripts.txt").lines().filter {
-                it.isNotEmpty()
-            }
 
-        findings.map { it.substringBefore(" ") } shouldBe
+        findings() shouldBe
             listOf(
-                "a/build.gradle.kts:10:",
-                "a/build.gradle.kts:12:",
-                "a/other.gradle.kts:1:",
-                "b/build.gradle.kts:1:",
+                "a/build.gradle.kts:10: [version-literal]",
+                "a/build.gradle.kts:12: [version-literal]",
+                "a/other.gradle.kts:1: [version-literal]",
+                "b/build.gradle.kts:1: [version-literal]",
             )
     }
 
@@ -144,7 +182,7 @@ class BuildScriptLintCheckFunctionalTest {
 
         val result = fixture.run("checkBuildScripts")
 
-        result.task(":checkBuildScripts")?.outcome shouldBe TaskOutcome.SUCCESS
+        result.task(":checkBuildScripts")?.outcome shouldBeIn GradleFixture.PASSED
     }
 
     @Test

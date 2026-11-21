@@ -6,6 +6,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
+import org.gradle.testkit.runner.TaskOutcome
 
 /**
  * A throwaway Gradle build in [projectDir] that applies the real conventions from this repository.
@@ -163,6 +164,12 @@ class GradleFixture(private val projectDir: Path) {
                 include(":platform")
                 include(":lib")
             }
+
+        /**
+         * The outcomes of a task that passed, whether it ran or its result came from the build
+         * cache, which TestKit shares with the user's Gradle home.
+         */
+        val PASSED: Set<TaskOutcome> = setOf(TaskOutcome.SUCCESS, TaskOutcome.FROM_CACHE)
 
         /**
          * Creates a fixture in [projectDir] whose root project applies only `courses.governance`.

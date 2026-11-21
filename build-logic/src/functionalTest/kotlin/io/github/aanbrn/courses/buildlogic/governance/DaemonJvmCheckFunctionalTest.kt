@@ -3,8 +3,8 @@ package io.github.aanbrn.courses.buildlogic.governance
 
 import io.github.aanbrn.courses.buildlogic.GradleFixture
 import io.kotest.assertions.withClue
+import io.kotest.matchers.collections.shouldBeIn
 import io.kotest.matchers.collections.shouldContain
-import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import java.nio.file.Path
 import org.gradle.testkit.runner.TaskOutcome
@@ -30,7 +30,7 @@ class DaemonJvmCheckFunctionalTest {
 
         val result = fixture.run("checkDaemonJvm")
 
-        result.task(":checkDaemonJvm")?.outcome shouldBe TaskOutcome.SUCCESS
+        result.task(":checkDaemonJvm")?.outcome shouldBeIn GradleFixture.PASSED
     }
 
     @Test
@@ -38,7 +38,8 @@ class DaemonJvmCheckFunctionalTest {
         fixture.file(".java-version", "25.0.1\n")
         properties("25")
 
-        fixture.run("checkDaemonJvm").task(":checkDaemonJvm")?.outcome shouldBe TaskOutcome.SUCCESS
+        fixture.run("checkDaemonJvm").task(":checkDaemonJvm")?.outcome shouldBeIn
+            GradleFixture.PASSED
     }
 
     @Test

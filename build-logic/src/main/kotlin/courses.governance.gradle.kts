@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
+import io.github.aanbrn.courses.buildlogic.governance.BuildScriptLintCheck
 import io.github.aanbrn.courses.buildlogic.governance.ConfigPolicyCheck
+import io.github.aanbrn.courses.buildlogic.governance.DaemonJvmConsistencyCheck
 
 // Repository governance checks (D-13): cacheable build-logic tasks wired into `check`, so a local
 // build and CI enforce the same rules. The plugin is applied to the root project only.
@@ -18,4 +20,46 @@ val checkGsdConfigPolicy =
         report.set(reports.map { it.file("gsd-config-policy.txt") })
     }
 
-tasks.named("check") { dependsOn(checkGsdConfigPolicy) }
+// Directories that are generated, vendored or owned by another tool are never scanned.
+val checkBuildScripts =
+    tasks.register<BuildScriptLintCheck>("checkBuildScripts") {
+        group = "verification"
+        description =
+            "Fails on version literals and on eager or cross-project APIs in build scripts."
+        sources.from(
+            layout.projectDirectory.asFileTree.matching {
+                include(
+                    "**/*.gradle.kts",
+                    "gradle.properties",
+                    "build-logic/src/main/kotlin/**/*.kt",
+                )
+                exclude(
+                    "**/build/**",
+                    "**/.gradle/**",
+                    "**/.kotlin/**",
+                    "**/node_modules/**",
+                    "**/.git/**",
+                    "**/.idea/**",
+                    "**/.mise/**",
+                    "**/.planning/**",
+                    "**/.claude/**",
+                    "build-logic/src/functionalTest/**",
+                )
+            },
+        )
+        report.set(reports.map { it.file("build-scripts.txt") })
+    }
+
+val checkDaemonJvm =
+    tasks.register<DaemonJvmConsistencyCheck>("checkDaemonJvm") {
+        group = "verification"
+        description =
+            "Fails when .java-version and gradle-daemon-jvm.properties name different JDKs."
+        javaVersionFile.from(layout.projectDirectory.file(".java-version").asFile)
+        daemonJvmProperties.from(
+            layout.projectDirectory.file("gradle/gradle-daemon-jvm.properties").asFile,
+        )
+        report.set(reports.map { it.file("daemon-jvm.txt") })
+    }
+
+tasks.named("check") { dependsOn(checkGsdConfigPolicy, checkBuildScripts, checkDaemonJvm) }
