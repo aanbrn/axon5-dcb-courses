@@ -1,0 +1,13 @@
+{
+  "Exclude": [
+    "^LICENSES/",
+    "gradle/wrapper/gradle-wrapper\\.jar$",
+    "^\\.planning/",
+    "^\\.claude/",
+    "^mise\\.lock$",
+    "^\\.mise/locks/"
+  ],
+  "Disable": {
+    "MaxLineLength": true
+  }
+}
