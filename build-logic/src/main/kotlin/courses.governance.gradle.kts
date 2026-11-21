@@ -2,6 +2,7 @@
 import io.github.aanbrn.courses.buildlogic.governance.BuildScriptLintCheck
 import io.github.aanbrn.courses.buildlogic.governance.ConfigPolicyCheck
 import io.github.aanbrn.courses.buildlogic.governance.DaemonJvmConsistencyCheck
+import io.github.aanbrn.courses.buildlogic.governance.PrTemplateCheck
 
 // Repository governance checks (D-13): cacheable build-logic tasks wired into `check`, so a local
 // build and CI enforce the same rules. The plugin is applied to the root project only.
@@ -62,4 +63,16 @@ val checkDaemonJvm =
         report.set(reports.map { it.file("daemon-jvm.txt") })
     }
 
-tasks.named("check") { dependsOn(checkGsdConfigPolicy, checkBuildScripts, checkDaemonJvm) }
+val checkPrTemplate =
+    tasks.register<PrTemplateCheck>("checkPrTemplate") {
+        group = "verification"
+        description =
+            "Fails when the pull request template drifts from the /gsd-ship body sections."
+        config.set(layout.projectDirectory.file(".planning/config.json"))
+        template.set(layout.projectDirectory.file(".github/PULL_REQUEST_TEMPLATE.md"))
+        report.set(reports.map { it.file("pr-template.txt") })
+    }
+
+tasks.named("check") {
+    dependsOn(checkGsdConfigPolicy, checkBuildScripts, checkDaemonJvm, checkPrTemplate)
+}
