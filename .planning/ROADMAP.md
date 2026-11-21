@@ -39,20 +39,22 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Every push and pull request runs a GitHub Actions workflow with SHA-pinned actions. It builds, tests and analyses the code, lints workflows and scripts (actionlint, zizmor, shellcheck) and scans the full history for leaked secrets. Renovate proposes grouped updates with a minimum release age for every version source (catalog, `.java-version`, `mise.toml`, Actions).
   4. `main` changes only through squash-merged pull requests from `gsd/phase-*` branches that pass the required checks. The ruleset enforces linear history and blocks force-push, and head branches are deleted after merge. The PR template mirrors the `/gsd-ship` body, and labels are synced from `labels.yml`. Secret scanning with push protection, Dependabot alerts, private vulnerability reporting, CodeQL and OpenSSF Scorecard are active.
   5. A pull request fails CI if it changes `.planning/config.json` against the declared policy or touches governance files without the `governance-approved` label. The agent must ask for confirmation before it edits governance files or runs GSD `config-set`.
-**Plans:** 11 plans
+**Plans:** 13 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Build skeleton tracer: wrapper, catalog, build-logic conventions, `:platform`, sample module, ktfmt/detekt/Dokka, TestKit (wave 1)
-- [ ] 01-02-PLAN.md — Pinned CLI tools: package-legitimacy gate, `mise.toml`/`mise.lock`, `.nvmrc`, `docs/tooling.md` (wave 1)
-- [ ] 01-03-PLAN.md — One-command formatting (Prettier, shell SPDX), `.editorconfig`, `.gitattributes`, `.gitignore`, REUSE, minimal README (wave 2)
-- [ ] 01-04-PLAN.md — Governance checks in build-logic: config policy, build-script lint, daemon JVM, tooling inventory (wave 3)
-- [ ] 01-05-PLAN.md — lefthook pre-commit hook and gradle-profiler scenarios with baseline (wave 3)
-- [ ] 01-06-PLAN.md — PR governance gate: `governance-approved` label, Renovate exemption, head-branch naming (wave 3)
-- [ ] 01-07-PLAN.md — Labels as code and the `/gsd-ship` PR template with `checkPrTemplate` (wave 4)
-- [ ] 01-08-PLAN.md — Renovate configuration: every version source, cooldown, grouping, narrow automerge (wave 3)
-- [ ] 01-09-PLAN.md — CI workflows: `ci.yml` (`ci-success`), CodeQL (actions + Kotlin spike), Scorecard, ADR-lite notes (wave 5)
-- [ ] 01-10-PLAN.md — GitHub settings as code, apply/drift scripts, Claude Code ask rules (wave 6)
-- [ ] 01-11-PLAN.md — Approval-gated application of GitHub settings, label and secrets; author-only steps (wave 7)
+- [ ] 01-01-PLAN.md — Build skeleton tracer: wrapper, catalog, `build-logic` settings and module conventions, `:platform` with every stack BOM, sample module, `.gitignore` (wave 1)
+- [ ] 01-02-PLAN.md — Quality conventions and TestKit: ktfmt + SPDX, detekt, Dokka, daemon JVM criteria, `functionalTest` suite (wave 2)
+- [ ] 01-03-PLAN.md — Pinned CLI tools: package-legitimacy gate, `mise.toml`/`mise.lock` (incl. shfmt, taplo), `.nvmrc`, `docs/tooling.md` (wave 2)
+- [ ] 01-04-PLAN.md — One-command formatting for every artifact type (Prettier, taplo, shfmt, generic text) and `.editorconfig` (wave 3)
+- [ ] 01-05-PLAN.md — REUSE compliance, minimal README, `.gitattributes` and tree normalisation (wave 4)
+- [ ] 01-06-PLAN.md — Governance checks in build-logic: config policy, build-script lint, daemon JVM (wave 4)
+- [ ] 01-07-PLAN.md — lefthook pre-commit hook and gradle-profiler scenarios with baseline (wave 5)
+- [ ] 01-08-PLAN.md — PR governance gate: `governance-approved` label, Renovate exemption, head-branch naming (wave 4)
+- [ ] 01-09-PLAN.md — Labels as code, the `/gsd-ship` PR template with `checkPrTemplate`, and `checkToolingInventory` (wave 5)
+- [ ] 01-10-PLAN.md — Renovate configuration: every version source, cooldown, grouping, narrow automerge (wave 4)
+- [ ] 01-11-PLAN.md — CI workflows: `ci.yml` (`ci-success`), CodeQL (actions + Kotlin spike), Scorecard, ADR-lite notes (wave 6)
+- [ ] 01-12-PLAN.md — GitHub settings as code, apply/drift scripts, Claude Code ask rules (wave 7)
+- [ ] 01-13-PLAN.md — Approval-gated application of GitHub settings, label and secrets by the author; read-only verification (wave 8)
 
 **Research**: Light. Topics: ktfmt KDoc formatting behaviour, isolated-projects compatibility, Spotless and REUSE header integration.
 **Approval gates**: GitHub repository settings (GH-06, GH-07) are applied via `gh` only after explicit author approval at execution time.
@@ -233,9 +235,9 @@ Some requirements are delivered and verified in one phase but set a standing rul
 
 | Requirement(s) | Established in | Standing obligation for later phases |
 |----------------|----------------|--------------------------------------|
-| INFRA-09, INFRA-10 | Phase 1 | New versions (compose images, buildpacks, `.nvmrc`, `packageManager`, npm packages) go only to their single source and are covered by Renovate. New tasks are cacheable, with declared inputs and outputs. |
+| INFRA-09, INFRA-10 | Phase 1 | New versions (compose images, buildpacks, `.nvmrc`, `packageManager`, npm packages) go only to their single source and are covered by Renovate. New tasks are cacheable, with declared inputs and outputs. Sub-scopes delivered by the phase that introduces the artefact: Phase 2 — compose and Testcontainers images (Axon Server, PostgreSQL, etc.) as catalog entries with tag and digest, passed to integration tests as task-input system properties and to compose through a Gradle-generated versions env file, with no image literals and both checked in CI (INFRA-09), plus Testcontainers singletons with local reuse (INFRA-10); Phase 5 — `packageManager` in `package.json`, exact npm versions with `pnpm-lock.yaml`, and the Gradle Node plugin convention reading `.nvmrc` (INFRA-09); Phase 6 — Paketo builder/run images and buildpacks with tag and digest (INFRA-09) and reused buildpack caches (INFRA-10). |
 | INFRA-16, TEST-09, TEST-10, TEST-13 | Phase 1 | Every new file carries an SPDX header and is auto-formatted. Public contracts and decision logic have KDoc. Biome lints TypeScript from the moment the frontend exists (Phase 5). |
-| CICD-01 | Phase 1 | Every new test level, analysis and report joins the CI workflow. |
+| CICD-01, CICD-08 | Phase 1 | Every new test level, analysis and report joins the CI workflow; coverage reporting joins in Phase 3 with Kover (TEST-08). Every new workflow, script and compose file is linted locally and in CI; `docker compose config` validation joins with the first compose file in Phase 2 (CICD-08). |
 | DOC-03, UPS-01..04 | Phase 2 | Every significant decision gets an ADR in the phase that makes it. Every upstream defect gets a record, and every workaround gets a marker. |
 | TEST-11, TEST-12, TEST-14 | Phase 2 | New tests go into the right suite, shared helpers live in `testFixtures`, and the standard toolchain applies (frontend: Vitest, Testing Library, MSW). |
 | IDEM-04 | Phase 2 | TypeID everywhere. Read models store native `uuid`, and the API boundary rejects malformed or wrong-type IDs (Phase 5 onward). |
@@ -260,7 +262,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Repository, Build & CI Foundation | 0/11 | Planned | - |
+| 1. Repository, Build & CI Foundation | 0/13 | Planned | - |
 | 2. Runtime Infrastructure & DCB Spikes | 0/TBD | Not started | - |
 | 3. Command Walking Skeleton | 0/TBD | Not started | - |
 | 4. Read Side & Live Queries | 0/TBD | Not started | - |

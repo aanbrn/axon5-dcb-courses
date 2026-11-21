@@ -825,24 +825,33 @@ Not applicable. This phase is greenfield (no rename or migration); the only pre-
 | A11 | `mise x gradle@9.9.2 -- gradle wrapper ...` can bootstrap the wrapper | Standard Stack | Use a manual Gradle download instead |
 | A12 | Spotless's FileTree target stays fast when `node_modules` appears (Phase 5) because `**/node_modules/**` directory excludes prune the walk | Pattern 2 | Slow configuration; move to per-module targets |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **D-09 wording vs two findings (decision needed from the author)**
    - Known: `permissions: read-all` fails zizmor (exit 13); a separate governance workflow cannot be part of `ci-success`.
    - Unclear: whether the author accepts `permissions: {}` + job-level `contents: read` and two required contexts (`ci-success`, `governance-success`).
    - Recommendation: accept both; record them as an ADR-lite note in `docs/adr/` (Phase 2 normalises).
+   - **RESOLVED:** author decision D-21 (CONTEXT): workflow-level `permissions: {}` with job grants and two required contexts `ci-success` and `governance-success`; implemented in plans 01-08 (`governance.yml`), 01-11 (`ci.yml`, ADR-lite `docs/adr/0001-workflow-permissions-and-required-checks.md`) and 01-12 (ruleset).
 2. **Sample module name, location and fate (discretion D-02)**
    - Recommendation: `:tooling:convention-sample` at `tooling/convention-sample` (package `io.github.aanbrn.courses.sample`), kept through Phase 1 as the live proof for detekt/Dokka/tests, removed when Phase 2's first real Kotlin module lands, with the removal recorded in the Phase 2 plan. TestKit tests stay permanent.
+   - **RESOLVED:** author decision D-22 (CONTEXT) adopts the recommendation; the module is created in plan 01-01.
 3. **Should `.claude/settings.json` be formatted by Prettier?**
    - It is the only tracked file under `.claude/`. Recommendation: include it (explicit target) and exclude the rest of `.claude/**` and all of `.planning/**`. Needs confirmation because GSD updates may rewrite it.
+   - **RESOLVED:** planner discretion (formatting is TEST-09 scope, no author decision needed): plan 01-04 Task 1 formats `.claude/settings.json` through an explicit Prettier target and keeps the rest of `.claude/**` and all of `.planning/**` excluded.
 4. **Spotless 8.11.0 or 8.12.0?**
    - Both passed the prototype; 8.12.0 was released on the research date. Recommendation: 8.11.0 (released 2026-11-02, inside the 7-day cooldown policy); Renovate will propose 8.12.0 after the cooldown.
+   - **RESOLVED:** Spotless 8.11.0 is pinned in the catalog by plan 01-01; Renovate (plan 01-10) proposes 8.12.0 once the 7-day cooldown has passed.
 5. **`gradle/actions` caching provider (A3)** and whether to supply `cache-encryption-key` (approval gate).
+   - **RESOLVED:** plan 01-11 uses the MIT-licensed `cache-provider: basic` with cache writes from `main` only; `GRADLE_ENCRYPTION_KEY` is optional (the workflow works without it) and is an approval item the author applies in plan 01-13.
 6. **README REUSE badge in Phase 1 (INFRA-16)**
    - There is no README yet and GH-02/DOC-01 are Phase 13. Recommendation: create a minimal README in Phase 1 containing the REUSE badge and a pointer to `docs/tooling.md`, or record the badge clause as completed in Phase 13 in the verification notes.
+   - **RESOLVED:** author decision D-23 (CONTEXT): a minimal README with the REUSE badge, quick start and `docs/tooling.md` pointer is created in plan 01-05; the full README stays in Phase 13.
 7. **Cross-phase: Conventional-Commit PR titles (Finding 10)** to be solved in Phase 12 (GH-05), possibly by a pre-merge title rewrite or a ship-title config. Phase 1 must not add a title lint.
+   - **RESOLVED:** deferred to Phase 12 (GH-05) by scope; Phase 1 adds no title lint (plan 01-09's PR template explicitly omits a Conventional-Commit title rule).
 8. **Whether the Kotlin leg of CodeQL ships in Phase 1** or only the `actions` language (A2). Recommendation: ship `actions` unconditionally and `java-kotlin` as a time-boxed spike.
+   - **RESOLVED:** author decision D-24 (CONTEXT) adopts the recommendation; plan 01-11 Task 3 runs the spike and records the outcome in `docs/adr/0002-codeql-kotlin-analysis.md`.
 9. **Detekt rule strictness beyond `comments`** (discretion): recommend `buildUponDefaultConfig = true` plus the six comments rules; add `MaxLineLength` at 120; revisit when real code arrives.
+   - **RESOLVED:** Claude's discretion per CONTEXT; plan 01-02 Task 1 configures `buildUponDefaultConfig = true`, the six `comments` rules and `MaxLineLength` 120, with no baseline.
 
 ## Environment Availability
 
