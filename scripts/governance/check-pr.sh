@@ -3,7 +3,8 @@
 # Pull request governance gate. Two rules, both decided here so CI and the tests run the same code:
 #   1. A PR that touches a governed file needs the maintainer's `governance-approved` label. The
 #      only exemption is a Renovate bump whose every governed diff changes versions, commit SHAs or
-#      digests and nothing else.
+#      digests and nothing else. A list at the files API limit (3000 entries) may hide a governed
+#      file, so it needs the label and is never exempt.
 #   2. A PR from a branch of this repository must come from a GSD phase branch or a bot branch.
 # All inputs arrive through environment variables, never arguments:
 #   PR_FILES_JSON        path to the JSON array returned by the pull request files API
@@ -24,6 +25,10 @@ readonly BOT_AUTHOR="renovate[bot]"
 readonly PHASE_BRANCH_PATTERN='^gsd/phase-[0-9]+(\.[0-9]+)?-[a-z0-9][a-z0-9-]*$'
 readonly RENOVATE_BRANCH_PATTERN='^renovate/.+$'
 readonly RELEASE_BRANCH_PATTERN='^release-please--.+$'
+# The pull request files API returns at most 3000 files and truncates silently. Files come back in
+# path order, so governed paths such as `mise.toml`, `renovate.json5` and `governance/**` fall off
+# first: a list this long may hide a governed file.
+readonly FILES_API_LIMIT=3000
 
 die() {
   echo "governance: $*" >&2
@@ -159,8 +164,33 @@ check_branch_name() {
   return 1
 }
 
+# A list at the files API limit may hide a governed file, so it needs the label like any governed
+# change, and the Renovate exemption is never consulted for it.
+check_files_api_limit() {
+  local count=$1
+  if has_label "$APPROVAL_LABEL"; then
+    echo "governance: the changed files list has $count entries, the files API limit;" \
+      "the pull request carries '$APPROVAL_LABEL'"
+    return 0
+  fi
+  {
+    echo "governance: the changed files list has $count entries, reaches the files API limit of" \
+      "$FILES_API_LIMIT and may hide governed files."
+    echo "governance: review the full diff and add the '$APPROVAL_LABEL' label, or split the pull request."
+  } >&2
+  return 1
+}
+
 # Rule 1: label gate with the narrow Renovate exemption.
 check_governed_files() {
+  local count
+  # Explicit exit: errexit is suspended inside a function called from an `||` list.
+  count=$(jq 'length' "$PR_FILES_JSON") || return 1
+  if [[ $count -ge $FILES_API_LIMIT ]]; then
+    check_files_api_limit "$count"
+    return
+  fi
+
   local -a touched=() blocked=() exempt=()
   local filename previous status has_patch patch is_touched is_exempt mode
   while IFS= read -r -d '' filename &&
