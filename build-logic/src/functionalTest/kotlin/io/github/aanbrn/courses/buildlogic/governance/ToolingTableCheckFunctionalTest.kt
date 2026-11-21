@@ -25,8 +25,11 @@ class ToolingTableCheckFunctionalTest {
         }
 
     @Test
-    fun `matching mise tools and inventory rows pass`() {
-        val result = fixture(MISE, inventory(ZIZMOR, REUSE, RENOVATE)).run(TASK)
+    fun `matching mise tools and inventory rows pass whatever the column padding`() {
+        val padded =
+            "|   zizmor (`zizmor`)     |  Audits workflows   |    `mise`     | `mise install` |\n"
+
+        val result = fixture(MISE, inventory(padded, REUSE, RENOVATE)).run(TASK)
 
         result.task(":$TASK")?.outcome shouldBeIn GradleFixture.PASSED
     }
@@ -76,17 +79,12 @@ class ToolingTableCheckFunctionalTest {
     }
 
     @Test
-    fun `an empty tools table and no mise-backed rows pass`() {
-        val result = fixture("[tools]\n", inventory(NOT_MISE)).run(TASK)
+    fun `an empty tools table passes without mise-backed rows and fails with one`() {
+        val fixture = fixture("[tools]\n", inventory(NOT_MISE))
 
-        result.task(":$TASK")?.outcome shouldBeIn GradleFixture.PASSED
-    }
-
-    @Test
-    fun `one mise-backed row with an empty tools table fails`() {
-        val output = fixture("[tools]\n", inventory(ZIZMOR)).runAndFail(TASK).output
-
-        output shouldContain "missing in mise.toml: zizmor"
+        fixture.run(TASK).task(":$TASK")?.outcome shouldBeIn GradleFixture.PASSED
+        fixture.file("docs/tooling.md", inventory(NOT_MISE, ZIZMOR))
+        fixture.runAndFail(TASK).output shouldContain "missing in mise.toml: zizmor"
     }
 
     @Test
@@ -122,16 +120,6 @@ class ToolingTableCheckFunctionalTest {
         val output = fixture(MISE, inventory(keyless, REUSE, RENOVATE)).runAndFail(TASK).output
 
         output shouldContain "no backticked mise.toml key in row: zizmor"
-    }
-
-    @Test
-    fun `table rows are read regardless of column padding`() {
-        val padded =
-            "|   zizmor (`zizmor`)     |  Audits workflows   |    `mise`     | `mise install` |\n"
-
-        val result = fixture(MISE, inventory(padded, REUSE, RENOVATE)).run(TASK)
-
-        result.task(":$TASK")?.outcome shouldBeIn GradleFixture.PASSED
     }
 
     @Test

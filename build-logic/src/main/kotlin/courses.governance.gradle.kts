@@ -3,6 +3,7 @@ import io.github.aanbrn.courses.buildlogic.governance.BuildScriptLintCheck
 import io.github.aanbrn.courses.buildlogic.governance.ConfigPolicyCheck
 import io.github.aanbrn.courses.buildlogic.governance.DaemonJvmConsistencyCheck
 import io.github.aanbrn.courses.buildlogic.governance.PrTemplateCheck
+import io.github.aanbrn.courses.buildlogic.governance.ToolingTableCheck
 
 // Repository governance checks (D-13): cacheable build-logic tasks wired into `check`, so a local
 // build and CI enforce the same rules. The plugin is applied to the root project only.
@@ -73,6 +74,21 @@ val checkPrTemplate =
         report.set(reports.map { it.file("pr-template.txt") })
     }
 
+val checkToolingInventory =
+    tasks.register<ToolingTableCheck>("checkToolingInventory") {
+        group = "verification"
+        description = "Fails when mise.toml and docs/tooling.md list different mise tools."
+        miseToml.set(layout.projectDirectory.file("mise.toml"))
+        inventory.set(layout.projectDirectory.file("docs/tooling.md"))
+        report.set(reports.map { it.file("tooling-inventory.txt") })
+    }
+
 tasks.named("check") {
-    dependsOn(checkGsdConfigPolicy, checkBuildScripts, checkDaemonJvm, checkPrTemplate)
+    dependsOn(
+        checkGsdConfigPolicy,
+        checkBuildScripts,
+        checkDaemonJvm,
+        checkPrTemplate,
+        checkToolingInventory,
+    )
 }
