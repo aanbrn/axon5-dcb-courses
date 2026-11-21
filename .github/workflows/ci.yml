@@ -76,9 +76,107 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      # Node.js comes from .nvmrc through setup-node (the npm:renovate tool needs it); mise only
+      # provides the CLI tools.
+      MISE_DISABLE_TOOLS: java,node
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Read the mise version
+        id: mise-version
+        run: |
+          version="$(sed -nE 's/^min_version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' mise.toml)"
+          test -n "${version}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
+        with:
+          version: ${{ steps.mise-version.outputs.version }}
+          install_args: >-
+            aqua:rhysd/actionlint zizmor shellcheck editorconfig-checker pipx:reuse npm:renovate
+
+      # Every check below lints all tracked files, whatever the pull request changed.
+      - name: Lint workflows (actionlint)
+        run: actionlint
+
+      # Online audits (impostor commits, ref confusion) need the job token to query the GitHub API.
+      - name: Audit workflows (zizmor)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: zizmor --no-progress .github/workflows
+
+      - name: Lint shell scripts (shellcheck)
+        run: git ls-files -z '*.sh' | xargs -0 -r shellcheck
+
+      - name: Check .editorconfig conformance
+        run: editorconfig-checker
+
+      - name: Check licensing metadata (REUSE)
+        run: reuse lint
+
+      # Renormalise a copy of the index, never the real one, and fail when that would change anything.
+      - name: Check line-ending and attribute normalisation
+        run: |
+          temp_index="$(mktemp)"
+          trap 'rm -f "${temp_index}"' EXIT
+          cp "$(git rev-parse --git-path index)" "${temp_index}"
+          export GIT_INDEX_FILE="${temp_index}"
+          git add --renormalize .
+          git diff --cached --exit-code --stat
+
+      - name: Validate the Renovate configuration
+        run: renovate-config-validator --strict renovate.json5
+
+      # Every tracked shell test runs, so a new scripts/**/test-*.sh joins CI without editing this file.
+      - name: Run shell tests
+        run: git ls-files -z -- 'scripts/test-*.sh' 'scripts/*/test-*.sh' | xargs -0 -r -n1 bash
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      MISE_DISABLE_TOOLS: java,node
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Read the mise version
+        id: mise-version
+        run: |
+          version="$(sed -nE 's/^min_version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' mise.toml)"
+          test -n "${version}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
+        with:
+          version: ${{ steps.mise-version.outputs.version }}
+          install_args: gitleaks
+
+      # The full history is scanned on every run; a leak already in history is reported, not purged.
+      - name: Scan the full history for secrets
+        run: gitleaks git --redact --no-banner
+
   ci-success:
     name: ci-success
-    needs: [build]
+    needs: [build, lint, secrets]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
