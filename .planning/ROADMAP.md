@@ -305,3 +305,13 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 11. DCB Teaching UI | 0/TBD | Not started | - |
 | 12. Observability, Resilience & Signed Releases | 0/TBD | Not started | - |
 | 13. Reference Documentation & Final Polish | 0/TBD | Not started | - |
+
+## Backlog
+
+### Phase 999.1: Follow-up — Phase 01 deferred UAT follow-up: Test 3 (BACKLOG)
+
+**Goal:** Resolve the UAT checkpoint deferred during Phase 01 verification
+**Source phase:** 01
+**Deferred at:** 2026-11-22 during /gsd-verify-work 01 session completion
+**Follow-ups:**
+- [ ] Test 3: GSD hooks fail in a Claude Code session started inside a git worktree: the hooks are registered in the main checkout's .claude/settings.local.json as "$CLAUDE_PROJECT_DIR"/.claude/hooks/..., the session in the worktree picks those settings up, but $CLAUDE_PROJECT_DIR points to the worktree, where the gitignored, locally installed .claude/hooks/ does not exist (SessionStart, PreToolUse, PostToolUse and Stop hooks all fail with 'No such file or directory' / MODULE_NOT_FOUND). Every GSD session run from a phase worktree therefore runs without the GSD guards. Options: install GSD locally in each worktree, or register the hooks with absolute paths to the main checkout. GSD tooling setup, not a Phase 1 deliverable. (deferred 2026-11-22)
