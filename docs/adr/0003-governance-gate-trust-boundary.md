@@ -48,9 +48,11 @@ Reasons:
 
 - The single maintainer merges every pull request. Through the ruleset, every change to `main` arrives as a
   squash-merged pull request whose diff the maintainer reads, including a rewrite of the gate.
-- Claude Code's ask rules cover every governed path (`.claude/settings.json`, kept in step with
-  `governance/governed-paths.txt` by `checkClaudeAskRules`), so the project's agent cannot change the gate
-  without the author confirming the edit (AIDEV-08).
+- Claude Code's ask rules cover every governed path for the agent's file-edit tool (`.claude/settings.json`,
+  kept in step with `governance/governed-paths.txt` by `checkClaudeAskRules`), so an edit to the gate through
+  that tool needs the author's confirmation (AIDEV-08). The rules do not match shell commands that write files,
+  so they make an unconfirmed change unlikely rather than impossible; they are a guard rail, not a security
+  boundary, and the maintainer's review of the diff remains the control.
 - T-01-20 already accepted the residual at ASVS L1. The alternatives below either run pull request-adjacent
   logic in a privileged context or do not close the gap.
 
@@ -72,7 +74,9 @@ Reasons:
 ## Consequences
 
 - `governance-success` stays one of the two required contexts (ADR-0001) and keeps catching unlabelled
-  governed changes made in good faith, whether by the maintainer or by the agent.
+  governed changes made in good faith, whether by the maintainer or by the agent. It does not stop an agent
+  change that edits the gate itself, whether through a confirmed edit or through a shell command the ask rules
+  do not match; the maintainer's diff review covers that case.
 - Before merging, the maintainer reads the diff of every governed file, with particular care for
   `.github/workflows/governance.yml`, `scripts/governance/**` and `governance/**`, because a change there can
   change the verdict of the check that runs on the same pull request.
