@@ -59,9 +59,17 @@ findings:
     severity: info
     disposition: open
     title: "Invisible characters are written literally in the Kotlin test source"
-open: 6
-total: 14
-recorded: 2026-11-21T16:30:00.000Z
+  - id: WR-08
+    severity: warning
+    disposition: fixed
+    title: "ADR-0003 overstates the ask-rule control: shell writes are not matched"
+  - id: IN-07
+    severity: info
+    disposition: open
+    title: "A future root package.json is governed as a whole file because of the deprecated renovate key"
+open: 7
+total: 16
+recorded: 2026-11-21T18:40:00.000Z
 ---
 
 # Phase 01: Code Review Disposition
@@ -82,6 +90,8 @@ recorded: 2026-11-21T16:30:00.000Z
 | WR-06 | warning | deferred | 01-REVIEW.md — re-review after gap closure; deferred by the author (2026-11-21): accepted residual for a one-maintainer repository, recorded in docs/adr/0003-governance-gate-trust-boundary.md |
 | WR-07 | warning | fixed | 01-REVIEW.md — re-review after gap closure; fixed by plan 01-19 |
 | IN-06 | info | open | 01-REVIEW.md — re-review after gap closure |
+| WR-08 | warning | fixed | 01-REVIEW.md — re-review after gap round 2; fixed by the orchestrator in 5980b3d (ADR-0003 wording) |
+| IN-07 | info | open | 01-REVIEW.md — re-review after gap round 2 |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
