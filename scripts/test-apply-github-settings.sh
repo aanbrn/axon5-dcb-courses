@@ -94,10 +94,10 @@ make_state() {
           {"id": 42, "name": "main", "source_type": "Repository", "enforcement": "active"}]' \
       >"$dir/repos__$base""__rulesets"
     jq '. + {id: 42, node_id: "RRS_x", source_type: "Repository", source: "owner/repo",
-             created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-02T00:00:00Z",
-             _links: {}, current_user_can_bypass: "always"}
-        | .rules |= (reverse | map(if .type == "pull_request"
-                                   then .parameters += {required_reviewers: []} else . end))' \
+      created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-02T00:00:00Z",
+      _links: {}, current_user_can_bypass: "always"}
+      | .rules |= (reverse | map(if .type == "pull_request"
+        then .parameters += {required_reviewers: []} else . end))' \
       "$RULESET" | jq "$ruleset_filter" >"$dir/repos__$base""__rulesets__42"
   fi
   case $alerts in
@@ -267,7 +267,7 @@ assert_out "starting point, --apply" "applied; the live settings match"
 assert_out "starting point, --apply" "RepositoryRole 5 mode=pull_request"
 assert_body "starting point, --apply patches only differences" "PATCH $R" \
   '(keys | sort) == ["allow_auto_merge","allow_merge_commit","allow_rebase_merge","allow_update_branch","delete_branch_on_merge","squash_merge_commit_message","squash_merge_commit_title"]
-   and .allow_merge_commit == false and .squash_merge_commit_title == "PR_TITLE"'
+    and .allow_merge_commit == false and .squash_merge_commit_title == "PR_TITLE"'
 
 # --- scoped runs ---------------------------------------------------------------------------------
 
@@ -371,7 +371,7 @@ assert_out "push protection off, --apply" "security.secret_scanning_push_protect
 assert_writes "push protection off, --apply" "PATCH $R"
 assert_body "push protection off, --apply" "PATCH $R" \
   '.security_and_analysis.secret_scanning_push_protection.status == "enabled"
-   and (.security_and_analysis | has("secret_scanning") | not)'
+    and (.security_and_analysis | has("secret_scanning") | not)'
 
 fresh
 make_state "$FX" . . error

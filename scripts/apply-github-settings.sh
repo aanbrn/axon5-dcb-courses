@@ -36,11 +36,11 @@ def sort_params:
   | (if has("allowed_merge_methods") then .allowed_merge_methods |= sort else . end);
 def norm:
   del(.id, .node_id, ._links, .created_at, .updated_at, .source, .source_type,
-      .current_user_can_bypass)
+    .current_user_can_bypass)
   | (if has("rules") then
-       .rules |= (map(if has("parameters") then .parameters |= sort_params else . end)
-                  | sort_by(.type))
-     else . end)
+    .rules |= (map(if has("parameters") then .parameters |= sort_params else . end)
+      | sort_by(.type))
+  else . end)
   | (if has("bypass_actors") then .bypass_actors |= sort_by(.actor_type, .actor_id) else . end);
 def proj($d):
   if ($d | type) == "object" and type == "object" then
