@@ -43,9 +43,25 @@ findings:
     severity: info
     disposition: open
     title: "The governance gate and shell tests depend on unpinned runner tools"
-open: 5
-total: 10
-recorded: 2026-11-21T13:05:00.000Z
+  - id: WR-05
+    severity: warning
+    disposition: open
+    title: "`check-pr.sh` ignores the exit status of the `jq` process substitution, so a mid-stream `jq` failure drops files and the gate passes"
+  - id: WR-06
+    severity: warning
+    disposition: open
+    title: "The gate runs from the pull request's own merge commit, so a PR can edit the gate that is meant to hold it"
+  - id: WR-07
+    severity: warning
+    disposition: open
+    title: "The governed boundary omits files that carry the same authority as governed ones"
+  - id: IN-06
+    severity: info
+    disposition: open
+    title: "Invisible characters are written literally in the Kotlin test source"
+open: 9
+total: 14
+recorded: 2026-11-21T16:30:00.000Z
 ---
 
 # Phase 01: Code Review Disposition
@@ -62,6 +78,10 @@ recorded: 2026-11-21T13:05:00.000Z
 | IN-03 | info | open | 01-REVIEW.md |
 | IN-04 | info | open | 01-REVIEW.md |
 | IN-05 | info | open | 01-REVIEW.md |
+| WR-05 | warning | open | 01-REVIEW.md — re-review after gap closure |
+| WR-06 | warning | open | 01-REVIEW.md — re-review after gap closure |
+| WR-07 | warning | open | 01-REVIEW.md — re-review after gap closure |
+| IN-06 | info | open | 01-REVIEW.md — re-review after gap closure |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
