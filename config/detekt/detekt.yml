@@ -1,16 +1,28 @@
+# Strict overrides on top of the detekt defaults (buildUponDefaultConfig). There is no baseline file.
+#
+# The `excludes` lists below are detekt's own defaults for test source sets plus the TestKit test
+# classes (`*FunctionalTest.kt`): the defaults match `**/test/**`, which does not match the
+# `functionalTest` source set, and tests are named in backticked prose. The shared TestKit fixture
+# is not excluded and stays fully documented.
 comments:
   UndocumentedPublicClass:
     active: true
   UndocumentedPublicFunction:
     active: true
+    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**', '**/*FunctionalTest.kt']
   UndocumentedPublicProperty:
     active: true
+    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**', '**/*FunctionalTest.kt']
   OutdatedDocumentation:
     active: true
   KDocReferencesNonPublicProperty:
     active: true
   EndOfSentenceFormat:
     active: true
+
+naming:
+  FunctionNaming:
+    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**', '**/*FunctionalTest.kt']
 
 style:
   MaxLineLength:
