@@ -72,6 +72,12 @@ Requirements: INFRA-01, INFRA-09, INFRA-10, INFRA-11, INFRA-12, INFRA-13, INFRA-
 - Exact detekt rule set strictness beyond "no baseline, `comments` enabled".
 - Concrete file names for the policy, ruleset and apply script, and the colour palette for labels.
 
+### Planning-time Resolutions (author-confirmed 2026-11-21, after research)
+- **D-21 (amends D-09):** Workflows declare `permissions: {}` at workflow level with minimal job-level grants (`contents: read` etc.) instead of `permissions: read-all`, because `read-all` fails zizmor. `governance.yml` stays a separate workflow with its own aggregating `governance-success` job, so the ruleset requires two status checks: `ci-success` and `governance-success`. Record the deviation from D-09 as an ADR-lite note under `docs/adr/`.
+- **D-22 (resolves D-02 discretion):** The sample module is `:tooling:convention-sample` at `tooling/convention-sample` (package `io.github.aanbrn.courses.sample`). It stays through Phase 1 as the live proof for detekt, Dokka, tests and SPDX headers and is removed when Phase 2's first real Kotlin module lands; the TestKit tests stay permanent.
+- **D-23 (INFRA-16 scope):** Phase 1 creates a minimal `README.md` with the REUSE badge, a quick start (`mise install`, `./gradlew build`) and a pointer to `docs/tooling.md`. The full README is Phase 13.
+- **D-24 (CodeQL scope):** `codeql.yml` analyses the `actions` language unconditionally; the `java-kotlin` language is a time-boxed spike. If it cannot run green within the time box, defer it with a recorded reason instead of blocking the phase.
+
 </decisions>
 
 <canonical_refs>
