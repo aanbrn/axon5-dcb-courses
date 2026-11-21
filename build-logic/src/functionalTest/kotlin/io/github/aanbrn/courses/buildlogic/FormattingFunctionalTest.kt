@@ -142,4 +142,18 @@ class FormattingFunctionalTest {
         fixture.run("spotlessMiscCheck").task(":spotlessMiscCheck")?.outcome shouldBe
             TaskOutcome.SUCCESS
     }
+
+    @Test
+    fun `profiler output directories inside the project are never formatted`() {
+        val fixture = GradleFixture.standard(projectDir)
+        fixture.run("spotlessApply")
+        // gradle-profiler writes a Gradle user home and its results into the project directory.
+        fixture.file("gradle-user-home/caches/gc.properties", "key=value   \nother=1")
+        fixture.file("profile-out/results.properties", "key=value   \nother=1")
+        fixture.file("profile-out-2/results.properties", "key=value   \nother=1")
+
+        // The task is up to date: the excluded files are not even inputs of it.
+        fixture.run("spotlessMiscCheck").task(":spotlessMiscCheck")?.outcome shouldBe
+            TaskOutcome.UP_TO_DATE
+    }
 }
