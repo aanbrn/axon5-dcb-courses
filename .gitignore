@@ -4,3 +4,6 @@
 /.claude/*
 !/.claude/settings.json
 !/.claude/CLAUDE.md
+
+# GSD state-contract snapshot: derived from ROADMAP.md/STATE.md and rewritten at every step boundary
+/.planning/state.json
