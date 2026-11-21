@@ -9,10 +9,32 @@ comments:
     active: true
   UndocumentedPublicFunction:
     active: true
-    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**', '**/*FunctionalTest.kt']
+    excludes:
+      [
+        "**/test/**",
+        "**/androidTest/**",
+        "**/commonTest/**",
+        "**/jvmTest/**",
+        "**/androidUnitTest/**",
+        "**/androidInstrumentedTest/**",
+        "**/jsTest/**",
+        "**/iosTest/**",
+        "**/*FunctionalTest.kt",
+      ]
   UndocumentedPublicProperty:
     active: true
-    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**', '**/*FunctionalTest.kt']
+    excludes:
+      [
+        "**/test/**",
+        "**/androidTest/**",
+        "**/commonTest/**",
+        "**/jvmTest/**",
+        "**/androidUnitTest/**",
+        "**/androidInstrumentedTest/**",
+        "**/jsTest/**",
+        "**/iosTest/**",
+        "**/*FunctionalTest.kt",
+      ]
   OutdatedDocumentation:
     active: true
   KDocReferencesNonPublicProperty:
@@ -22,7 +44,18 @@ comments:
 
 naming:
   FunctionNaming:
-    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**', '**/*FunctionalTest.kt']
+    excludes:
+      [
+        "**/test/**",
+        "**/androidTest/**",
+        "**/commonTest/**",
+        "**/jvmTest/**",
+        "**/androidUnitTest/**",
+        "**/androidInstrumentedTest/**",
+        "**/jsTest/**",
+        "**/iosTest/**",
+        "**/*FunctionalTest.kt",
+      ]
 
 style:
   MaxLineLength:

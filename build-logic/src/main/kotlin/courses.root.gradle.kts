@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import io.github.aanbrn.courses.buildlogic.VerifyNodeVersion
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 
 plugins {
@@ -21,6 +22,7 @@ val excluded =
         "**/.planning/**",
         "**/.claude/**",
         "**/.mise/**",
+        "gradle/wrapper/**",
         "LICENSES/**",
     )
 
@@ -36,6 +38,22 @@ fun sources(vararg globs: String): FileTree =
         exclude(excluded)
     }
 
+// Spotless runs Prettier with the `node` on PATH. The environment provides the version named in
+// `.nvmrc` (mise locally, setup-node in CI) and this task fails fast when the active major differs.
+val verifyNodeVersion =
+    tasks.register<VerifyNodeVersion>("verifyNodeVersion") {
+        nvmrc.set(layout.projectDirectory.file(".nvmrc"))
+        output.set(layout.buildDirectory.file("verifyNodeVersion/node-major.txt"))
+        // The result depends on the environment, not on declared inputs, so it is checked on every
+        // build.
+        outputs.upToDateWhen { false }
+    }
+
+// The one tracked file under `.claude` that is project-owned; the rest of `.claude` and all of
+// `.planning` belong to GSD and stay outside the formatting contract.
+val claudeSettings: FileTree =
+    layout.projectDirectory.asFileTree.matching { include(".claude/settings.json") }
+
 spotless {
     kotlin {
         target(sources("**/*.kt"))
@@ -49,7 +67,20 @@ spotless {
         // lands above the first statement.
         licenseHeaderFile("config/spotless/license-header.txt", "[^/\\s]")
     }
+    format("prettier") {
+        target(
+            sources("**/*.json", "**/*.json5", "**/*.yml", "**/*.yaml", "**/*.md"),
+            claudeSettings,
+        )
+        prettier(mapOf("prettier" to libs.versions.prettier.get())).configFile(".prettierrc.yaml")
+    }
 }
+
+// The verified Node major is an input of every Prettier task, so a cached result never survives a
+// Node switch.
+tasks
+    .matching { it.name.startsWith("spotlessPrettier") }
+    .configureEach { inputs.files(verifyNodeVersion.flatMap { it.output }) }
 
 // build-logic is a separate included build: root `check` reaches its detekt, Dokka and TestKit
 // checks through it.

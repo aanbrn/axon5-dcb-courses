@@ -1,0 +1,7 @@
+# Prettier settings for JSON, JSON5, YAML and Markdown. The values below must equal the matching
+# sections of .editorconfig, which editorconfig-checker verifies on the formatted tree.
+printWidth: 100
+tabWidth: 2
+useTabs: false
+endOfLine: lf
+proseWrap: preserve
