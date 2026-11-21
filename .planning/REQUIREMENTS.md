@@ -181,10 +181,10 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **GH-01**: Repository metadata is complete and managed as code (applied via `gh` after author approval): description, topics, homepage (docs site), social preview image, unused features (e.g. wiki) disabled
 - [ ] **GH-02**: README showcases the project with badges (CI, coverage, license, OpenSSF Scorecard, Axon/Kotlin/Spring Boot versions) and a UI screenshot or animation
 - [ ] **GH-03**: Community health files exist: CONTRIBUTING, CODE_OF_CONDUCT, SUPPORT, CODEOWNERS, and SECURITY.md stating supported versions (latest release and `main`), reporting only via private vulnerability reporting, realistic response timelines (acknowledgement, assessment, fix, disclosure), scope (non-production teaching reference, no authentication in v1; dependency vulnerabilities routed upstream) and a safe-harbour statement
-- [ ] **GH-08**: A single PR template matches the structure of the `/gsd-ship` PR body (summary, user stories and acceptance criteria, risks and dependencies, verification, checklist), so GSD-generated and manual PRs (Renovate, contributors) look the same
+- [x] **GH-08**: A single PR template matches the structure of the `/gsd-ship` PR body (summary, user stories and acceptance criteria, risks and dependencies, verification, checklist), so GSD-generated and manual PRs (Renovate, contributors) look the same
 - [ ] **GH-09**: YAML issue forms exist for bug report (mandatory reproduction and versions), feature request and documentation feedback; blank issues are disabled and `config.yml` routes questions to Discussions and vulnerabilities to private vulnerability reporting
 - [ ] **GH-10**: GitHub Discussions is enabled with categories (Q&A, Ideas, Show and tell) and discussion templates
-- [ ] **GH-11**: Labels are managed as code (`labels.yml` synced by CI), aligned with Conventional Commit types, release-please, Renovate and the upstream register
+- [x] **GH-11**: Labels are managed as code (`labels.yml` synced by CI), aligned with Conventional Commit types, release-please, Renovate and the upstream register
 - [ ] **GH-12**: In-repository templates exist for ADRs (MADR), documentation pages, Event Modeling slice descriptions, upstream records (`docs/upstream/`) and upstream issues (minimal reproduction), and are used by the project skills
 - [ ] **GH-13**: `CITATION.cff` enables GitHub's "Cite this repository" for references from articles and talks
 - [ ] **GH-04**: Documentation site is published to GitHub Pages automatically from CI
@@ -201,7 +201,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Developer Tooling
 
-- [ ] **TOOL-01**: All developer and CI tools are inventoried in `docs/tooling.md` (purpose, version source, installation): git, gh, Docker-compatible engine (colima/OrbStack/Docker Desktop), docker compose, pack, JDK, Node.js/pnpm, lefthook, gitleaks, trivy, grype, syft, cosign, Structurizr, act, etc.
+- [x] **TOOL-01**: All developer and CI tools are inventoried in `docs/tooling.md` (purpose, version source, installation): git, gh, Docker-compatible engine (colima/OrbStack/Docker Desktop), docker compose, pack, JDK, Node.js/pnpm, lefthook, gitleaks, trivy, grype, syft, cosign, Structurizr, act, etc.
 - [ ] **TOOL-02**: CLI tools not managed by Gradle are pinned in `mise.toml` and kept up to date by Renovate
 - [ ] **TOOL-03**: A `doctor` command verifies the local environment (required tools and versions, Docker engine, Testcontainers connectivity) and explains how to fix problems
 - [ ] **TOOL-04**: The setup works with colima (Testcontainers `DOCKER_HOST`/Ryuk configuration documented and verified) as well as Docker Desktop
@@ -394,10 +394,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GH-01 | Phase 13 | Pending |
 | GH-02 | Phase 13 | Pending |
 | GH-03 | Phase 13 | Pending |
-| GH-08 | Phase 1 | Pending |
+| GH-08 | Phase 1 | Complete |
 | GH-09 | Phase 13 | Pending |
 | GH-10 | Phase 13 | Pending |
-| GH-11 | Phase 1 | Pending |
+| GH-11 | Phase 1 | Complete |
 | GH-12 | Phase 2 | Pending |
 | GH-13 | Phase 13 | Pending |
 | GH-04 | Phase 7 | Pending |
@@ -408,7 +408,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | UPS-02 | Phase 2 | Pending |
 | UPS-03 | Phase 2 | Pending |
 | UPS-04 | Phase 2 | Pending |
-| TOOL-01 | Phase 1 | Pending |
+| TOOL-01 | Phase 1 | Complete |
 | TOOL-02 | Phase 1 | Pending |
 | TOOL-03 | Phase 2 | Pending |
 | TOOL-04 | Phase 2 | Pending |
