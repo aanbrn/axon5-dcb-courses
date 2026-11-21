@@ -391,6 +391,145 @@ run_case "R1 a NUL in a governed entry's patch fails the gate instead of droppin
   "could not be read: jq exited with status" \
   PR_FILES_JSON="$nul_patch" PR_LABELS_JSON="$LABEL_NONE"
 
+# The same NUL in the only entry, which is not governed: an unreadable entry fails the gate even
+# when it is not governed, because nothing after it can be trusted.
+nul_only_patch=$(
+  files_json nul-only-patch <<'JSON'
+[{"filename": "docs/tooling.md", "status": "modified", "patch": "@@ -1 +1 @@\n-a\n+b\u0000c"}]
+JSON
+)
+run_case "R2 a NUL in the patch of the only, ungoverned entry fails the gate" 1 \
+  "could not be read: jq exited with status" \
+  PR_FILES_JSON="$nul_only_patch" PR_LABELS_JSON="$LABEL_NONE"
+
+nul_filename=$(
+  files_json nul-filename <<'JSON'
+[{"filename": "docs/a\u0000b.md", "status": "added"}]
+JSON
+)
+run_case "R3 a NUL in a filename fails the gate" 1 "could not be read: jq exited with status" \
+  PR_FILES_JSON="$nul_filename" PR_LABELS_JSON="$LABEL_NONE"
+
+nul_previous=$(
+  files_json nul-previous <<'JSON'
+[{"filename": "docs/new.md", "previous_filename": "docs/old\u0000.md", "status": "renamed"}]
+JSON
+)
+run_case "R4 a NUL in a previous_filename fails the gate" 1 \
+  "could not be read: jq exited with status" \
+  PR_FILES_JSON="$nul_previous" PR_LABELS_JSON="$LABEL_NONE"
+
+run_case "R5 the label never approves an unreadable list" 1 \
+  "could not be read: jq exited with status" \
+  PR_FILES_JSON="$nul_patch" PR_LABELS_JSON="$LABEL_APPROVED"
+run_case "R6 the renovate exemption is never consulted for an unreadable list" 1 \
+  "could not be read: jq exited with status" \
+  PR_FILES_JSON="$nul_patch" PR_LABELS_JSON="$LABEL_NONE" \
+  PR_AUTHOR="$BOT" PR_HEAD_REF=renovate/mise
+
+# A jq that misbehaves on demand, so each guard is proven on its own. fake_jq writes a wrapper named
+# jq and prints its directory; a case puts that directory first on PATH. Every call that does not
+# stream records (validation, `length`, the label checks) goes to the real jq.
+#   FAKE_JQ_REAL  absolute path of the real jq
+#   FAKE_JQ_MODE  pass | exit-after-output | drop-entries | torn-record
+#   FAKE_JQ_LOG   optional file that receives a listing of the temporary directory
+REAL_JQ=$(command -v jq)
+
+fake_jq() {
+  local dir="$TMP/fake-jq"
+  mkdir -p "$dir"
+  cat >"$dir/jq" <<'WRAPPER'
+#!/usr/bin/env bash
+streams_records=0
+for arg in "$@"; do
+  [[ $arg == --raw-output0 ]] && streams_records=1
+done
+if [[ $streams_records -eq 0 ]]; then
+  exec "$FAKE_JQ_REAL" "$@"
+fi
+if [[ -n ${FAKE_JQ_LOG:-} ]]; then
+  ls -A "${TMPDIR:-/tmp}" >>"$FAKE_JQ_LOG"
+fi
+case ${FAKE_JQ_MODE:-pass} in
+pass)
+  exec "$FAKE_JQ_REAL" "$@"
+  ;;
+exit-after-output)
+  "$FAKE_JQ_REAL" "$@"
+  exit 3
+  ;;
+drop-entries)
+  printf '%s\0' docs/tooling.md '' modified 0 ''
+  ;;
+torn-record)
+  printf '%s\0' docs/tooling.md '' modified
+  ;;
+esac
+WRAPPER
+  chmod +x "$dir/jq"
+  echo "$dir"
+}
+
+# run_tmpdir_case <name> <expected exit code> <expected output regex> <tmpdir> <log> [VAR=value ...]
+# Like run_case, but the gate gets its own empty temporary directory. The case passes only when the
+# gate exits as expected, the records file existed in that directory during the run (the fake jq
+# logs a listing, so the case cannot pass vacuously) and nothing is left in the directory afterwards.
+run_tmpdir_case() {
+  local name=$1 expected_code=$2 expected_output=$3 tmpdir=$4 log=$5
+  shift 5
+  mkdir -p "$tmpdir"
+  : >"$log"
+  local output code=0 leftover during
+  output=$(env -i PATH="$PATH" GOVERNED_PATHS_FILE="$GOVERNED" "${DEFAULT_ENV[@]}" \
+    TMPDIR="$tmpdir" FAKE_JQ_LOG="$log" "$@" bash "$CHECK" 2>&1) || code=$?
+  leftover=$(find "$tmpdir" -mindepth 1 -print)
+  during=$(grep -c 'check-pr-records\.' "$log" || true)
+  if [[ $code -eq $expected_code && $during -ge 1 && -z $leftover ]] &&
+    grep -Eq -- "$expected_output" <<<"$output"; then
+    passed=$((passed + 1))
+    echo "ok   - $name"
+  else
+    failed=$((failed + 1))
+    echo "FAIL - $name (exit $code, expected $expected_code; records file seen during run: $during;" \
+      "left behind: ${leftover:-nothing}; output pattern: $expected_output)"
+    while IFS= read -r line; do
+      echo "       | $line"
+    done <<<"$output"
+  fi
+}
+
+fake_dir=$(fake_jq)
+
+run_case "R7 a jq that exits non-zero after writing every record fails on its status alone" 1 \
+  "jq exited with status 3" \
+  PATH="$fake_dir:$PATH" FAKE_JQ_REAL="$REAL_JQ" FAKE_JQ_MODE=exit-after-output \
+  PR_FILES_JSON="$docs_only" PR_LABELS_JSON="$LABEL_NONE"
+
+two_entries=$(
+  files_json two-entries <<'JSON'
+[
+{"filename": "docs/tooling.md", "status": "modified"},
+{"filename": ".github/workflows/ci.yml", "status": "modified"}
+]
+JSON
+)
+run_case "R8 a jq that exits 0 one record short fails on the completeness check alone" 1 \
+  "1 of 2 entries were evaluated" \
+  PATH="$fake_dir:$PATH" FAKE_JQ_REAL="$REAL_JQ" FAKE_JQ_MODE=drop-entries \
+  PR_FILES_JSON="$two_entries" PR_LABELS_JSON="$LABEL_NONE"
+run_case "R9 a torn record fails the completeness check" 1 "0 of 1 entries were evaluated" \
+  PATH="$fake_dir:$PATH" FAKE_JQ_REAL="$REAL_JQ" FAKE_JQ_MODE=torn-record \
+  PR_FILES_JSON="$docs_only" PR_LABELS_JSON="$LABEL_NONE"
+
+run_tmpdir_case "R10 no records file is left behind when the gate fails" 1 \
+  "jq exited with status 3" "$TMP/r10-tmp" "$TMP/r10.log" \
+  PATH="$fake_dir:$PATH" FAKE_JQ_REAL="$REAL_JQ" FAKE_JQ_MODE=exit-after-output \
+  PR_FILES_JSON="$docs_only" PR_LABELS_JSON="$LABEL_NONE"
+run_tmpdir_case "R11 no records file is left behind when the gate passes" 0 \
+  "no governed file is touched" "$TMP/r11-tmp" "$TMP/r11.log" \
+  PATH="$fake_dir:$PATH" FAKE_JQ_REAL="$REAL_JQ" FAKE_JQ_MODE=pass \
+  PR_FILES_JSON="$docs_only" PR_LABELS_JSON="$LABEL_NONE"
+
 # --- governed paths grammar (WR-04) -------------------------------------------------------------
 # The same case table runs against GovernedPaths.parse in build-logic (GovernedPathsFormatFunctionalTest).
 
