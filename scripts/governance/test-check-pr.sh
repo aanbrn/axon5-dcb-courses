@@ -374,6 +374,23 @@ run_case "3000 entries from renovate never take the version-only exemption" 1 "f
   GOVERNED_PATHS_FILE="$limit_globs" PR_FILES_JSON="$many_3000" PR_LABELS_JSON="$LABEL_NONE" \
   PR_AUTHOR="$BOT" PR_HEAD_REF=renovate/mise
 
+# --- reading the changed files list (WR-05) -----------------------------------------------------
+# The gate must either evaluate every entry or fail; it never passes a list it did not read.
+
+# A NUL cannot travel in the NUL-delimited record stream, so jq aborts part-way through the list.
+# The NUL is the JSON escape \u0000, so the fixture file itself holds no raw NUL byte.
+nul_patch=$(
+  files_json nul-patch <<'JSON'
+[
+{"filename": "docs/tooling.md", "status": "modified"},
+{"filename": ".github/workflows/ci.yml", "status": "modified", "patch": "@@ -1 +1 @@\n-a\n+b\u0000c"}
+]
+JSON
+)
+run_case "R1 a NUL in a governed entry's patch fails the gate instead of dropping the entry" 1 \
+  "could not be read: jq exited with status" \
+  PR_FILES_JSON="$nul_patch" PR_LABELS_JSON="$LABEL_NONE"
+
 # --- governed paths grammar (WR-04) -------------------------------------------------------------
 # The same case table runs against GovernedPaths.parse in build-logic (GovernedPathsFormatFunctionalTest).
 

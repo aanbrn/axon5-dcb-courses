@@ -4,7 +4,8 @@
 #   1. A PR that touches a governed file needs the maintainer's `governance-approved` label. The
 #      only exemption is a Renovate bump whose every governed diff changes versions, commit SHAs or
 #      digests and nothing else. A list at the files API limit (3000 entries) may hide a governed
-#      file, so it needs the label and is never exempt.
+#      file, so it needs the label and is never exempt. A list that cannot be read completely fails,
+#      with or without the label.
 #   2. A PR from a branch of this repository must come from a GSD phase branch or a bot branch.
 # All inputs arrive through environment variables, never arguments:
 #   PR_FILES_JSON        path to the JSON array returned by the pull request files API
@@ -33,9 +34,17 @@ readonly RELEASE_BRANCH_PATTERN='^release-please--.+$'
 # first: a list this long may hide a governed file.
 readonly FILES_API_LIMIT=3000
 
+# Temporary file holding the per-file records. It is a script-level global, not a local of
+# `check_governed_files`, so the EXIT trap still sees it after the function has returned.
+RECORDS_FILE=''
+
 die() {
   echo "governance: $*" >&2
   exit 1
+}
+
+cleanup() {
+  [[ -z $RECORDS_FILE ]] || rm -f -- "$RECORDS_FILE"
 }
 
 # Succeeds when the path matches the glob. `**` matches any characters including `/`; every other
@@ -221,6 +230,22 @@ check_governed_files() {
     return
   fi
 
+  # The records go to a file so that jq's exit status can be read before any entry is evaluated.
+  # The status of a process substitution is lost and `set -e` does not see it, so a jq failure
+  # part-way through the list used to end the loop quietly and drop the remaining entries (WR-05).
+  # Errexit is suspended in this function because `main` calls it from an `||` list, so every
+  # status is handled explicitly.
+  RECORDS_FILE=$(mktemp "${TMPDIR:-/tmp}/check-pr-records.XXXXXX") || return 1
+  local jq_status=0
+  jq --raw-output0 '.[] | (
+      .filename, (.previous_filename // ""), (.status // ""),
+      (if (.patch | type) == "string" then "1" else "0" end), (.patch // "")
+    )' "$PR_FILES_JSON" >"$RECORDS_FILE" || jq_status=$?
+  if [[ $jq_status -ne 0 ]]; then
+    echo "governance: the changed files list could not be read: jq exited with status $jq_status" >&2
+    return 1
+  fi
+
   local -a touched=() blocked=() exempt=()
   local filename previous status has_patch patch is_touched is_exempt mode
   while IFS= read -r -d '' filename &&
@@ -254,10 +279,7 @@ check_governed_files() {
       blocked+=("$filename")
       [[ -n $previous ]] && blocked+=("$previous")
     fi
-  done < <(jq --raw-output0 '.[] | (
-      .filename, (.previous_filename // ""), (.status // ""),
-      (if (.patch | type) == "string" then "1" else "0" end), (.patch // "")
-    )' "$PR_FILES_JSON")
+  done <"$RECORDS_FILE"
 
   if [[ ${#touched[@]} -eq 0 ]]; then
     echo "governance: no governed file is touched"
@@ -281,6 +303,7 @@ check_governed_files() {
 }
 
 main() {
+  trap cleanup EXIT
   load_globs "${GOVERNED_PATHS_FILE:-governance/governed-paths.txt}"
   validate_inputs
 
