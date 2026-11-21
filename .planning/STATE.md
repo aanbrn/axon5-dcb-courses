@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Repository, Build & CI Foundation
 status: executing
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-11-21T09:06:25.398Z"
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-11-21T09:34:55.297Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 01 execution started
-state_head: bcf2c500849418ea586f08a22ec116a445c816fc
+state_head: 4e435f8f6de82025b747bb6071d65c768ea0dfb9
 progress:
   total_phases: 13
   completed_phases: 0
   total_plans: 14
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 01 (Repository, Build & CI Foundation) — EXECUTING
-Plan: 3 of 14
+Plan: 4 of 14
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 01 execution started
 
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 0%
 |------|----------|-------|-------|
 | Phase 01 P01 | 7 min | 2 tasks | 17 files |
 | Phase 01 P02 | 14 min | 2 tasks | 11 files |
+| Phase 01 P03 | 25 min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,8 @@ Recent decisions affecting current work:
 - [Phase 01]: Gradle dependency locking and verification-metadata.xml deferred to Phase 6 (CICD-05); Jackson BOM pinned to 3.1.8 as declared by spring-boot-dependencies 4.1.3
 - [Phase 01]: detekt analyses the functionalTest source set; test classes (*FunctionalTest.kt) get detekt's default test exclusions for FunctionNaming and the undocumented-function/property rules, GradleFixture stays fully checked — detekt's built-in test exclusions match **/test/** only; prose test names are the project convention; no baseline or disabled rules
 - [Phase 01]: TestKit fixtures run :lib tasks, never root build/check, and use the repository's real :platform — Root check reaches build-logic check and would recurse into functionalTest; an empty platform leaves test dependencies unversioned
+- [Phase 01]: npm:renovate installed with one exact-version trust-policy exception (trust_policy_excludes = [@yarnpkg/libzip@3.2.2]), approved by the author; trust policy not disabled globally — libzip 3.2.2 was published manually by the Yarn lead maintainer without provenance (3.2.0 had it); remove the exception when renovate no longer pulls it
+- [Phase 01]: mise.lock enforced with locked = true; .mise/locks sidecar lockfiles are committed with it — mise.lock references the npm and pipx sidecar lockfiles; without them a fresh clone cannot verify those tools
 
 ### Pending Todos
 
@@ -97,6 +100,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T09:06:25.372Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-11-21T09:34:55.273Z
+Stopped at: Completed 01-03-PLAN.md
 Resume file: None
