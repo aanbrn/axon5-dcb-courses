@@ -2,17 +2,17 @@
 gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Repository, Build & CI Foundation
-status: executing
-stopped_at: Completed 01-16-PLAN.md
-last_updated: "2026-11-21T14:26:38.822Z"
+status: verifying
+stopped_at: Completed 01-17-PLAN.md
+last_updated: "2026-11-21T14:30:34.888Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 01 execution started
-state_head: 031ab23095c699734ad9a65c7ce4728666c8b585
+state_head: 25cc123923bc206be55e62027c3046d2041faf94
 progress:
   total_phases: 13
   completed_phases: 0
   total_plans: 17
-  completed_plans: 16
+  completed_plans: 17
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 Phase: 01 (Repository, Build & CI Foundation) — EXECUTING
 Plan: 17 of 17
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-11-21 — Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
@@ -72,6 +72,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P14 | 10 min | 3 tasks | 0 files |
 | Phase 01 P15 | 5 min | 3 tasks | 6 files |
 | Phase 01 P16 | 12 min | 2 tasks | 6 files |
+| Phase 01 P17 | 15 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,7 @@ Recent decisions affecting current work:
 - [Phase 01]: Plan 01-14: author approved apply-without-ruleset; repository and security settings, governance-approved label and GRADLE_ENCRYPTION_KEY are live, SETTINGS_DRIFT_SECTIONS=repository security, ruleset main deferred until ci-success and governance-success are green on the phase PR
 - [Phase 01]: 01-15: a file list at the 3000-entry files API limit needs the governance-approved label instead of failing unconditionally, and never takes the renovate exemption
 - [Phase 01]: 01-16: governed-paths grammar shared by check-pr.sh load_globs and GovernedPaths.parse; NUL bytes converted with tr so both parsers fail closed — bash read drops NUL silently while Kotlin keeps it; any input one parser keeps and the other drops must fail closed in both (WR-04)
+- [Phase 01]: Governed-path list covers the enforcement surface (29 entries); version catalog, gradlew.bat, module conventions and tests stay outside, documented in the file
 
 ### Pending Todos
 
@@ -133,6 +135,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T14:26:38.791Z
-Stopped at: Completed 01-16-PLAN.md
+Last session: 2026-11-21T14:30:34.855Z
+Stopped at: Completed 01-17-PLAN.md
 Resume file: None

@@ -213,9 +213,9 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **AIDEV-03**: `.claude/` is tracked selectively: only `.claude/settings.json` (marketplace and plugin registration) and `.claude/CLAUDE.md` are committed; the GSD installation and `settings.local.json` are ignored, and the GSD version and install command are recorded in the tooling inventory and checked by `doctor`
 - [ ] **AIDEV-04**: Shared MCP servers (Context7 for up-to-date library documentation, Playwright for browser-driven UI verification) are configured in the project-scope `.mcp.json` at the repository root with pinned versions and no secrets (environment variable references only); personal MCP servers (IntelliJ, optionally GitHub) are configured in local scope and documented with setup instructions; all MCP servers are listed in the tooling inventory, checked by `doctor`, and added only with the author's approval
 - [ ] **AIDEV-05**: GSD project settings are enforced as policy: a CI test validates `.planning/config.json` against an explicit policy (e.g. branching strategy, tagging, commit_docs, runtime, no foreign model overrides) and fails on any deviation until the policy itself is deliberately changed
-- [ ] **AIDEV-06**: Changes to governance files (`.planning/config.json`, `.claude/settings.json`, `.mcp.json`, `.github/**`, `mise.toml`, Renovate config, CODEOWNERS) fail a CI governance check unless the PR carries a `governance-approved` label applied by a maintainer
+- [x] **AIDEV-06**: Changes to governance files (`.planning/config.json`, `.claude/settings.json`, `.mcp.json`, `.github/**`, `mise.toml`, Renovate config, CODEOWNERS) fail a CI governance check unless the PR carries a `governance-approved` label applied by a maintainer
 - [ ] **AIDEV-07**: GSD installation integrity is protected: GSD is installed at a pinned version (never `@latest`), `doctor` verifies installed files against the SHA-256 hashes in `gsd-file-manifest.json` and reports modified hooks or unexpected files, `doctor` warns about global `~/.gsd/defaults.json` keys that leak into projects, and GSD updates happen only deliberately via `/gsd-update` with changelog and hook diff review
-- [ ] **AIDEV-08**: Claude Code permission rules in `.claude/settings.json` require explicit confirmation (`ask`) for edits to governance files and for GSD `config-set` calls, so the agent cannot silently change project settings
+- [x] **AIDEV-08**: Claude Code permission rules in `.claude/settings.json` require explicit confirmation (`ask`) for edits to governance files and for GSD `config-set` calls, so the agent cannot silently change project settings
 
 ## v2 Requirements
 
@@ -417,9 +417,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AIDEV-03 | Phase 2 | Pending |
 | AIDEV-04 | Phase 2 | Pending |
 | AIDEV-05 | Phase 1 | Gaps Found |
-| AIDEV-06 | Phase 1 | Gaps Found |
+| AIDEV-06 | Phase 1 | Complete |
 | AIDEV-07 | Phase 2 | Pending |
-| AIDEV-08 | Phase 1 | Gaps Found |
+| AIDEV-08 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 150 total
