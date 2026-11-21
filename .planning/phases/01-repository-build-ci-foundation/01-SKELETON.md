@@ -18,14 +18,14 @@ alignment, configuration cache and isolated projects.
 | Leg of the path | Proven by | Plan |
 |---|---|---|
 | Fresh clone → pinned tools | `mise install` (tools from `mise.toml` + `mise.lock`, JDK from `.java-version`, Node from `.nvmrc`) | 01-03 |
-| Pinned tools → one-command build | `./gradlew build` (build-logic conventions, `:platform`, catalog, sample module, TestKit, formatting, governance checks) | 01-01, 01-02, 01-04, 01-06, 01-09 |
-| Edit → commit | lefthook pre-commit (format staged files, gitleaks, `reuse lint`, workflow and shell linters) | 01-07 |
-| Commit → PR checks | `ci.yml` (`ci-success`), `governance.yml` (`governance-success`), CodeQL, Scorecard | 01-08, 01-09, 01-11 |
-| PR → `main` | ruleset (squash only, linear history, required contexts), applied by the author after approval (D-15) | 01-12, 01-13 |
-| Updates keep flowing | Renovate (Mend app) with 7-day cooldown and narrow automerge | 01-10, 01-13 |
+| Pinned tools → one-command build | `./gradlew build` (build-logic conventions, `:platform`, catalog, sample module, TestKit, formatting, governance checks) | 01-01, 01-02, 01-04, 01-05, 01-07, 01-10 |
+| Edit → commit | lefthook pre-commit (format staged files, gitleaks, `reuse lint`, workflow and shell linters) | 01-08 |
+| Commit → PR checks | `ci.yml` (`ci-success`), `governance.yml` (`governance-success`), CodeQL, Scorecard | 01-09, 01-10, 01-12 |
+| PR → `main` | ruleset (squash only, linear history, required contexts), applied by the author after approval (D-15) | 01-13, 01-14 |
+| Updates keep flowing | Renovate (Mend app) with 7-day cooldown and narrow automerge | 01-11, 01-14 |
 
 The hosted leg (a real GitHub Actions run on a PR and the squash merge) is closed by `/gsd-ship`:
-the phase PR is the first PR on the repository, and the ruleset the author applies in plan 01-13 blocks its
+the phase PR is the first PR on the repository, and the ruleset the author applies in plan 01-14 blocks its
 merge until both required contexts are green.
 
 ## Architectural Decisions
@@ -35,7 +35,7 @@ merge until both required contexts are green.
 | Build tool | Gradle 9.9.2 wrapper (checksum-pinned), Kotlin DSL | Project constraint; configuration cache, build cache, parallel execution and isolated projects all green in the research prototype |
 | Build logic | Included build `build-logic` (no `buildSrc`) with precompiled convention plugins `courses.settings`, `courses.root`, `courses.kotlin-library`, `courses.governance` (D-04) | Composable per module role; TestKit-tested; isolated-projects compatible |
 | Version management | One source per ecosystem: `gradle/libs.versions.toml` (libraries, BOMs, plugins, ktfmt, Prettier), `.java-version` (JDK), `.nvmrc` (Node), `mise.toml` + `mise.lock` (CLI tools, mise `min_version`), SHA pins (Actions) | INFRA-09; version literals in build scripts fail `checkBuildScripts` |
-| Dependency alignment | `:platform` (`java-platform`) imports the Spring Boot, Axon Framework, Axoniq Framework, Testcontainers, Jackson, Kotlin, JUnit and Kotest BOMs; the module convention adds `platform(project(":platform"))` to every `*Implementation` configuration | INFRA-11; future test suites and fixtures inherit it automatically; the catalog's Kotlin overrides Boot's managed Kotlin |
+| Dependency alignment | `:platform` (`java-platform`) imports the Spring Boot, Axon Framework, Axoniq Framework, Testcontainers, Jackson, Kotlin, JUnit and Kotest BOMs; the module convention adds `platform(project(":platform"))` to every `*Implementation` configuration | INFRA-11; future test suites and fixtures inherit it automatically; the catalog's Kotlin overrides Boot's managed Kotlin through an explicit `api` constraint on `kotlin-stdlib` (catalog alias) |
 | Group and base package | `io.github.aanbrn.courses` (D-01) | Costly to change; fixed before any Kotlin code lands |
 | Directory layout | By role: `platform/`, `services/{command,query,automation,bff}`, `contracts/*`, `frontend/`, `docs-site/`, `tooling/*` (D-03) | Paths are referenced by CI, Renovate, REUSE, `.gitattributes` and docs |
 | Formatting | Spotless at the root over the whole repository: ktfmt kotlinlang style (Kotlin, KTS, KDoc), Prettier (JSON, JSON5, YAML, Markdown), taplo (TOML), shfmt (shell), generic whitespace steps (properties, scenarios, text and dotfile configs), SPDX header on Kotlin, KTS and shell; taplo and shfmt pinned in `mise.toml` | One `./gradlew spotlessApply` for every artifact type (D-05, D-06, TEST-09, CLAUDE.md formatting constraint) |
@@ -49,10 +49,10 @@ merge until both required contexts are green.
 
 ## Stack Touched in Phase 1
 
-- [x] Project scaffold: Gradle wrapper, `build-logic`, `:platform`, catalog, sample module, formatting, static analysis, test runner, licensing (plans 01-01, 01-02, 01-04, 01-05)
-- [x] Tooling: `mise.toml`, `mise.lock`, lefthook pre-commit hook (plans 01-03, 01-07)
-- [x] CI: build, lint, secret scan, governance gate, CodeQL, Scorecard, labels sync (plans 01-08, 01-09, 01-11)
-- [x] Repository governance: governance checks, ruleset, merge settings, security features, Renovate (plans 01-06, 01-10, 01-12, 01-13)
+- [x] Project scaffold: Gradle wrapper, `build-logic`, `:platform`, catalog, sample module, formatting, static analysis, test runner, licensing (plans 01-01, 01-02, 01-04, 01-05, 01-06)
+- [x] Tooling: `mise.toml`, `mise.lock`, lefthook pre-commit hook (plans 01-03, 01-08)
+- [x] CI: build, lint, secret scan, governance gate, CodeQL, Scorecard, labels sync (plans 01-09, 01-10, 01-12)
+- [x] Repository governance: governance checks, ruleset, merge settings, security features, Renovate (plans 01-07, 01-11, 01-13, 01-14)
 - [ ] Routing — **Out of Scope: deferred to Phase 5** (BFF REST API) per ROADMAP
 - [ ] Database read and write — **Out of Scope: deferred to Phases 2–4** (Axon Server DCB event store, PostgreSQL read models) per ROADMAP
 - [ ] UI interaction wired to an API — **Out of Scope: deferred to Phase 5** (first live UI) per ROADMAP
