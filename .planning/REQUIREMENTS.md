@@ -190,7 +190,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **GH-04**: Documentation site is published to GitHub Pages automatically from CI
 - [ ] **GH-05**: Commits and PR titles follow Conventional Commits (checked locally by the pre-commit tooling and in CI); release-please exclusively owns version tags (`vX.Y.Z`), changelogs and GitHub Releases (GSD milestone tagging disabled); release images are published to GHCR, signed and attested
 - [ ] **GH-06**: Repository security settings are enabled: `main` protected by a ruleset (changes only via PR, required status checks, linear history, no force-push or deletion, 0 required approvals for the solo author, bypass for admins only), secret scanning with push protection, Dependabot alerts, private vulnerability reporting, CodeQL, OpenSSF Scorecard workflow
-- [ ] **GH-07**: Repository is configured for the GSD workflow: one branch per phase (`gsd/phase-{N}-{slug}`), each phase shipped via `/gsd-ship` as a PR; only squash merge is enabled, using the PR title as the commit title and the PR body (GSD planning summary) as the commit message; head branches are deleted after merge
+- [x] **GH-07**: Repository is configured for the GSD workflow: one branch per phase (`gsd/phase-{N}-{slug}`), each phase shipped via `/gsd-ship` as a PR; only squash merge is enabled, using the PR title as the commit title and the PR body (GSD planning summary) as the commit message; head branches are deleted after merge
 
 ### Upstream-first
 
@@ -213,7 +213,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **AIDEV-03**: `.claude/` is tracked selectively: only `.claude/settings.json` (marketplace and plugin registration) and `.claude/CLAUDE.md` are committed; the GSD installation and `settings.local.json` are ignored, and the GSD version and install command are recorded in the tooling inventory and checked by `doctor`
 - [ ] **AIDEV-04**: Shared MCP servers (Context7 for up-to-date library documentation, Playwright for browser-driven UI verification) are configured in the project-scope `.mcp.json` at the repository root with pinned versions and no secrets (environment variable references only); personal MCP servers (IntelliJ, optionally GitHub) are configured in local scope and documented with setup instructions; all MCP servers are listed in the tooling inventory, checked by `doctor`, and added only with the author's approval
 - [x] **AIDEV-05**: GSD project settings are enforced as policy: a CI test validates `.planning/config.json` against an explicit policy (e.g. branching strategy, tagging, commit_docs, runtime, no foreign model overrides) and fails on any deviation until the policy itself is deliberately changed
-- [ ] **AIDEV-06**: Changes to governance files (`.planning/config.json`, `.claude/settings.json`, `.mcp.json`, `.github/**`, `mise.toml`, Renovate config, CODEOWNERS) fail a CI governance check unless the PR carries a `governance-approved` label applied by a maintainer
+- [x] **AIDEV-06**: Changes to governance files (`.planning/config.json`, `.claude/settings.json`, `.mcp.json`, `.github/**`, `mise.toml`, Renovate config, CODEOWNERS) fail a CI governance check unless the PR carries a `governance-approved` label applied by a maintainer
 - [ ] **AIDEV-07**: GSD installation integrity is protected: GSD is installed at a pinned version (never `@latest`), `doctor` verifies installed files against the SHA-256 hashes in `gsd-file-manifest.json` and reports modified hooks or unexpected files, `doctor` warns about global `~/.gsd/defaults.json` keys that leak into projects, and GSD updates happen only deliberately via `/gsd-update` with changelog and hook diff review
 - [x] **AIDEV-08**: Claude Code permission rules in `.claude/settings.json` require explicit confirmation (`ask`) for edits to governance files and for GSD `config-set` calls, so the agent cannot silently change project settings
 
@@ -403,7 +403,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GH-04 | Phase 7 | Pending |
 | GH-05 | Phase 12 | Pending |
 | GH-06 | Phase 1 | Pending |
-| GH-07 | Phase 1 | Pending |
+| GH-07 | Phase 1 | Complete |
 | UPS-01 | Phase 2 | Pending |
 | UPS-02 | Phase 2 | Pending |
 | UPS-03 | Phase 2 | Pending |
@@ -417,7 +417,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AIDEV-03 | Phase 2 | Pending |
 | AIDEV-04 | Phase 2 | Pending |
 | AIDEV-05 | Phase 1 | Complete |
-| AIDEV-06 | Phase 1 | Pending |
+| AIDEV-06 | Phase 1 | Complete |
 | AIDEV-07 | Phase 2 | Pending |
 | AIDEV-08 | Phase 1 | Complete |
 

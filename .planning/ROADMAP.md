@@ -39,7 +39,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Every push and pull request runs a GitHub Actions workflow with SHA-pinned actions. It builds, tests and analyses the code, lints workflows and scripts (actionlint, zizmor, shellcheck) and scans the full history for leaked secrets. Renovate proposes grouped updates with a minimum release age for every version source (catalog, `.java-version`, `mise.toml`, Actions).
   4. `main` changes only through squash-merged pull requests from `gsd/phase-*` branches that pass the required checks. The ruleset enforces linear history and blocks force-push, and head branches are deleted after merge. The PR template mirrors the `/gsd-ship` body, and labels are synced from `labels.yml`. Secret scanning with push protection, Dependabot alerts, private vulnerability reporting, CodeQL and OpenSSF Scorecard are active.
   5. A pull request fails CI if it changes `.planning/config.json` against the declared policy or touches governance files without the `governance-approved` label. The agent must ask for confirmation before it edits governance files or runs GSD `config-set`.
-**Plans:** 13/14 plans executed
+**Plans:** 14/14 plans executed
 
 Plans:
 **Wave 1**
@@ -74,7 +74,7 @@ Plans:
 - [x] 01-13-PLAN.md — GitHub settings as code, apply/drift scripts, Claude Code ask rules (wave 9)
 
 **Wave 10** *(blocked on Wave 9 completion)*
-- [ ] 01-14-PLAN.md — Approval-gated application of GitHub settings, label and secrets by the author; read-only verification (wave 10)
+- [x] 01-14-PLAN.md — Approval-gated application of GitHub settings, label and secrets by the author; read-only verification (wave 10)
 
 **Cross-cutting constraints:** <!-- gsd:generated -->
 - Edge TEST-09 empty: running `./gradlew spotlessApply` on an already formatted tree modifies no file (`git status --porcelain` stays empty)
@@ -285,7 +285,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Repository, Build & CI Foundation | 13/14 | In Progress | - |
+| 1. Repository, Build & CI Foundation | 14/14 | In Progress | - |
 | 2. Runtime Infrastructure & DCB Spikes | 0/TBD | Not started | - |
 | 3. Command Walking Skeleton | 0/TBD | Not started | - |
 | 4. Read Side & Live Queries | 0/TBD | Not started | - |

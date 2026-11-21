@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Repository, Build & CI Foundation
 status: executing
-stopped_at: Completed 01-13-PLAN.md
-last_updated: "2026-11-21T12:05:06.430Z"
+stopped_at: Completed 01-14-PLAN.md
+last_updated: "2026-11-21T12:44:00.969Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 01 execution started
-state_head: b1272f856c4a8770eab98bd56110c32978a9e840
+state_head: 357389eecaa324f19a8e21df6e55beb9bbff55af
 progress:
   total_phases: 13
   completed_phases: 0
   total_plans: 14
-  completed_plans: 13
+  completed_plans: 14
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 01 (Repository, Build & CI Foundation) — EXECUTING
-Plan: 13 of 14
+Plan: 14 of 14
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 01 execution started
 
@@ -69,6 +69,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P11 | 8 min | 2 tasks | 2 files |
 | Phase 01 P12 | 24 min | 3 tasks | 5 files |
 | Phase 01 P13 | 22 min | 3 tasks | 10 files |
+| Phase 01 P14 | 10 min | 3 tasks | 0 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,7 @@ Recent decisions affecting current work:
 - [Phase 01]: Plan 01-12: MISE_DISABLE_TOOLS=java,node is set at job level and the build job uses plain ./gradlew build with mise-action shims on PATH — Job-level env reaches the shims Gradle and lint steps invoke later; mise x without tool arguments would install every tool in mise.toml
 - [Phase 01]: Plan 01-12: CodeQL ships the actions language only; java-kotlin deferred after a negative local spike — Two extraction attempts saw no Kotlin source on macOS arm64 (and --no-configuration-cache is rejected by Isolated Projects); ADR-0002 records evidence and re-enable criteria
 - [Phase 01]: Plan 01-13: ruleset equality projects the live document onto the keys declared in main.json, and the main ruleset bypass actor is RepositoryRole 5 with mode pull_request (confirm via the apply read-back in plan 01-14)
+- [Phase 01]: Plan 01-14: author approved apply-without-ruleset; repository and security settings, governance-approved label and GRADLE_ENCRYPTION_KEY are live, SETTINGS_DRIFT_SECTIONS=repository security, ruleset main deferred until ci-success and governance-success are green on the phase PR
 
 ### Pending Todos
 
@@ -127,6 +129,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T12:05:06.401Z
-Stopped at: Completed 01-13-PLAN.md
+Last session: 2026-11-21T12:44:00.941Z
+Stopped at: Completed 01-14-PLAN.md
 Resume file: None
