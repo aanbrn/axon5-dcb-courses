@@ -1,0 +1,39 @@
+# Fast pre-commit hook (D-08): format and screen the staged files and nothing else. Static analysis,
+# Dokka and tests belong to CI, so there is deliberately no pre-push hook.
+# Install it once per clone with `lefthook install`. Every command runs through `mise x --`, so the
+# tools pinned in mise.toml are used without activating mise in the shell.
+min_version: 2.2.2
+
+pre-commit:
+  # Sequential on purpose: the format job re-stages its output, which the later jobs then screen.
+  parallel: false
+  jobs:
+    - name: format
+      # Every file type that `spotlessApply` covers, plus the dotfile configs it formats.
+      glob:
+        - "*.{kt,kts,json,json5,yml,yaml,md,toml,sh,properties,scenarios,txt}"
+        - ".editorconfig"
+        - ".gitattributes"
+        - ".gitignore"
+        - ".nvmrc"
+        - ".java-version"
+      run: mise x -- scripts/format-staged.sh {staged_files}
+      stage_fixed: true
+
+    - name: gitleaks
+      run: mise x -- gitleaks git --pre-commit --staged --no-banner --redact
+
+    - name: reuse
+      run: mise x -- reuse lint --quiet
+
+    - name: actionlint
+      glob: ".github/workflows/*.{yml,yaml}"
+      run: mise x -- actionlint {staged_files}
+
+    - name: zizmor
+      glob: ".github/workflows/*.{yml,yaml}"
+      run: mise x -- zizmor --offline --no-progress {staged_files}
+
+    - name: shellcheck
+      glob: "*.sh"
+      run: mise x -- shellcheck {staged_files}
