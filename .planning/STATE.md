@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Repository, Build & CI Foundation
 status: executing
-stopped_at: Completed 01-06-PLAN.md
-last_updated: "2026-11-21T09:59:34.017Z"
+stopped_at: Completed 01-07-PLAN.md
+last_updated: "2026-11-21T10:16:45.416Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 01 execution started
-state_head: 52e5e40a90703bb6bf5b3891f8384830b6424725
+state_head: 9c5b1048c0a9fef52fe09f2936cbc56f5235f782
 progress:
   total_phases: 13
   completed_phases: 0
   total_plans: 14
-  completed_plans: 6
+  completed_plans: 7
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 01 (Repository, Build & CI Foundation) — EXECUTING
-Plan: 7 of 14
+Plan: 8 of 14
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 01 execution started
 
@@ -62,6 +62,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P04 | 12min | 2 tasks | 9 files |
 | Phase 01 P05 | 12 min | 2 tasks | 6 files |
 | Phase 01 P06 | 14min | 2 tasks | 9 files |
+| Phase 01 P07 | 20 min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,8 @@ Recent decisions affecting current work:
 - [Phase 01]: Missing taplo is replaced by an existing placeholder file at configuration time so the Spotless native step can be stored in the configuration cache; VerifyFormatterBinary then fails the TOML tasks with a mise install hint
 - [Phase 01]: Formatter binary checks are a separate upstream task (VerifyFormatterBinary), not a doFirst, because Spotless fingerprints its step state before doFirst runs; the binary path and version output are inputs of the Spotless tasks of that type
 - [Phase 01]: REUSE: .planning/** gets an override annotation because planning prose quotes SPDX header text; SPDX text in code string literals is fenced with REUSE-IgnoreStart/End
+- [Phase 01]: Governance config-policy report lists key paths only, never values (config files can hold credentials) — Gradle output reaches CI logs; checkGsdConfigPolicy still names every added, removed or changed key
+- [Phase 01]: Governance TestKit tests assert task outcome in {SUCCESS, FROM_CACHE} via GradleFixture.PASSED — TestKit shares the user's Gradle home, so the build cache can answer an identical fixture build
 
 ### Pending Todos
 
@@ -108,6 +111,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T09:59:33.990Z
-Stopped at: Completed 01-06-PLAN.md
+Last session: 2026-11-21T10:16:45.391Z
+Stopped at: Completed 01-07-PLAN.md
 Resume file: None
