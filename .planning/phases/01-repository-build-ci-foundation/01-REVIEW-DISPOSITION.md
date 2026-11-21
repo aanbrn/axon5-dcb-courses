@@ -49,7 +49,7 @@ findings:
     title: "`check-pr.sh` ignores the exit status of the `jq` process substitution, so a mid-stream `jq` failure drops files and the gate passes"
   - id: WR-06
     severity: warning
-    disposition: open
+    disposition: deferred
     title: "The gate runs from the pull request's own merge commit, so a PR can edit the gate that is meant to hold it"
   - id: WR-07
     severity: warning
@@ -59,7 +59,7 @@ findings:
     severity: info
     disposition: open
     title: "Invisible characters are written literally in the Kotlin test source"
-open: 7
+open: 6
 total: 14
 recorded: 2026-11-21T16:30:00.000Z
 ---
@@ -79,7 +79,7 @@ recorded: 2026-11-21T16:30:00.000Z
 | IN-04 | info | open | 01-REVIEW.md |
 | IN-05 | info | open | 01-REVIEW.md |
 | WR-05 | warning | fixed | 01-REVIEW.md — re-review after gap closure; fixed by plan 01-18 |
-| WR-06 | warning | open | 01-REVIEW.md — re-review after gap closure |
+| WR-06 | warning | deferred | 01-REVIEW.md — re-review after gap closure; deferred by the author (2026-11-21): accepted residual for a one-maintainer repository, recorded in docs/adr/0003-governance-gate-trust-boundary.md |
 | WR-07 | warning | fixed | 01-REVIEW.md — re-review after gap closure; fixed by plan 01-19 |
 | IN-06 | info | open | 01-REVIEW.md — re-review after gap closure |
 

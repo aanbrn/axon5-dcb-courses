@@ -40,3 +40,6 @@ Two findings from the Phase 1 prototype contradict that wording:
   deviation; the author accepted it as D-21.
 - A workflow added later (for example CodeQL or Scorecard) is not part of the required contexts unless an
   aggregator is added for it and the ruleset is updated deliberately.
+- The required `governance-success` context is evaluated by code from the pull request's own tree.
+  [ADR-0003](0003-governance-gate-trust-boundary.md) records why that residual is accepted and when to revisit
+  it.
