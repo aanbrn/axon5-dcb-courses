@@ -1,0 +1,10 @@
+.planning/config.json
+.claude/settings.json
+.mcp.json
+.github/**
+mise.toml
+mise.lock
+renovate.json5
+CODEOWNERS
+governance/**
+scripts/governance/**
