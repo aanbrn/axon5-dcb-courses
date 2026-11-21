@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Repository, Build & CI Foundation
 status: executing
-stopped_at: Completed 01-17-PLAN.md
-last_updated: "2026-11-21T15:22:30.782Z"
+stopped_at: Completed 01-18-PLAN.md
+last_updated: "2026-11-21T15:31:38.573Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 01 execution started
-state_head: ad891271695cbb4466812e729ddcbe36c0443a5b
+state_head: 40f3bb45e40a5791e53e0d43536f623b11681805
 progress:
   total_phases: 13
   completed_phases: 0
   total_plans: 20
-  completed_plans: 17
+  completed_plans: 18
   percent: 0
 ---
 
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: 01 (Repository, Build & CI Foundation) — READY TO EXECUTE
-Plan: 17 of 17
+Phase: 01 (Repository, Build & CI Foundation) — EXECUTING
+Plan: 19 of 20
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 01 execution started
 
@@ -73,6 +73,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P15 | 5 min | 3 tasks | 6 files |
 | Phase 01 P16 | 12 min | 2 tasks | 6 files |
 | Phase 01 P17 | 15 min | 2 tasks | 4 files |
+| Phase 01 P18 | 24 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,7 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-15: a file list at the 3000-entry files API limit needs the governance-approved label instead of failing unconditionally, and never takes the renovate exemption
 - [Phase 01]: 01-16: governed-paths grammar shared by check-pr.sh load_globs and GovernedPaths.parse; NUL bytes converted with tr so both parsers fail closed — bash read drops NUL silently while Kotlin keeps it; any input one parser keeps and the other drops must fail closed in both (WR-04)
 - [Phase 01]: Governed-path list covers the enforcement surface (29 entries); version catalog, gradlew.bat, module conventions and tests stay outside, documented in the file
+- [Phase 01]: 01-18: NUL strings are not rejected up front; the check-pr.sh reading fails closed through a checked jq status and an entry-count guard (WR-05)
 
 ### Pending Todos
 
@@ -135,6 +137,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T14:30:34.855Z
-Stopped at: Completed 01-17-PLAN.md
+Last session: 2026-11-21T15:31:38.468Z
+Stopped at: Completed 01-18-PLAN.md
 Resume file: None
