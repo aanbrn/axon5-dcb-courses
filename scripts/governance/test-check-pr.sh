@@ -493,6 +493,34 @@ boundary_case \
 boundary_case scripts/apply-github-settings.sh governed
 boundary_case build-logic/src/main/kotlin/courses.kotlin-library.gradle.kts ungoverned
 
+# The rest of the enforcement boundary: CODEOWNERS location, root build configuration, the plugin
+# build, the root and settings convention plugins and the launcher.
+boundary_case docs/CODEOWNERS governed
+boundary_case build.gradle.kts governed
+boundary_case build.gradle governed
+boundary_case settings.gradle.kts governed
+boundary_case settings.gradle governed
+boundary_case gradle.properties governed
+boundary_case buildSrc/build.gradle.kts governed
+boundary_case build-logic/build.gradle.kts governed
+boundary_case build-logic/build.gradle governed
+boundary_case build-logic/settings.gradle.kts governed
+boundary_case build-logic/settings.gradle governed
+boundary_case build-logic/src/main/kotlin/courses.root.gradle.kts governed
+boundary_case build-logic/src/main/kotlin/courses.settings.settings.gradle.kts governed
+boundary_case gradlew governed
+boundary_case gradle/wrapper/gradle-wrapper.jar governed
+boundary_case gradle/gradle-daemon-jvm.properties governed
+
+# Deliberately outside the boundary, for the reasons recorded in governance/governed-paths.txt.
+boundary_case \
+  build-logic/src/functionalTest/kotlin/io/github/aanbrn/courses/buildlogic/governance/AskRulesCheckFunctionalTest.kt \
+  ungoverned
+boundary_case gradle/libs.versions.toml ungoverned
+boundary_case gradlew.bat ungoverned
+boundary_case scripts/test-apply-github-settings.sh ungoverned
+boundary_case tooling/convention-sample/build.gradle.kts ungoverned
+
 # --- head branch naming -------------------------------------------------------------------------
 
 run_case "a same-repository branch outside the allowed names fails" 1 "feature/x" \

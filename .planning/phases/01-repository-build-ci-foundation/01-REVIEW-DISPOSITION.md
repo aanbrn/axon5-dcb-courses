@@ -9,7 +9,7 @@ findings:
     title: "Governance file-list step fails open when `gh api` produces no output"
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Governed paths do not cover the code that enforces governance"
   - id: WR-02
     severity: warning
@@ -43,7 +43,7 @@ findings:
     severity: info
     disposition: open
     title: "The governance gate and shell tests depend on unpinned runner tools"
-open: 6
+open: 5
 total: 10
 recorded: 2026-11-21T13:05:00.000Z
 ---
@@ -53,7 +53,7 @@ recorded: 2026-11-21T13:05:00.000Z
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
 | CR-01 | critical | fixed | 01-REVIEW.md — fixed by plan 01-15 |
-| WR-01 | warning | open | 01-REVIEW.md |
+| WR-01 | warning | fixed | 01-REVIEW.md — fixed by plan 01-17 |
 | WR-02 | warning | deferred | 01-REVIEW.md — deferred by the author at gap planning (2026-11-21): binding the approval label to a commit or dismissing it on push needs a separate design decision (workflow permissions or a new verification mechanism); not part of the gap-closure scope |
 | WR-03 | warning | fixed | 01-REVIEW.md — fixed by plan 01-15 |
 | WR-04 | warning | fixed | 01-REVIEW.md — fixed by plan 01-16 |
