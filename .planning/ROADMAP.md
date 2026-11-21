@@ -42,20 +42,42 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 14 plans
 
 Plans:
+**Wave 1**
 - [ ] 01-01-PLAN.md — Build skeleton tracer: wrapper, catalog, `build-logic` settings and module conventions, `:platform` with every stack BOM and the explicit Kotlin override, sample module, `.gitignore` (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 01-02-PLAN.md — Quality conventions and TestKit: ktfmt + SPDX, detekt, Dokka, daemon JVM criteria, `functionalTest` suite (wave 2)
 - [ ] 01-03-PLAN.md — Pinned CLI tools: package-legitimacy gate, `mise.toml`/`mise.lock` (incl. shfmt, taplo), `.nvmrc`, `docs/tooling.md` (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 01-04-PLAN.md — Prettier formatting (JSON, JSON5, YAML, Markdown) with Node verified against `.nvmrc`, and `.editorconfig` (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 01-05-PLAN.md — Remaining formatters: TOML (taplo), shell (shfmt + SPDX header) and generic text formats (wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 01-06-PLAN.md — REUSE compliance, minimal README, `.gitattributes` and tree normalisation (wave 5)
 - [ ] 01-07-PLAN.md — Governance checks in build-logic: config policy, build-script lint, daemon JVM (wave 5)
-- [ ] 01-08-PLAN.md — lefthook pre-commit hook and gradle-profiler scenarios with baseline (wave 6)
 - [ ] 01-09-PLAN.md — PR governance gate: `governance-approved` label, Renovate exemption, head-branch naming (wave 5)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 01-08-PLAN.md — lefthook pre-commit hook and gradle-profiler scenarios with baseline (wave 6)
 - [ ] 01-10-PLAN.md — Labels as code, the `/gsd-ship` PR template with `checkPrTemplate`, and `checkToolingInventory` (wave 6)
+
+**Wave 7** *(blocked on Wave 6 completion)*
 - [ ] 01-11-PLAN.md — Renovate configuration: every version source, cooldown, grouping, narrow automerge (wave 7)
+
+**Wave 8** *(blocked on Wave 7 completion)*
 - [ ] 01-12-PLAN.md — CI workflows: `ci.yml` (`ci-success`), CodeQL (actions + Kotlin spike), Scorecard, ADR-lite notes (wave 8)
+
+**Wave 9** *(blocked on Wave 8 completion)*
 - [ ] 01-13-PLAN.md — GitHub settings as code, apply/drift scripts, Claude Code ask rules (wave 9)
+
+**Wave 10** *(blocked on Wave 9 completion)*
 - [ ] 01-14-PLAN.md — Approval-gated application of GitHub settings, label and secrets by the author; read-only verification (wave 10)
+
+**Cross-cutting constraints:** <!-- gsd:generated -->
+- Edge TEST-09 empty: running `./gradlew spotlessApply` on an already formatted tree modifies no file (`git status --porcelain` stays empty)
 
 **Research**: Light. Topics: ktfmt KDoc formatting behaviour, isolated-projects compatibility, Spotless and REUSE header integration.
 **Approval gates**: GitHub repository settings (GH-06, GH-07) are applied via `gh` only after explicit author approval at execution time.
