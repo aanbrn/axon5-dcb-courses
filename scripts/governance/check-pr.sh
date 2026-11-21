@@ -20,6 +20,9 @@ set -euo pipefail
 # Byte-wise comparison: look-alike Unicode characters never match an ASCII pattern.
 export LC_ALL=C
 
+# load_globs strips padding with the extended pattern `*(...)`.
+shopt -s extglob
+
 readonly APPROVAL_LABEL="governance-approved"
 readonly BOT_AUTHOR="renovate[bot]"
 readonly PHASE_BRANCH_PATTERN='^gsd/phase-[0-9]+(\.[0-9]+)?-[a-z0-9][a-z0-9-]*$'
@@ -72,11 +75,17 @@ is_governed() {
   return 1
 }
 
+# Reads the governed path globs. The grammar is shared with `GovernedPaths.parse` in build-logic's
+# governance package, which backs `checkClaudeAskRules`; both must change together (WR-04). Lines are
+# split on LF only, and leading and trailing space, tab and carriage return are stripped and nothing
+# else (`[:space:]` would also strip vertical tab and form feed).
 load_globs() {
   local file=$1 line
   [[ -f $file ]] || die "governed paths file not found: $file"
   GLOBS=()
   while IFS= read -r line || [[ -n $line ]]; do
+    line=${line##*([ $'\t\r'])}
+    line=${line%%*([ $'\t\r'])}
     [[ -n $line ]] && GLOBS+=("$line")
   done <"$file"
   [[ ${#GLOBS[@]} -gt 0 ]] || die "governed paths file is empty: $file"

@@ -17,11 +17,11 @@ import org.gradle.api.tasks.TaskAction
  * Fails the build when the Claude Code ask rules drift from the governed paths.
  *
  * `.claude/settings.json` must carry, in `permissions.ask`, exactly one `Edit(/<path>)` rule for
- * every line of `governance/governed-paths.txt` and one `Bash(*config-set*)` rule, so the agent has
- * to ask the author before it edits a governance file or changes the GSD configuration. The order
- * of the rules does not matter and further rules are allowed. Ask rules are a convenience for the
- * author, not a security boundary: CI (`checkGsdConfigPolicy` and the governance workflow) stays
- * the enforcement.
+ * every entry of `governance/governed-paths.txt`, parsed by `GovernedPaths`, and one
+ * `Bash(*config-set*)` rule, so the agent has to ask the author before it edits a governance file
+ * or changes the GSD configuration. The order of the rules does not matter and further rules are
+ * allowed. Ask rules are a convenience for the author, not a security boundary: CI
+ * (`checkGsdConfigPolicy` and the governance workflow) stays the enforcement.
  */
 @CacheableTask
 abstract class AskRulesCheck : DefaultTask() {
@@ -42,9 +42,13 @@ abstract class AskRulesCheck : DefaultTask() {
     /** Compares the ask rules of [claudeSettings] with the paths listed in [governedPaths]. */
     @TaskAction
     fun check() {
-        val governed =
-            governedPaths.get().asFile.readLines().map { it.trim() }.filter { it.isNotEmpty() }
-        val problems = if (governed.isEmpty()) listOf(NO_GOVERNED_PATHS) else problems(governed)
+        val governed = GovernedPaths.parse(governedPaths.get().asFile.readText())
+        val problems =
+            when {
+                governed.problems.isNotEmpty() -> governed.problems.map { "$GOVERNED_PATH $it" }
+                governed.entries.isEmpty() -> listOf(NO_GOVERNED_PATHS)
+                else -> problems(governed.entries)
+            }
         report.get().asFile.apply {
             parentFile.mkdirs()
             writeText(

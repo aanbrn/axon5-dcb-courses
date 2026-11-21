@@ -374,6 +374,32 @@ run_case "3000 entries from renovate never take the version-only exemption" 1 "f
   GOVERNED_PATHS_FILE="$limit_globs" PR_FILES_JSON="$many_3000" PR_LABELS_JSON="$LABEL_NONE" \
   PR_AUTHOR="$BOT" PR_HEAD_REF=renovate/mise
 
+# --- governed paths grammar (WR-04) -------------------------------------------------------------
+# The same case table runs against GovernedPaths.parse in build-logic (GovernedPathsFormatFunctionalTest).
+
+# governed_file <name> <text>: stores `printf %b` of the text as $TMP/<name>.txt and prints its path,
+# so a case can spell tabs, carriage returns and raw bytes as escapes.
+governed_file() {
+  printf '%b' "$2" >"$TMP/$1.txt"
+  echo "$TMP/$1.txt"
+}
+
+# touch_json <name> <filename>: stores a one-file list as $TMP/<name>.json and prints its path.
+touch_json() {
+  jq -n --arg f "$2" '[{filename: $f, status: "modified"}]' >"$TMP/$1.json"
+  echo "$TMP/$1.json"
+}
+
+padded=$(governed_file padded '  .mcp.json  \n')
+touches_mcp=$(touch_json touches-mcp .mcp.json)
+run_case "G1 a governed entry padded with spaces still governs its path" 1 "\.mcp\.json" \
+  GOVERNED_PATHS_FILE="$padded" PR_FILES_JSON="$touches_mcp" PR_LABELS_JSON="$LABEL_NONE"
+
+crlf=$(governed_file crlf '\tmise.toml\r\n')
+touches_mise=$(touch_json touches-mise mise.toml)
+run_case "G2 a tab-indented entry with a CRLF ending still governs its path" 1 "mise\.toml" \
+  GOVERNED_PATHS_FILE="$crlf" PR_FILES_JSON="$touches_mise" PR_LABELS_JSON="$LABEL_NONE"
+
 # --- head branch naming -------------------------------------------------------------------------
 
 run_case "a same-repository branch outside the allowed names fails" 1 "feature/x" \
