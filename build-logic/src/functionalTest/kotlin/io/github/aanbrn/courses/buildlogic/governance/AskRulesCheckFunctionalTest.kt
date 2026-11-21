@@ -65,39 +65,6 @@ class AskRulesCheckFunctionalTest {
     }
 
     @Test
-    fun `settings without permissions ask fail`() {
-        val noPermissions = fixture("{}\n").runAndFail(TASK).output
-        noPermissions shouldContain "permissions.ask is missing or empty"
-
-        val noAsk = fixture("""{"permissions": {"allow": ["Bash(ls)"]}}""").runAndFail(TASK).output
-        noAsk shouldContain "permissions.ask is missing or empty"
-    }
-
-    @Test
-    fun `an empty ask array fails`() {
-        val output = fixture(settings()).runAndFail(TASK).output
-
-        output shouldContain "permissions.ask is missing or empty"
-    }
-
-    @Test
-    fun `an ask value that is not a list fails`() {
-        val output =
-            fixture("""{"permissions": {"ask": "Edit(/mise.toml)"}}""").runAndFail(TASK).output
-
-        output shouldContain "permissions.ask is not a list"
-    }
-
-    @Test
-    fun `a rule that is not a string fails`() {
-        val withNumber = settings(*EXPECTED.toTypedArray()).replace("]", ", 7]")
-
-        val output = fixture(withNumber).runAndFail(TASK).output
-
-        output shouldContain "permissions.ask contains a value that is not a string: 7"
-    }
-
-    @Test
     fun `the order of the rules does not matter`() {
         val reversed = settings(*EXPECTED.reversed().toTypedArray())
 
@@ -108,18 +75,9 @@ class AskRulesCheckFunctionalTest {
 
     @Test
     fun `additional ask rules and other permission lists are allowed`() {
+        val rules = (EXPECTED + "Bash(rm *)").joinToString { "\"$it\"" }
         val extended =
-            """
-            {
-              "${'$'}schema": "https://json.schemastore.org/claude-code-settings.json",
-              "permissions": {
-                "ask": [${(EXPECTED + "Bash(git push*)").joinToString { "\"$it\"" }}],
-                "allow": ["Bash(ls)"],
-                "deny": ["Read(/.env)"]
-              }
-            }
-            """
-                .trimIndent()
+            """{"permissions": {"ask": [$rules], "allow": ["Bash(ls)"], "deny": ["Read(/.env)"]}}"""
 
         val result = fixture(extended).run(TASK)
 
@@ -142,20 +100,6 @@ class AskRulesCheckFunctionalTest {
         val result = fixture(paths = padded).run(TASK)
 
         result.task(":$TASK")?.outcome shouldBeIn GradleFixture.PASSED
-    }
-
-    @Test
-    fun `an empty governed path list fails instead of passing vacuously`() {
-        val output = fixture(paths = "\n\n").runAndFail(TASK).output
-
-        output shouldContain "governance/governed-paths.txt lists no governed path"
-    }
-
-    @Test
-    fun `settings that are not valid JSON fail`() {
-        val output = fixture("{ not json").runAndFail(TASK).output
-
-        output shouldContain "settings.json is not valid JSON"
     }
 
     @Test

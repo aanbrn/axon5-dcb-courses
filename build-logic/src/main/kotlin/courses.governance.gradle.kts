@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import io.github.aanbrn.courses.buildlogic.governance.AskRulesCheck
 import io.github.aanbrn.courses.buildlogic.governance.BuildScriptLintCheck
 import io.github.aanbrn.courses.buildlogic.governance.ConfigPolicyCheck
 import io.github.aanbrn.courses.buildlogic.governance.DaemonJvmConsistencyCheck
@@ -20,6 +21,16 @@ val checkGsdConfigPolicy =
         config.set(layout.projectDirectory.file(".planning/config.json"))
         policy.set(layout.projectDirectory.file("governance/gsd-config-policy.json"))
         report.set(reports.map { it.file("gsd-config-policy.txt") })
+    }
+
+val checkClaudeAskRules =
+    tasks.register<AskRulesCheck>("checkClaudeAskRules") {
+        group = "verification"
+        description =
+            "Fails when the Claude Code ask rules do not cover every governed path and config-set."
+        claudeSettings.set(layout.projectDirectory.file(".claude/settings.json"))
+        governedPaths.set(layout.projectDirectory.file("governance/governed-paths.txt"))
+        report.set(reports.map { it.file("claude-ask-rules.txt") })
     }
 
 // Directories that are generated, vendored or owned by another tool are never scanned.
@@ -86,6 +97,7 @@ val checkToolingInventory =
 tasks.named("check") {
     dependsOn(
         checkGsdConfigPolicy,
+        checkClaudeAskRules,
         checkBuildScripts,
         checkDaemonJvm,
         checkPrTemplate,
