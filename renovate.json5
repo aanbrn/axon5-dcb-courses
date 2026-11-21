@@ -1,0 +1,40 @@
+// SPDX-License-Identifier: MIT
+// Renovate configuration for the Mend Renovate GitHub App (D-11).
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["config:best-practices", "helpers:pinGitHubActionDigestsToSemver"],
+  // Never propose a release younger than seven days. Set at the top level so it applies to every
+  // manager, including GitHub Actions digest updates (CICD-04).
+  minimumReleaseAge: "7 days",
+  // Do not let a pending minimum-release-age check create a branch or PR early.
+  internalChecksFilter: "strict",
+  customManagers: [
+    {
+      customType: "regex",
+      description: "JDK major version in .java-version (no built-in Renovate manager covers it)",
+      managerFilePatterns: ["/(^|/)\\.java-version$/"],
+      matchStrings: ["^(?<currentValue>\\d+(?:\\.\\d+)*)\\s*$"],
+      depNameTemplate: "java",
+      datasourceTemplate: "java-version",
+      versioningTemplate: "loose",
+    },
+    {
+      customType: "regex",
+      description: "Versions annotated with '# renovate: datasource=... depName=...' in the Gradle version catalog",
+      managerFilePatterns: ["/(^|/)gradle/libs\\.versions\\.toml$/"],
+      matchStrings: [
+        '# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+\\S+ = "(?<currentValue>[^"]+)"',
+      ],
+    },
+    {
+      customType: "regex",
+      description: "mise's own minimum version (min_version) in mise.toml",
+      managerFilePatterns: ["/(^|/)mise\\.toml$/"],
+      matchStrings: ['min_version = "(?<currentValue>[^"]+)"'],
+      depNameTemplate: "jdx/mise",
+      datasourceTemplate: "github-releases",
+      // mise tags releases as v<version>; min_version is written without the leading v.
+      extractVersionTemplate: "^v(?<version>.+)$",
+    },
+  ],
+}
