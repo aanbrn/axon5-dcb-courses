@@ -164,6 +164,17 @@ class GradleFixture(private val projectDir: Path) {
                 include(":lib")
             }
 
+        /**
+         * Creates a fixture in [projectDir] whose root project applies only `courses.governance`.
+         *
+         * Governance checks read plain repository files, so the fixture carries none of them; each
+         * test writes the files its check reads.
+         */
+        fun governance(projectDir: Path): GradleFixture =
+            GradleFixture(projectDir).apply {
+                file("build.gradle.kts", "$HEADER\nplugins { id(\"courses.governance\") }\n")
+            }
+
         private fun requiredProperty(name: String): String =
             checkNotNull(System.getProperty(name)) {
                 "System property '$name' is not set; run the fixture through the functionalTest task."
