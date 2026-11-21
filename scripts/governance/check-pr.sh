@@ -247,12 +247,13 @@ check_governed_files() {
   fi
 
   local -a touched=() blocked=() exempt=()
-  local filename previous status has_patch patch is_touched is_exempt mode
+  local filename previous status has_patch patch is_touched is_exempt mode seen=0
   while IFS= read -r -d '' filename &&
     IFS= read -r -d '' previous &&
     IFS= read -r -d '' status &&
     IFS= read -r -d '' has_patch &&
     IFS= read -r -d '' patch; do
+    seen=$((seen + 1))
     is_touched=0
     if is_governed "$filename"; then
       is_touched=1
@@ -280,6 +281,14 @@ check_governed_files() {
       [[ -n $previous ]] && blocked+=("$previous")
     fi
   done <"$RECORDS_FILE"
+
+  # A second guard, independent of jq's status: it catches a producer that exits 0 but writes fewer
+  # records than the list has entries, or a torn record. Both sides count JSON array entries.
+  if [[ $seen -ne $count ]]; then
+    echo "governance: the changed files list could not be read completely:" \
+      "$seen of $count entries were evaluated" >&2
+    return 1
+  fi
 
   if [[ ${#touched[@]} -eq 0 ]]; then
     echo "governance: no governed file is touched"
