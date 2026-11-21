@@ -133,7 +133,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **TEST-08**: Backend code coverage is measured with Kover as one aggregated report across all modules and all test suites (unit, component, integration), with line and branch coverage, layered thresholds (high for DCB decision and automation logic, moderate overall) and explicit, justified exclusions (generated code, configuration, entry points)
 - [ ] **TEST-16**: Frontend code coverage is measured with Vitest (v8 provider) with thresholds per FSD layer (higher for `shared`/`entities`/`features`, lower for `app`/`pages`) and the generated API client excluded
 - [ ] **TEST-17**: Coverage is reported for backend and frontend as CI artifacts (HTML plus XML/LCOV), in the job summary and as a PR comment, with a self-generated README badge (no external coverage SaaS without the author's approval); thresholds only ratchet upwards unless deliberately changed
-- [ ] **TEST-09**: All produced artifacts (Kotlin, Gradle KTS, TS/TSX, JSON, YAML, Markdown) are automatically formatted by one command and checked for style compliance, with a shared `.editorconfig`, a pre-commit hook formatting changed files, CI failing on violations, and generated code excluded
+- [x] **TEST-09**: All produced artifacts (Kotlin, Gradle KTS, TS/TSX, JSON, YAML, Markdown) are automatically formatted by one command and checked for style compliance, with a shared `.editorconfig`, a pre-commit hook formatting changed files, CI failing on violations, and generated code excluded
 - [x] **TEST-10**: Code is idiomatic Kotlin with KDoc on public contracts and decision logic; KDoc is auto-formatted (formatter with KDoc support, e.g. ktfmt, instead of ktlint), its presence and quality on public API are enforced by static analysis (detekt `comments` rules), and broken KDoc references fail the build (Dokka `failOnWarning`)
 - [ ] **TEST-18**: Mapping between layers (API ↔ commands/queries, query results ↔ DTOs) is done by explicit Kotlin extension functions next to the layer boundary (`toCommand`, `toDto`, `toView`), without mapping generators; naming and placement are enforced by architecture tests
 - [ ] **TEST-11**: JVM test levels (unit, component, integration) are separate Gradle JVM Test Suites with their own dependencies and tasks, all included in coverage
@@ -358,7 +358,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-08 | Phase 3 | Pending |
 | TEST-16 | Phase 7 | Pending |
 | TEST-17 | Phase 7 | Pending |
-| TEST-09 | Phase 1 | Pending |
+| TEST-09 | Phase 1 | Complete |
 | TEST-10 | Phase 1 | Complete |
 | TEST-18 | Phase 5 | Pending |
 | TEST-11 | Phase 2 | Pending |

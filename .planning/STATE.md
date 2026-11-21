@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Repository, Build & CI Foundation
 status: executing
-stopped_at: Completed 01-09-PLAN.md
-last_updated: "2026-11-21T10:25:36.954Z"
+stopped_at: Completed 01-08-PLAN.md
+last_updated: "2026-11-21T10:48:45.197Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 01 execution started
-state_head: 44785bbdd19315f2354e39435bf52719b932c8d1
+state_head: 98524a81b568644b3d52289e1b4882f247de0f4e
 progress:
   total_phases: 13
   completed_phases: 0
   total_plans: 14
-  completed_plans: 8
+  completed_plans: 9
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 01 (Repository, Build & CI Foundation) — EXECUTING
-Plan: 8 of 14
+Plan: 9 of 14
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 01 execution started
 
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P06 | 14min | 2 tasks | 9 files |
 | Phase 01 P07 | 20 min | 2 tasks | 10 files |
 | Phase 01 P09 | 7 min | 2 tasks | 4 files |
+| Phase 01 P08 | 22 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,7 @@ Recent decisions affecting current work:
 - [Phase 01]: Governance config-policy report lists key paths only, never values (config files can hold credentials) — Gradle output reaches CI logs; checkGsdConfigPolicy still names every added, removed or changed key
 - [Phase 01]: Governance TestKit tests assert task outcome in {SUCCESS, FROM_CACHE} via GradleFixture.PASSED — TestKit shares the user's Gradle home, so the build cache can answer an identical fixture build
 - [Phase 01]: Plan 01-09: renovate[bot] exemption classifies patch lines by position after the first hunk header (no three-dash exclusion) and collapses release asset ids in mise.lock; same-repository PR head refs must be gsd/phase-*, renovate/* or release-please--*
+- [Phase 01]: Plan 01-08: gradle-user-home and profile-out* are excluded from the Spotless source filter (gradle-profiler writes them into the project); lefthook is exercised with run --no-auto-install only, because a plain run installs the hook into the shared git directory
 
 ### Pending Todos
 
@@ -113,6 +115,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T10:25:36.927Z
-Stopped at: Completed 01-09-PLAN.md
+Last session: 2026-11-21T10:48:45.170Z
+Stopped at: Completed 01-08-PLAN.md
 Resume file: None
