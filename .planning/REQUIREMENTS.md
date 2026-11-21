@@ -11,8 +11,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **INFRA-01**: Developer can build the whole backend with one Gradle command from a multi-project build with convention plugins (`build-logic`) and a version catalog
 - [ ] **INFRA-09**: Every version is pinned in exactly one place per ecosystem: the Gradle version catalog holds all libraries, BOMs (consumed through the `:platform` module, no dependency-management plugin), Gradle plugins, tool versions and all container images used anywhere — infrastructure images for compose and integration tests (Axon Server, PostgreSQL, Grafana LGTM, Toxiproxy, etc.) as well as Paketo builder/run images and individual buildpacks — as full references with tag + digest; integration tests receive them as system properties declared as task inputs (no image literals in test code), docker compose consumes a Gradle-generated versions env file (no image literals in compose files, both checked in CI), and Renovate updates tag and digest together; the JDK version lives only in `.java-version` (read by the Gradle toolchain convention, CI `setup-java` via `java-version-file`, mise/jenv/IDE; `gradle/gradle-daemon-jvm.properties` is generated from it and checked for consistency); the Node.js version lives only in `.nvmrc` (read by nvm, mise, `setup-node` and the Gradle Node plugin convention) and the pnpm version in the `packageManager` field of `package.json`; npm packages use exact versions in `package.json` plus `pnpm-lock.yaml`; GitHub Actions are pinned by SHA in workflows; version literals in build scripts are rejected by an automated check; Renovate covers all of these sources
-- [ ] **INFRA-11**: A dedicated `:platform` module (`java-platform`) is the single alignment point for JVM dependencies: it imports all BOMs (Spring Boot, Axoniq/Axon Framework, Testcontainers, Kotlin, Kotest, Jackson, etc.) and declares `api` constraints for libraries not covered by a BOM and for deliberate overrides (e.g. Kotlin over Boot's managed version), referencing only version-catalog aliases; convention plugins apply `platform(project(":platform"))` to every JVM module and every relevant configuration (main, all test suites, test fixtures, load tests)
-- [ ] **INFRA-12**: `build-logic` (included build with convention plugins) is first-class code: it uses the same version catalog (plugin dependencies declared as catalog libraries, type-safe catalog access in precompiled script plugins, no version literals), is formatted, statically analysed and KDoc-documented under the same rules and pre-commit/CI checks as application code, its convention plugins have Gradle TestKit functional tests (including configuration-cache compatibility), and it meets the same configuration-cache/isolated-projects and lazy-configuration requirements
+- [x] **INFRA-11**: A dedicated `:platform` module (`java-platform`) is the single alignment point for JVM dependencies: it imports all BOMs (Spring Boot, Axoniq/Axon Framework, Testcontainers, Kotlin, Kotest, Jackson, etc.) and declares `api` constraints for libraries not covered by a BOM and for deliberate overrides (e.g. Kotlin over Boot's managed version), referencing only version-catalog aliases; convention plugins apply `platform(project(":platform"))` to every JVM module and every relevant configuration (main, all test suites, test fixtures, load tests)
+- [x] **INFRA-12**: `build-logic` (included build with convention plugins) is first-class code: it uses the same version catalog (plugin dependencies declared as catalog libraries, type-safe catalog access in precompiled script plugins, no version literals), is formatted, statically analysed and KDoc-documented under the same rules and pre-commit/CI checks as application code, its convention plugins have Gradle TestKit functional tests (including configuration-cache compatibility), and it meets the same configuration-cache/isolated-projects and lazy-configuration requirements
 - [ ] **INFRA-13**: `.gitattributes` defines repository-wide file handling consistent with `.editorconfig`: `text=auto eol=lf` by default, strict LF for `gradlew` and shell scripts, CRLF for `*.bat`/`*.cmd`, `binary` for images, fonts and jars; `linguist-generated` for generated client code and lock/verification files and `linguist-documentation` for docs so GitHub language stats and PR diffs stay meaningful; `-diff` for machine-generated lock metadata; CI verifies that the working tree is normalised
 - [ ] **INFRA-16**: The repository is REUSE-compliant: every source file (Kotlin, Gradle KTS, TS/TSX, CSS, shell, etc.) carries a single `SPDX-License-Identifier: MIT` line (added and checked by Spotless where supported); copyright and licensing for all files, including those that cannot carry headers (JSON, images, generated code), are declared once in `REUSE.toml` (`precedence = "aggregate"`); `reuse lint` runs in pre-commit and CI, and the README shows the REUSE badge
 - [ ] **INFRA-17**: Environment variables are defined once per service in a descriptor (name, description, image default, secret flag), from which Gradle generates: image defaults passed to buildpack builds as `BPE_DEFAULT_*` (overridable at runtime), OCI image labels documenting each variable and its default so they are visible via `docker image inspect` (Paketo Image Labels buildpack), `.env.example`, and the configuration reference page; application config keeps local-development defaults (`${VAR:local-default}`); secrets never get image defaults or labels; CI verifies generated artifacts are up to date; whether buildpack env can appear in `Config.Env` directly is verified in Phase 1
@@ -134,11 +134,11 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **TEST-16**: Frontend code coverage is measured with Vitest (v8 provider) with thresholds per FSD layer (higher for `shared`/`entities`/`features`, lower for `app`/`pages`) and the generated API client excluded
 - [ ] **TEST-17**: Coverage is reported for backend and frontend as CI artifacts (HTML plus XML/LCOV), in the job summary and as a PR comment, with a self-generated README badge (no external coverage SaaS without the author's approval); thresholds only ratchet upwards unless deliberately changed
 - [ ] **TEST-09**: All produced artifacts (Kotlin, Gradle KTS, TS/TSX, JSON, YAML, Markdown) are automatically formatted by one command and checked for style compliance, with a shared `.editorconfig`, a pre-commit hook formatting changed files, CI failing on violations, and generated code excluded
-- [ ] **TEST-10**: Code is idiomatic Kotlin with KDoc on public contracts and decision logic; KDoc is auto-formatted (formatter with KDoc support, e.g. ktfmt, instead of ktlint), its presence and quality on public API are enforced by static analysis (detekt `comments` rules), and broken KDoc references fail the build (Dokka `failOnWarning`)
+- [x] **TEST-10**: Code is idiomatic Kotlin with KDoc on public contracts and decision logic; KDoc is auto-formatted (formatter with KDoc support, e.g. ktfmt, instead of ktlint), its presence and quality on public API are enforced by static analysis (detekt `comments` rules), and broken KDoc references fail the build (Dokka `failOnWarning`)
 - [ ] **TEST-18**: Mapping between layers (API ↔ commands/queries, query results ↔ DTOs) is done by explicit Kotlin extension functions next to the layer boundary (`toCommand`, `toDto`, `toView`), without mapping generators; naming and placement are enforced by architecture tests
 - [ ] **TEST-11**: JVM test levels (unit, component, integration) are separate Gradle JVM Test Suites with their own dependencies and tasks, all included in coverage
 - [ ] **TEST-12**: Shared test data builders and test helpers are published via Gradle Java Test Fixtures (`testFixtures`) instead of being duplicated across modules
-- [ ] **TEST-13**: Static analysis runs for Kotlin (detekt or equivalent) and TypeScript (Biome) with the build failing on violations
+- [x] **TEST-13**: Static analysis runs for Kotlin (detekt or equivalent) and TypeScript (Biome) with the build failing on violations
 - [ ] **TEST-14**: Test toolchain is standardised: JUnit 6 (Jupiter) as the only JVM runner, Kotest Assertions for assertions, `kotest-property` for property-based invariant tests, AxonTestFixture for DCB decisions, MockK (minimal mocking), Awaitility for async, Testcontainers for infrastructure; frontend uses Vitest, Testing Library and MSW
 - [ ] **TEST-15**: Tests read as a business specification: Kotlin test methods and `@Nested` classes use backticked prose names in business language (no JVM-forbidden characters; prose names only in test sources, enforced by static analysis/Konsist); tests are tagged with the business rule ID they prove (`@Tag`) to feed the rule → test catalogue
 
@@ -272,8 +272,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | INFRA-01 | Phase 1 | Complete |
 | INFRA-09 | Phase 1 | Pending |
-| INFRA-11 | Phase 1 | Pending |
-| INFRA-12 | Phase 1 | Pending |
+| INFRA-11 | Phase 1 | Complete |
+| INFRA-12 | Phase 1 | Complete |
 | INFRA-13 | Phase 1 | Pending |
 | INFRA-16 | Phase 1 | Pending |
 | INFRA-17 | Phase 6 | Pending |
@@ -359,11 +359,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-16 | Phase 7 | Pending |
 | TEST-17 | Phase 7 | Pending |
 | TEST-09 | Phase 1 | Pending |
-| TEST-10 | Phase 1 | Pending |
+| TEST-10 | Phase 1 | Complete |
 | TEST-18 | Phase 5 | Pending |
 | TEST-11 | Phase 2 | Pending |
 | TEST-12 | Phase 2 | Pending |
-| TEST-13 | Phase 1 | Pending |
+| TEST-13 | Phase 1 | Complete |
 | TEST-14 | Phase 2 | Pending |
 | TEST-15 | Phase 3 | Pending |
 | CICD-01 | Phase 1 | Pending |

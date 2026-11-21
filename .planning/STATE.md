@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Repository, Build & CI Foundation
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-11-21T08:49:58.198Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-11-21T09:06:25.398Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 01 execution started
-state_head: 4c13be0d7453beea9d65ed76d78a9f679c4f386a
+state_head: bcf2c500849418ea586f08a22ec116a445c816fc
 progress:
   total_phases: 13
   completed_phases: 0
   total_plans: 14
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 01 (Repository, Build & CI Foundation) — EXECUTING
-Plan: 2 of 14
+Plan: 3 of 14
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 01 execution started
 
@@ -57,6 +57,7 @@ Progress: [░░░░░░░░░░] 0%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01 P01 | 7 min | 2 tasks | 17 files |
+| Phase 01 P02 | 14 min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,8 @@ Recent decisions affecting current work:
 - [Roadmap]: Cross-cutting conventions (ROADMAP.md) carry standing obligations such as ADRs, Event Modeling per slice, test naming and UI-SPEC per UI phase
 - [Phase 01]: Kotlin override is the only api constraint in :platform in Phase 1 (api(libs.kotlin.stdlib), catalog Kotlin 2.4.21 over Boot-managed 2.3.21); later non-BOM libraries and pins get their own catalog-referenced api constraints
 - [Phase 01]: Gradle dependency locking and verification-metadata.xml deferred to Phase 6 (CICD-05); Jackson BOM pinned to 3.1.8 as declared by spring-boot-dependencies 4.1.3
+- [Phase 01]: detekt analyses the functionalTest source set; test classes (*FunctionalTest.kt) get detekt's default test exclusions for FunctionNaming and the undocumented-function/property rules, GradleFixture stays fully checked — detekt's built-in test exclusions match **/test/** only; prose test names are the project convention; no baseline or disabled rules
+- [Phase 01]: TestKit fixtures run :lib tasks, never root build/check, and use the repository's real :platform — Root check reaches build-logic check and would recurse into functionalTest; an empty platform leaves test dependencies unversioned
 
 ### Pending Todos
 
@@ -94,6 +97,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T08:49:58.172Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-11-21T09:06:25.372Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None
