@@ -39,7 +39,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Every push and pull request runs a GitHub Actions workflow with SHA-pinned actions. It builds, tests and analyses the code, lints workflows and scripts (actionlint, zizmor, shellcheck) and scans the full history for leaked secrets. Renovate proposes grouped updates with a minimum release age for every version source (catalog, `.java-version`, `mise.toml`, Actions).
   4. `main` changes only through squash-merged pull requests from `gsd/phase-*` branches that pass the required checks. The ruleset enforces linear history and blocks force-push, and head branches are deleted after merge. The PR template mirrors the `/gsd-ship` body, and labels are synced from `labels.yml`. Secret scanning with push protection, Dependabot alerts, private vulnerability reporting, CodeQL and OpenSSF Scorecard are active.
   5. A pull request fails CI if it changes `.planning/config.json` against the declared policy or touches governance files without the `governance-approved` label. The agent must ask for confirmation before it edits governance files or runs GSD `config-set`.
-**Plans:** 11/14 plans executed
+**Plans:** 12/14 plans executed
 
 Plans:
 **Wave 1**
@@ -68,7 +68,7 @@ Plans:
 - [x] 01-11-PLAN.md — Renovate configuration: every version source, cooldown, grouping, narrow automerge (wave 7)
 
 **Wave 8** *(blocked on Wave 7 completion)*
-- [ ] 01-12-PLAN.md — CI workflows: `ci.yml` (`ci-success`), CodeQL (actions + Kotlin spike), Scorecard, ADR-lite notes (wave 8)
+- [x] 01-12-PLAN.md — CI workflows: `ci.yml` (`ci-success`), CodeQL (actions + Kotlin spike), Scorecard, ADR-lite notes (wave 8)
 
 **Wave 9** *(blocked on Wave 8 completion)*
 - [ ] 01-13-PLAN.md — GitHub settings as code, apply/drift scripts, Claude Code ask rules (wave 9)
@@ -285,7 +285,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Repository, Build & CI Foundation | 11/14 | In Progress | - |
+| 1. Repository, Build & CI Foundation | 12/14 | In Progress | - |
 | 2. Runtime Infrastructure & DCB Spikes | 0/TBD | Not started | - |
 | 3. Command Walking Skeleton | 0/TBD | Not started | - |
 | 4. Read Side & Live Queries | 0/TBD | Not started | - |

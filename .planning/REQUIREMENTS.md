@@ -13,12 +13,12 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **INFRA-09**: Every version is pinned in exactly one place per ecosystem: the Gradle version catalog holds all libraries, BOMs (consumed through the `:platform` module, no dependency-management plugin), Gradle plugins, tool versions and all container images used anywhere — infrastructure images for compose and integration tests (Axon Server, PostgreSQL, Grafana LGTM, Toxiproxy, etc.) as well as Paketo builder/run images and individual buildpacks — as full references with tag + digest; integration tests receive them as system properties declared as task inputs (no image literals in test code), docker compose consumes a Gradle-generated versions env file (no image literals in compose files, both checked in CI), and Renovate updates tag and digest together; the JDK version lives only in `.java-version` (read by the Gradle toolchain convention, CI `setup-java` via `java-version-file`, mise/jenv/IDE; `gradle/gradle-daemon-jvm.properties` is generated from it and checked for consistency); the Node.js version lives only in `.nvmrc` (read by nvm, mise, `setup-node` and the Gradle Node plugin convention) and the pnpm version in the `packageManager` field of `package.json`; npm packages use exact versions in `package.json` plus `pnpm-lock.yaml`; GitHub Actions are pinned by SHA in workflows; version literals in build scripts are rejected by an automated check; Renovate covers all of these sources
 - [x] **INFRA-11**: A dedicated `:platform` module (`java-platform`) is the single alignment point for JVM dependencies: it imports all BOMs (Spring Boot, Axoniq/Axon Framework, Testcontainers, Kotlin, Kotest, Jackson, etc.) and declares `api` constraints for libraries not covered by a BOM and for deliberate overrides (e.g. Kotlin over Boot's managed version), referencing only version-catalog aliases; convention plugins apply `platform(project(":platform"))` to every JVM module and every relevant configuration (main, all test suites, test fixtures, load tests)
 - [x] **INFRA-12**: `build-logic` (included build with convention plugins) is first-class code: it uses the same version catalog (plugin dependencies declared as catalog libraries, type-safe catalog access in precompiled script plugins, no version literals), is formatted, statically analysed and KDoc-documented under the same rules and pre-commit/CI checks as application code, its convention plugins have Gradle TestKit functional tests (including configuration-cache compatibility), and it meets the same configuration-cache/isolated-projects and lazy-configuration requirements
-- [ ] **INFRA-13**: `.gitattributes` defines repository-wide file handling consistent with `.editorconfig`: `text=auto eol=lf` by default, strict LF for `gradlew` and shell scripts, CRLF for `*.bat`/`*.cmd`, `binary` for images, fonts and jars; `linguist-generated` for generated client code and lock/verification files and `linguist-documentation` for docs so GitHub language stats and PR diffs stay meaningful; `-diff` for machine-generated lock metadata; CI verifies that the working tree is normalised
+- [x] **INFRA-13**: `.gitattributes` defines repository-wide file handling consistent with `.editorconfig`: `text=auto eol=lf` by default, strict LF for `gradlew` and shell scripts, CRLF for `*.bat`/`*.cmd`, `binary` for images, fonts and jars; `linguist-generated` for generated client code and lock/verification files and `linguist-documentation` for docs so GitHub language stats and PR diffs stay meaningful; `-diff` for machine-generated lock metadata; CI verifies that the working tree is normalised
 - [x] **INFRA-16**: The repository is REUSE-compliant: every source file (Kotlin, Gradle KTS, TS/TSX, CSS, shell, etc.) carries a single `SPDX-License-Identifier: MIT` line (added and checked by Spotless where supported); copyright and licensing for all files, including those that cannot carry headers (JSON, images, generated code), are declared once in `REUSE.toml` (`precedence = "aggregate"`); `reuse lint` runs in pre-commit and CI, and the README shows the REUSE badge
 - [ ] **INFRA-17**: Environment variables are defined once per service in a descriptor (name, description, image default, secret flag), from which Gradle generates: image defaults passed to buildpack builds as `BPE_DEFAULT_*` (overridable at runtime), OCI image labels documenting each variable and its default so they are visible via `docker image inspect` (Paketo Image Labels buildpack), `.env.example`, and the configuration reference page; application config keeps local-development defaults (`${VAR:local-default}`); secrets never get image defaults or labels; CI verifies generated artifacts are up to date; whether buildpack env can appear in `Config.Env` directly is verified in Phase 1
 - [x] **INFRA-14**: `.gitignore` comprehensively covers Gradle, Kotlin, Node/pnpm, IDE files, `.env`, test/Playwright/coverage artifacts and local tool state; `.editorconfig` explicitly defines settings for every file type in the repository, and formatter configurations are verified not to conflict with it
 - [ ] **INFRA-15**: Shared IDE run configurations are versioned (IntelliJ run configurations for services, compose and test suites; recommended VS Code extensions), while all other IDE state stays ignored
-- [ ] **INFRA-10**: The Gradle build uses every applicable speed-up mechanism: configuration cache enabled with problems failing the build; local and CI build cache (`gradle/actions/setup-gradle`, encrypted configuration cache, cache writes from `main` only); parallel execution and file-system watching; isolated-projects-compatible build logic (no cross-project configuration; isolated projects evaluated in Phase 1); convention plugins in an included `build-logic` build (no `buildSrc`); lazy configuration API and cacheable tasks with declared inputs/outputs (including frontend, client generation and docs tasks); Gradle daemon JVM criteria and tuned daemon/Kotlin daemon JVM args; K2 incremental compilation without kapt; parallel test forks and separately parallelised test suites in CI; Testcontainers singletons (and local reuse); reused buildpack caches; build performance tracked with gradle-profiler scenarios; Build Scans optional and only with author approval
+- [x] **INFRA-10**: The Gradle build uses every applicable speed-up mechanism: configuration cache enabled with problems failing the build; local and CI build cache (`gradle/actions/setup-gradle`, encrypted configuration cache, cache writes from `main` only); parallel execution and file-system watching; isolated-projects-compatible build logic (no cross-project configuration; isolated projects evaluated in Phase 1); convention plugins in an included `build-logic` build (no `buildSrc`); lazy configuration API and cacheable tasks with declared inputs/outputs (including frontend, client generation and docs tasks); Gradle daemon JVM criteria and tuned daemon/Kotlin daemon JVM args; K2 incremental compilation without kapt; parallel test forks and separately parallelised test suites in CI; Testcontainers singletons (and local reuse); reused buildpack caches; build performance tracked with gradle-profiler scenarios; Build Scans optional and only with author approval
 - [ ] **INFRA-02**: Shared contracts (commands, events, queries, shared kernel with tag constants and sealed result types) live in dedicated modules with no Spring or framework logic
 - [ ] **INFRA-03**: Developer can start Axon Server (pinned version, DCB context created automatically, correct hostname) and PostgreSQL with one docker compose command
 - [ ] **INFRA-04**: An automated smoke test proves that a conflicting conditional append is rejected by the DCB event store
@@ -144,15 +144,15 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### CI/CD & Supply Chain
 
-- [ ] **CICD-01**: GitHub Actions build, run all test levels, report coverage and static analysis on every push and PR
+- [x] **CICD-01**: GitHub Actions build, run all test levels, report coverage and static analysis on every push and PR
 - [ ] **CICD-02**: Container images for all services and the UI are built with Cloud Native Buildpacks (Paketo): Spring Boot `bootBuildImage` for JVM services, Paketo Web Servers buildpack (nginx with custom config: SPA routing, `/api` proxy to the BFF with SSE-safe buffering) for the frontend; no hand-written Dockerfiles for application images
 - [ ] **CICD-10**: Image build tasks always set fully qualified image names from one convention-plugin pattern `ghcr.io/<owner>/<rootProject.name>-<project.name>:<project.version>` (registry and owner configurable via `gradle.properties` for forks; version from the release-please-managed version file, SNAPSHOT between releases); CI adds a short git SHA tag for `main` builds and `latest` only for releases; signing and attestation target the digest; images carry standard OCI labels (`source`, `version`, `revision`, `created`, `licenses`, `title`, `description`); docker compose references the same names via the generated env file
-- [ ] **CICD-03**: All Actions and base images are pinned by SHA/digest
+- [x] **CICD-03**: All Actions and base images are pinned by SHA/digest
 - [ ] **CICD-04**: Dependency and tool version updates are tracked automatically (Renovate) with grouping and minimum release age
 - [ ] **CICD-05**: Dependencies and built images are scanned for vulnerabilities, failing on fixable high-severity issues
-- [ ] **CICD-06**: Secret leaks are detected in the repository (full history) and in PRs
+- [x] **CICD-06**: Secret leaks are detected in the repository (full history) and in PRs
 - [ ] **CICD-07**: SBOMs are generated and images are signed with provenance attestations
-- [ ] **CICD-08**: Workflows and scripts are linted locally (pre-commit) and in CI: actionlint for GitHub Actions workflows (with shellcheck for `run:` blocks), zizmor for Actions security issues (template injection, excessive permissions, unpinned actions, cache poisoning, dangerous triggers), shellcheck for all shell scripts, and `docker compose config` validation for compose files; tool versions pinned in `mise.toml`
+- [x] **CICD-08**: Workflows and scripts are linted locally (pre-commit) and in CI: actionlint for GitHub Actions workflows (with shellcheck for `run:` blocks), zizmor for Actions security issues (template injection, excessive permissions, unpinned actions, cache poisoning, dangerous triggers), shellcheck for all shell scripts, and `docker compose config` validation for compose files; tool versions pinned in `mise.toml`
 - [ ] **CICD-09**: Dependency licences (JVM and npm) are reported and checked in CI against an allowlist, with Axoniq commercial-terms modules explicitly listed and justified; a NOTICE file lists third-party attributions and the Axoniq terms
 
 ### Observability
@@ -274,12 +274,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-09 | Phase 1 | Complete |
 | INFRA-11 | Phase 1 | Complete |
 | INFRA-12 | Phase 1 | Complete |
-| INFRA-13 | Phase 1 | Pending |
+| INFRA-13 | Phase 1 | Complete |
 | INFRA-16 | Phase 1 | Complete |
 | INFRA-17 | Phase 6 | Pending |
 | INFRA-14 | Phase 1 | Complete |
 | INFRA-15 | Phase 6 | Pending |
-| INFRA-10 | Phase 1 | Pending |
+| INFRA-10 | Phase 1 | Complete |
 | INFRA-02 | Phase 2 | Pending |
 | INFRA-03 | Phase 2 | Pending |
 | INFRA-04 | Phase 2 | Pending |
@@ -366,15 +366,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-13 | Phase 1 | Complete |
 | TEST-14 | Phase 2 | Pending |
 | TEST-15 | Phase 3 | Pending |
-| CICD-01 | Phase 1 | Pending |
+| CICD-01 | Phase 1 | Complete |
 | CICD-02 | Phase 6 | Pending |
 | CICD-10 | Phase 6 | Pending |
-| CICD-03 | Phase 1 | Pending |
+| CICD-03 | Phase 1 | Complete |
 | CICD-04 | Phase 1 | Pending |
 | CICD-05 | Phase 6 | Pending |
-| CICD-06 | Phase 1 | Pending |
+| CICD-06 | Phase 1 | Complete |
 | CICD-07 | Phase 12 | Pending |
-| CICD-08 | Phase 1 | Pending |
+| CICD-08 | Phase 1 | Complete |
 | CICD-09 | Phase 2 | Pending |
 | OBS-01 | Phase 12 | Pending |
 | OBS-02 | Phase 12 | Pending |
