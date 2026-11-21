@@ -1,9 +1,9 @@
 ---
-status: partial
+status: diagnosed
 phase: 01-repository-build-ci-foundation
 source: [01-VERIFICATION.md, 01-01-SUMMARY.md, 01-02-SUMMARY.md, 01-03-SUMMARY.md, 01-04-SUMMARY.md, 01-05-SUMMARY.md, 01-06-SUMMARY.md, 01-07-SUMMARY.md, 01-08-SUMMARY.md, 01-09-SUMMARY.md, 01-10-SUMMARY.md, 01-11-SUMMARY.md, 01-12-SUMMARY.md, 01-13-SUMMARY.md, 01-14-SUMMARY.md, 01-15-SUMMARY.md, 01-16-SUMMARY.md, 01-17-SUMMARY.md, 01-18-SUMMARY.md, 01-19-SUMMARY.md, 01-20-SUMMARY.md]
 started: 2026-11-21T16:46:16Z
-updated: 2026-11-21T17:44:37.783Z
+updated: 2026-11-21T17:57:47Z
 ---
 
 ## Current Test
@@ -594,8 +594,22 @@ blocked: 5
   reason: "User reported: На поиск exec-ом бинаря по PATH полагаться нельзя. Нужно резолвить PATH, используя System.getenv(\"PATH\"), и самому находить полный путь до бинаря. Потом уже пользоваться exec. Это уже рабочий способ."
   severity: major
   test: 2
-  artifacts: []
-  missing: []
+  root_cause: "Two independent causes. (1) VerifyNodeVersion execs `node` by bare name; the JDK resolves a bare command against parentPathv, a native copy of PATH cached once when the daemon JVM initialises ProcessImpl (JDK-6413313), so a warm daemon finds node on the PATH of the client that started it. Gradle 9.9.2 does update System.getenv() and the native environ per build, so System.getenv(\"PATH\") inside a task action is current; only the bare-name lookup is stale. (2) Spotless Prettier (spotless-lib 4.11.0) never runs the verified node: with no explicit executables it searches System.getenv(\"PATH\") npm-first and runs the node next to that npm, so the guard (node-first, stale) and the formatter (npm-first, current) can pick different binaries with or without a daemon."
+  artifacts:
+    - path: "build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/VerifyNodeVersion.kt"
+      issue: "commandLine(\"node\", \"--version\") at lines 58-59 runs node by bare name"
+    - path: "build-logic/src/main/kotlin/courses.root.gradle.kts"
+      issue: "prettier(...) at line 113 sets no nodeExecutable/npmExecutable; the comment at lines 47-48 ('Spotless runs Prettier with the node on PATH') is inaccurate; pathOf (lines 59-67) is correct but shell-based"
+    - path: "build-logic/src/functionalTest/kotlin/io/github/aanbrn/courses/buildlogic/FormattingFunctionalTest.kt"
+      issue: "no test switches node on PATH within one daemon or checks that Prettier runs the verified node"
+  missing:
+    - "One resolver that walks System.getenv(\"PATH\") (split on File.pathSeparator, skip empty entries) and returns the first File(dir, name) that isFile && canExecute() as an absolute path, or null to keep the existing 'not available on PATH' message"
+    - "VerifyNodeVersion execs the resolved absolute node path, never \"node\""
+    - "Spotless Prettier is pointed at the same binary: prettier(...).nodeExecutable(nodePath).npmExecutable(<nodeDir>/npm), resolved at configuration time through a ValueSource (providers.of) rather than a direct System.getenv(\"PATH\") read, so the configuration cache is invalidated only when the resolved path changes; configuration must not fail without Node (verifyNodeVersion fails first)"
+    - "Correct the 'Spotless runs Prettier with the node on PATH' comment"
+    - "TestKit regression tests: two builds on one daemon with a @TempDir node shim prepended in the second, expecting verifyNodeVersion to fail naming .nvmrc; and a logging node shim plus npm link asserting Prettier's server ran the verified node"
+    - "Optional: record the resolved node path in node-major.txt so a different binary also invalidates Prettier (author's call; today invalidation is by major only); optional: replace pathOf's sh -c command -v with the same ValueSource resolver"
+  debug_session: ".planning/debug/node-binary-resolved-from-daemon-path.md"
 
 ## Deferred Follow-Ups
 
