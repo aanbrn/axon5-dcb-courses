@@ -12,6 +12,7 @@ val libs = the<org.gradle.accessors.dm.LibrariesForLibs>()
 
 // Directories that are generated, vendored or owned by another tool. `.planning` and `.claude` are
 // owned by GSD, which would otherwise fail `spotlessCheck` on every generated document.
+// `.gsd` holds GSD's self-ignored runtime state, such as dispatch sentinels.
 // `gradle-user-home` and `profile-out*` are written into the project by gradle-profiler.
 val excluded =
     listOf(
@@ -23,6 +24,7 @@ val excluded =
         "**/.idea/**",
         "**/.planning/**",
         "**/.claude/**",
+        "**/.gsd/**",
         "**/.mise/**",
         "**/gradle-user-home/**",
         "**/profile-out*/**",
