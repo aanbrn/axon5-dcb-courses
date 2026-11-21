@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Repository, Build & CI Foundation
 status: executing
-stopped_at: Completed 01-04-PLAN.md
-last_updated: "2026-11-21T09:41:26.554Z"
+stopped_at: Completed 01-05-PLAN.md
+last_updated: "2026-11-21T09:53:49.238Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 01 execution started
-state_head: d018f93e45726f7e42ff7c12c018342678d0f33f
+state_head: 92b3430a131eaf6d48319516e6bedd3972deb98c
 progress:
   total_phases: 13
   completed_phases: 0
   total_plans: 14
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 01 (Repository, Build & CI Foundation) — EXECUTING
-Plan: 5 of 14
+Plan: 6 of 14
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 01 execution started
 
@@ -60,6 +60,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P02 | 14 min | 2 tasks | 11 files |
 | Phase 01 P03 | 25 min | 3 tasks | 8 files |
 | Phase 01 P04 | 12min | 2 tasks | 9 files |
+| Phase 01 P05 | 12 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,8 @@ Recent decisions affecting current work:
 - [Phase 01]: mise.lock enforced with locked = true; .mise/locks sidecar lockfiles are committed with it — mise.lock references the npm and pipx sidecar lockfiles; without them a fresh clone cannot verify those tools
 - [Phase 01]: Markdown leaves indent_size unset in .editorconfig because Prettier aligns ordered-list continuation lines to the three-column marker
 - [Phase 01]: editorconfig-checker excludes mise.lock and .mise/locks as generated lockfiles
+- [Phase 01]: Missing taplo is replaced by an existing placeholder file at configuration time so the Spotless native step can be stored in the configuration cache; VerifyFormatterBinary then fails the TOML tasks with a mise install hint
+- [Phase 01]: Formatter binary checks are a separate upstream task (VerifyFormatterBinary), not a doFirst, because Spotless fingerprints its step state before doFirst runs; the binary path and version output are inputs of the Spotless tasks of that type
 
 ### Pending Todos
 
@@ -103,6 +106,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T09:41:26.530Z
-Stopped at: Completed 01-04-PLAN.md
+Last session: 2026-11-21T09:53:49.210Z
+Stopped at: Completed 01-05-PLAN.md
 Resume file: None
