@@ -78,10 +78,11 @@ class GovernedPathsFormatFunctionalTest {
     }
 
     @Test
-    fun `K7 a byte order mark fails closed naming the first line`() {
-        val output = fixture("﻿mise.toml\n").runAndFail(TASK).output
+    fun `K7 a byte order mark or a NUL character fails closed naming the first line`() {
+        val problem = "line 1: entry contains a character outside printable ASCII"
 
-        output shouldContain "line 1: entry contains a character outside printable ASCII"
+        fixture("﻿mise.toml\n").runAndFail(TASK).output shouldContain problem
+        fixture("mi\u0000se.toml\n").runAndFail(TASK).output shouldContain problem
     }
 
     @Test

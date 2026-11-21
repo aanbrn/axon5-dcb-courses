@@ -22,17 +22,24 @@ internal data class GovernedPaths(val entries: List<String>, val problems: List<
     companion object {
         private const val STRIPPED = " \t\r"
         private const val LINE_SEPARATOR = '\n'
+        private const val COMMENT_MARKER = '#'
+        private val PRINTABLE_ASCII = ' '..'~'
 
         /** Parses the [text] of a governed paths file. */
         fun parse(text: String): GovernedPaths {
-            val entries =
-                text
-                    .split(LINE_SEPARATOR)
-                    .map { line -> line.trim { it in STRIPPED } }
-                    .filter {
-                        it.isNotEmpty()
-                    }
-            return GovernedPaths(entries, emptyList())
+            val entries = mutableListOf<String>()
+            val problems = mutableListOf<String>()
+            text.split(LINE_SEPARATOR).forEachIndexed { index, line ->
+                val entry = line.trim { it in STRIPPED }
+                when {
+                    entry.isEmpty() || entry.startsWith(COMMENT_MARKER) -> Unit
+                    entry.all { it in PRINTABLE_ASCII } -> entries += entry
+                    else ->
+                        problems +=
+                            "line ${index + 1}: entry contains a character outside printable ASCII"
+                }
+            }
+            return GovernedPaths(entries, problems)
         }
     }
 }

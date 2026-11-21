@@ -76,19 +76,40 @@ is_governed() {
 }
 
 # Reads the governed path globs. The grammar is shared with `GovernedPaths.parse` in build-logic's
-# governance package, which backs `checkClaudeAskRules`; both must change together (WR-04). Lines are
-# split on LF only, and leading and trailing space, tab and carriage return are stripped and nothing
-# else (`[:space:]` would also strip vertical tab and form feed).
+# governance package, which backs `checkClaudeAskRules`; both must change together (WR-04):
+#   1. Lines are split on LF only.
+#   2. Leading and trailing space, tab and carriage return are stripped and nothing else
+#      (`[:space:]` would also strip vertical tab and form feed).
+#   3. Empty lines and lines starting with `#` are ignored.
+#   4. Every other entry must be printable ASCII (0x20 to 0x7E), checked byte-wise under LC_ALL=C.
+#      A NUL byte, which `read` would silently drop, is turned into a non-printable byte first.
+#      Every offending line is reported in ascending order and the gate fails closed.
+#   5. A file without entries fails closed.
 load_globs() {
-  local file=$1 line
+  local file=$1 line number=0
+  local -a offending=()
   [[ -f $file ]] || die "governed paths file not found: $file"
   GLOBS=()
   while IFS= read -r line || [[ -n $line ]]; do
+    number=$((number + 1))
     line=${line##*([ $'\t\r'])}
     line=${line%%*([ $'\t\r'])}
-    [[ -n $line ]] && GLOBS+=("$line")
-  done <"$file"
-  [[ ${#GLOBS[@]} -gt 0 ]] || die "governed paths file is empty: $file"
+    if [[ -z $line || $line == '#'* ]]; then
+      continue
+    fi
+    if [[ $line == *[![:print:]]* ]]; then
+      offending+=("$number")
+    else
+      GLOBS+=("$line")
+    fi
+  done < <(tr '\0' '\001' <"$file")
+  if [[ ${#offending[@]} -gt 0 ]]; then
+    for number in "${offending[@]}"; do
+      echo "governance: $file line $number: entry contains a character outside printable ASCII" >&2
+    done
+    exit 1
+  fi
+  [[ ${#GLOBS[@]} -gt 0 ]] || die "governed paths file lists no governed path: $file"
 }
 
 validate_inputs() {

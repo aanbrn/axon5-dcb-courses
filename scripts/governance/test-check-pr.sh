@@ -451,6 +451,11 @@ bom=$(governed_file bom '\xef\xbb\xbfmise.toml\n')
 run_case "G8 a byte order mark fails closed naming the first line" 1 "line 1: $NOT_PRINTABLE" \
   GOVERNED_PATHS_FILE="$bom" PR_FILES_JSON="$docs_only" PR_LABELS_JSON="$LABEL_NONE"
 
+nul=$(governed_file nul 'mi\x00se.toml\n')
+run_case "G8b a NUL byte fails closed instead of being dropped by the reader" 1 \
+  "line 1: $NOT_PRINTABLE" \
+  GOVERNED_PATHS_FILE="$nul" PR_FILES_JSON="$docs_only" PR_LABELS_JSON="$LABEL_NONE"
+
 inner_cr=$(governed_file inner-cr 'mise.toml\r.mcp.json\n')
 run_case "G9 an inner carriage return fails closed instead of splitting the entry" 1 \
   "line 1: $NOT_PRINTABLE" \
