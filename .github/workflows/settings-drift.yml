@@ -1,0 +1,66 @@
+name: Settings drift
+
+# Read-only comparison of the live repository settings and `main` ruleset with the declared ones in
+# `.github/rulesets/main.json` and `.github/repository-settings.json` (D-15). It never writes: the
+# check mode of the script issues GET requests only, and the token it receives is a read-only
+# fine-grained token. The workflow is deliberately not a required status check.
+#
+# Until the author creates the `SETTINGS_READ_TOKEN` secret (approval gate, plan 01-14) the job
+# prints a notice and succeeds. The repository variable `SETTINGS_DRIFT_SECTIONS` records, as
+# space-separated section names, which sections the author has applied while that is a strict
+# subset of `ruleset repository security`; when it is unset every section is checked.
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/rulesets/**"
+      - ".github/repository-settings.json"
+      - "scripts/apply-github-settings.sh"
+
+permissions: {}
+
+concurrency:
+  group: settings-drift-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  drift:
+    name: Settings drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Every value reaches the shell through env: only. An unknown section name in the variable
+      # makes the script exit 2, so a mistyped record fails loudly instead of narrowing the check.
+      - name: Compare the declared settings with the live repository
+        env:
+          GH_TOKEN: ${{ secrets.SETTINGS_READ_TOKEN }}
+          GITHUB_REPOSITORY_NAME: ${{ github.repository }}
+          DRIFT_SECTIONS: ${{ vars.SETTINGS_DRIFT_SECTIONS }}
+        run: |
+          if [[ -z "${GH_TOKEN}" ]]; then
+            echo "::notice::Settings drift check skipped: the SETTINGS_READ_TOKEN secret does not exist yet. The author creates the read-only token at the approval gate (plan 01-14)."
+            exit 0
+          fi
+
+          words=()
+          read -ra words <<<"${DRIFT_SECTIONS}" || true
+          if [[ ${#words[@]} -eq 0 ]]; then
+            words=(ruleset repository security)
+          else
+            echo "::notice::Settings drift check covers only the recorded sections: ${words[*]}"
+          fi
+
+          only=()
+          for section in "${words[@]}"; do
+            only+=(--only "${section}")
+          done
+          scripts/apply-github-settings.sh --check --repo "${GITHUB_REPOSITORY_NAME}" "${only[@]}"
