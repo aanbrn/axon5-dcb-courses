@@ -341,6 +341,39 @@ run_case "renovate with the label passes even for a non-version change" 0 \
   PR_FILES_JSON="$new_tool_files" PR_LABELS_JSON="$LABEL_APPROVED" \
   PR_AUTHOR="$BOT" PR_HEAD_REF=renovate/mise
 
+# --- files API limit ----------------------------------------------------------------------------
+
+# files_many <name> <count>: stores a list of <count> non-governed entries as $TMP/<name>.json and
+# prints its path.
+files_many() {
+  jq -n --argjson count "$2" \
+    '[range($count) | {filename: "docs/f\(.).md", status: "added"}]' >"$TMP/$1.json"
+  echo "$TMP/$1.json"
+}
+
+# One governed glob keeps the per-file loop short for thousands of entries.
+limit_globs="$TMP/limit-globs.txt"
+echo 'governance/**' >"$limit_globs"
+
+many_2999=$(files_many many-2999 2999)
+many_3000=$(files_many many-3000 3000)
+many_3001=$(files_many many-3001 3001)
+
+run_case "2999 entries are evaluated file by file and pass" 0 "no governed file is touched" \
+  GOVERNED_PATHS_FILE="$limit_globs" PR_FILES_JSON="$many_2999" PR_LABELS_JSON="$LABEL_NONE"
+run_case "3000 entries without the label fail and name the count" 1 "3000 entries" \
+  GOVERNED_PATHS_FILE="$limit_globs" PR_FILES_JSON="$many_3000" PR_LABELS_JSON="$LABEL_NONE"
+run_case "3000 entries without the label are told to add the label" 1 \
+  "add the 'governance-approved' label" \
+  GOVERNED_PATHS_FILE="$limit_globs" PR_FILES_JSON="$many_3000" PR_LABELS_JSON="$LABEL_NONE"
+run_case "3001 entries without the label fail and name the count" 1 "3001 entries" \
+  GOVERNED_PATHS_FILE="$limit_globs" PR_FILES_JSON="$many_3001" PR_LABELS_JSON="$LABEL_NONE"
+run_case "3000 entries with the label pass" 0 "carries 'governance-approved'" \
+  GOVERNED_PATHS_FILE="$limit_globs" PR_FILES_JSON="$many_3000" PR_LABELS_JSON="$LABEL_APPROVED"
+run_case "3000 entries from renovate never take the version-only exemption" 1 "files API limit" \
+  GOVERNED_PATHS_FILE="$limit_globs" PR_FILES_JSON="$many_3000" PR_LABELS_JSON="$LABEL_NONE" \
+  PR_AUTHOR="$BOT" PR_HEAD_REF=renovate/mise
+
 # --- head branch naming -------------------------------------------------------------------------
 
 run_case "a same-repository branch outside the allowed names fails" 1 "feature/x" \
