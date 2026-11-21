@@ -1,0 +1,34 @@
+# Pinned CLI tools for local development, hooks and CI.
+#
+# Version sources (INFRA-09): the JDK comes from `.java-version` and Node.js from `.nvmrc`
+# (read through idiomatic_version_file_enable_tools); neither is repeated here. The mise
+# version itself lives only in `min_version` below, read by CI and updated by Renovate.
+# Every entry below is locked per platform, with checksums, in `mise.lock`.
+
+min_version = "2026.11.11"
+
+[settings]
+idiomatic_version_file_enable_tools = ["node", "java"]
+# Refuse to install anything that is not pinned, with a checksum, in mise.lock.
+locked = true
+
+[tools]
+gitleaks = "8.30.1"
+# Explicit backend: the registry alias for actionlint points to an unvetted fork.
+"aqua:rhysd/actionlint" = "1.7.12"
+shellcheck = "0.11.0"
+lefthook = "2.2.2"
+zizmor = "1.32.0"
+editorconfig-checker = "4.0.2"
+"pipx:reuse" = { version = "6.3.0", extras = "charset-normalizer" }
+"github:gradle/gradle-profiler" = "0.26.0"
+# Formatter binaries Spotless runs for shell scripts and TOML.
+"aqua:mvdan/sh" = "3.14.1"
+"aqua:tamasfe/taplo" = "0.10.0"
+# Newest releases at least seven days old at pinning time (the cooldown Renovate enforces).
+# Exact-version trust-policy exception, approved by the author: renovate pulls @yarnpkg/libzip@3.2.2
+# transitively; that release was published manually by the Yarn lead maintainer without provenance
+# (3.2.0 had it), which trips trustPolicy=no-downgrade. Remove once renovate no longer pulls it.
+"npm:renovate" = { version = "44.239.1", trust_policy_excludes = ["@yarnpkg/libzip@3.2.2"] }
+jq = "1.8.2"
+gh = "2.104.0"
