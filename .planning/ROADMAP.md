@@ -39,12 +39,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Every push and pull request runs a GitHub Actions workflow with SHA-pinned actions. It builds, tests and analyses the code, lints workflows and scripts (actionlint, zizmor, shellcheck) and scans the full history for leaked secrets. Renovate proposes grouped updates with a minimum release age for every version source (catalog, `.java-version`, `mise.toml`, Actions).
   4. `main` changes only through squash-merged pull requests from `gsd/phase-*` branches that pass the required checks. The ruleset enforces linear history and blocks force-push, and head branches are deleted after merge. The PR template mirrors the `/gsd-ship` body, and labels are synced from `labels.yml`. Secret scanning with push protection, Dependabot alerts, private vulnerability reporting, CodeQL and OpenSSF Scorecard are active.
   5. A pull request fails CI if it changes `.planning/config.json` against the declared policy or touches governance files without the `governance-approved` label. The agent must ask for confirmation before it edits governance files or runs GSD `config-set`.
-**Plans:** 20/20 plans executed
+**Plans:** 20/21 plans executed
 
 Plans:
 - [x] 01-18-PLAN.md
 - [x] 01-19-PLAN.md
 - [x] 01-20-PLAN.md
+- [ ] 01-21-PLAN.md — Gap closure G-01-2: one `ExecutableOnPath` resolver over the build's `PATH` feeds `verifyNodeVersion`, Spotless Prettier, taplo and shfmt; warm-daemon and configuration-cache TestKit tests (wave 1)
 
 **Wave 1**
 - [x] 01-15-PLAN.md
