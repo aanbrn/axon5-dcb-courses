@@ -2,6 +2,8 @@
 plugins {
     `java-library`
     id("org.jetbrains.kotlin.jvm")
+    id("dev.detekt")
+    id("org.jetbrains.dokka")
 }
 
 val libs = the<org.gradle.accessors.dm.LibrariesForLibs>()
@@ -29,7 +31,7 @@ val javaLanguageVersion: Provider<JavaLanguageVersion> =
             val major =
                 text.trim().substringBefore('.').toIntOrNull()
                     ?: throw GradleException(
-                        ".java-version must hold a numeric JDK major version, but it holds '${text.trim()}'"
+                        ".java-version must hold a numeric JDK major version, but it holds '${text.trim()}'",
                     )
             JavaLanguageVersion.of(major)
         }
@@ -46,3 +48,13 @@ tasks.withType<Test>().configureEach {
     useJUnitPlatform()
     maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
 }
+
+// Strict analysis without a baseline; the overrides live in one shared file.
+detekt {
+    buildUponDefaultConfig.set(true)
+    config.setFrom(isolated.rootProject.projectDirectory.file("config/detekt/detekt.yml"))
+}
+
+dokka { dokkaPublications.html { failOnWarning.set(true) } }
+
+tasks.named("check") { dependsOn(tasks.named("dokkaGeneratePublicationHtml")) }
