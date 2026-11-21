@@ -10,7 +10,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Foundation & Infrastructure
 
 - [x] **INFRA-01**: Developer can build the whole backend with one Gradle command from a multi-project build with convention plugins (`build-logic`) and a version catalog
-- [ ] **INFRA-09**: Every version is pinned in exactly one place per ecosystem: the Gradle version catalog holds all libraries, BOMs (consumed through the `:platform` module, no dependency-management plugin), Gradle plugins, tool versions and all container images used anywhere — infrastructure images for compose and integration tests (Axon Server, PostgreSQL, Grafana LGTM, Toxiproxy, etc.) as well as Paketo builder/run images and individual buildpacks — as full references with tag + digest; integration tests receive them as system properties declared as task inputs (no image literals in test code), docker compose consumes a Gradle-generated versions env file (no image literals in compose files, both checked in CI), and Renovate updates tag and digest together; the JDK version lives only in `.java-version` (read by the Gradle toolchain convention, CI `setup-java` via `java-version-file`, mise/jenv/IDE; `gradle/gradle-daemon-jvm.properties` is generated from it and checked for consistency); the Node.js version lives only in `.nvmrc` (read by nvm, mise, `setup-node` and the Gradle Node plugin convention) and the pnpm version in the `packageManager` field of `package.json`; npm packages use exact versions in `package.json` plus `pnpm-lock.yaml`; GitHub Actions are pinned by SHA in workflows; version literals in build scripts are rejected by an automated check; Renovate covers all of these sources
+- [x] **INFRA-09**: Every version is pinned in exactly one place per ecosystem: the Gradle version catalog holds all libraries, BOMs (consumed through the `:platform` module, no dependency-management plugin), Gradle plugins, tool versions and all container images used anywhere — infrastructure images for compose and integration tests (Axon Server, PostgreSQL, Grafana LGTM, Toxiproxy, etc.) as well as Paketo builder/run images and individual buildpacks — as full references with tag + digest; integration tests receive them as system properties declared as task inputs (no image literals in test code), docker compose consumes a Gradle-generated versions env file (no image literals in compose files, both checked in CI), and Renovate updates tag and digest together; the JDK version lives only in `.java-version` (read by the Gradle toolchain convention, CI `setup-java` via `java-version-file`, mise/jenv/IDE; `gradle/gradle-daemon-jvm.properties` is generated from it and checked for consistency); the Node.js version lives only in `.nvmrc` (read by nvm, mise, `setup-node` and the Gradle Node plugin convention) and the pnpm version in the `packageManager` field of `package.json`; npm packages use exact versions in `package.json` plus `pnpm-lock.yaml`; GitHub Actions are pinned by SHA in workflows; version literals in build scripts are rejected by an automated check; Renovate covers all of these sources
 - [x] **INFRA-11**: A dedicated `:platform` module (`java-platform`) is the single alignment point for JVM dependencies: it imports all BOMs (Spring Boot, Axoniq/Axon Framework, Testcontainers, Kotlin, Kotest, Jackson, etc.) and declares `api` constraints for libraries not covered by a BOM and for deliberate overrides (e.g. Kotlin over Boot's managed version), referencing only version-catalog aliases; convention plugins apply `platform(project(":platform"))` to every JVM module and every relevant configuration (main, all test suites, test fixtures, load tests)
 - [x] **INFRA-12**: `build-logic` (included build with convention plugins) is first-class code: it uses the same version catalog (plugin dependencies declared as catalog libraries, type-safe catalog access in precompiled script plugins, no version literals), is formatted, statically analysed and KDoc-documented under the same rules and pre-commit/CI checks as application code, its convention plugins have Gradle TestKit functional tests (including configuration-cache compatibility), and it meets the same configuration-cache/isolated-projects and lazy-configuration requirements
 - [ ] **INFRA-13**: `.gitattributes` defines repository-wide file handling consistent with `.editorconfig`: `text=auto eol=lf` by default, strict LF for `gradlew` and shell scripts, CRLF for `*.bat`/`*.cmd`, `binary` for images, fonts and jars; `linguist-generated` for generated client code and lock/verification files and `linguist-documentation` for docs so GitHub language stats and PR diffs stay meaningful; `-diff` for machine-generated lock metadata; CI verifies that the working tree is normalised
@@ -202,7 +202,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Developer Tooling
 
 - [x] **TOOL-01**: All developer and CI tools are inventoried in `docs/tooling.md` (purpose, version source, installation): git, gh, Docker-compatible engine (colima/OrbStack/Docker Desktop), docker compose, pack, JDK, Node.js/pnpm, lefthook, gitleaks, trivy, grype, syft, cosign, Structurizr, act, etc.
-- [ ] **TOOL-02**: CLI tools not managed by Gradle are pinned in `mise.toml` and kept up to date by Renovate
+- [x] **TOOL-02**: CLI tools not managed by Gradle are pinned in `mise.toml` and kept up to date by Renovate
 - [ ] **TOOL-03**: A `doctor` command verifies the local environment (required tools and versions, Docker engine, Testcontainers connectivity) and explains how to fix problems
 - [ ] **TOOL-04**: The setup works with colima (Testcontainers `DOCKER_HOST`/Ryuk configuration documented and verified) as well as Docker Desktop
 
@@ -271,7 +271,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | INFRA-01 | Phase 1 | Complete |
-| INFRA-09 | Phase 1 | Pending |
+| INFRA-09 | Phase 1 | Complete |
 | INFRA-11 | Phase 1 | Complete |
 | INFRA-12 | Phase 1 | Complete |
 | INFRA-13 | Phase 1 | Pending |
@@ -409,7 +409,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | UPS-03 | Phase 2 | Pending |
 | UPS-04 | Phase 2 | Pending |
 | TOOL-01 | Phase 1 | Complete |
-| TOOL-02 | Phase 1 | Pending |
+| TOOL-02 | Phase 1 | Complete |
 | TOOL-03 | Phase 2 | Pending |
 | TOOL-04 | Phase 2 | Pending |
 | AIDEV-01 | Phase 2 | Pending |
