@@ -21,7 +21,7 @@ findings:
     title: "A PR with 3000 or more files hides governed files from the gate"
   - id: WR-04
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "The governed-paths file is parsed differently by the shell gate and the Gradle check"
   - id: IN-01
     severity: info
@@ -43,7 +43,7 @@ findings:
     severity: info
     disposition: open
     title: "The governance gate and shell tests depend on unpinned runner tools"
-open: 7
+open: 6
 total: 10
 recorded: 2026-11-21T13:05:00.000Z
 ---
@@ -56,7 +56,7 @@ recorded: 2026-11-21T13:05:00.000Z
 | WR-01 | warning | open | 01-REVIEW.md |
 | WR-02 | warning | deferred | 01-REVIEW.md — deferred by the author at gap planning (2026-11-21): binding the approval label to a commit or dismissing it on push needs a separate design decision (workflow permissions or a new verification mechanism); not part of the gap-closure scope |
 | WR-03 | warning | fixed | 01-REVIEW.md — fixed by plan 01-15 |
-| WR-04 | warning | open | 01-REVIEW.md |
+| WR-04 | warning | fixed | 01-REVIEW.md — fixed by plan 01-16 |
 | IN-01 | info | open | 01-REVIEW.md |
 | IN-02 | info | open | 01-REVIEW.md |
 | IN-03 | info | open | 01-REVIEW.md |
