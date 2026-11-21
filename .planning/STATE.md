@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Repository, Build & CI Foundation
 status: executing
-stopped_at: Completed 01-18-PLAN.md
-last_updated: "2026-11-21T15:31:38.573Z"
+stopped_at: Completed 01-19-PLAN.md
+last_updated: "2026-11-21T15:35:33.092Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 01 execution started
-state_head: 40f3bb45e40a5791e53e0d43536f623b11681805
+state_head: 3529028b4f1d5fc54ec1ceb53cd6fa157a6dc05e
 progress:
   total_phases: 13
   completed_phases: 0
   total_plans: 20
-  completed_plans: 18
+  completed_plans: 19
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 01 (Repository, Build & CI Foundation) — EXECUTING
-Plan: 19 of 20
+Plan: 20 of 20
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 01 execution started
 
@@ -74,6 +74,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P16 | 12 min | 2 tasks | 6 files |
 | Phase 01 P17 | 15 min | 2 tasks | 4 files |
 | Phase 01 P18 | 24 min | 2 tasks | 3 files |
+| Phase 01 P19 | 6 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -115,6 +116,7 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-16: governed-paths grammar shared by check-pr.sh load_globs and GovernedPaths.parse; NUL bytes converted with tr so both parsers fail closed — bash read drops NUL silently while Kotlin keeps it; any input one parser keeps and the other drops must fail closed in both (WR-04)
 - [Phase 01]: Governed-path list covers the enforcement surface (29 entries); version catalog, gradlew.bat, module conventions and tests stay outside, documented in the file
 - [Phase 01]: 01-18: NUL strings are not rejected up front; the check-pr.sh reading fails closed through a checked jq status and an entry-count guard (WR-05)
+- [Phase 01]: Plan 01-19: governed every Renovate config name and every mise config, rc and sidecar-lock location CI reads (54 entries); the renovate[bot] version-only exemption stays unchanged and its sidecar cost is a recorded follow-up
 
 ### Pending Todos
 
@@ -137,6 +139,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T15:31:38.468Z
-Stopped at: Completed 01-18-PLAN.md
+Last session: 2026-11-21T15:35:32.988Z
+Stopped at: Completed 01-19-PLAN.md
 Resume file: None
