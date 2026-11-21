@@ -400,6 +400,62 @@ touches_mise=$(touch_json touches-mise mise.toml)
 run_case "G2 a tab-indented entry with a CRLF ending still governs its path" 1 "mise\.toml" \
   GOVERNED_PATHS_FILE="$crlf" PR_FILES_JSON="$touches_mise" PR_LABELS_JSON="$LABEL_NONE"
 
+# run_order_case <name> <first> <second> [VAR=value ...]
+# Like run_case, but expects exit 1 and the two texts in the combined output, <first> before <second>.
+run_order_case() {
+  local name=$1 first=$2 second=$3
+  shift 3
+  local output code=0
+  output=$(env -i PATH="$PATH" GOVERNED_PATHS_FILE="$GOVERNED" "${DEFAULT_ENV[@]}" "$@" \
+    bash "$CHECK" 2>&1) || code=$?
+  if [[ $code -eq 1 && $output == *"$first"*"$second"* ]]; then
+    passed=$((passed + 1))
+    echo "ok   - $name"
+  else
+    failed=$((failed + 1))
+    echo "FAIL - $name (exit $code, expected 1; '$first' before '$second')"
+    while IFS= read -r line; do
+      echo "       | $line"
+    done <<<"$output"
+  fi
+}
+
+NOT_PRINTABLE="entry contains a character outside printable ASCII"
+
+comments=$(governed_file comments '# a comment\n   # indented comment\nmise.toml\n')
+touches_comment=$(touch_json touches-comment '# a comment')
+run_case "G3 a comment line governs nothing" 0 "no governed file is touched" \
+  GOVERNED_PATHS_FILE="$comments" PR_FILES_JSON="$touches_comment" PR_LABELS_JSON="$LABEL_NONE"
+
+inner_space=$(governed_file inner-space 'docs/my notes.md\n')
+touches_notes=$(touch_json touches-notes 'docs/my notes.md')
+run_case "G4 an entry keeps its inner space" 1 "docs/my notes\.md" \
+  GOVERNED_PATHS_FILE="$inner_space" PR_FILES_JSON="$touches_notes" PR_LABELS_JSON="$LABEL_NONE"
+
+nbsp=$(governed_file nbsp 'mise.toml\n\xc2\xa0.mcp.json\n')
+run_case "G5 a non-breaking space fails closed naming the line" 1 "line 2: $NOT_PRINTABLE" \
+  GOVERNED_PATHS_FILE="$nbsp" PR_FILES_JSON="$docs_only" PR_LABELS_JSON="$LABEL_NONE"
+
+two_bad=$(governed_file two-bad \
+  'a\n\xc2\xa0.mcp.json\nb\nc\nd\ne\nf\ng\nh\nmise\t.toml\n')
+run_order_case "G6 every offending line is reported in ascending line order" \
+  "line 2:" "line 10:" \
+  GOVERNED_PATHS_FILE="$two_bad" PR_FILES_JSON="$docs_only" PR_LABELS_JSON="$LABEL_NONE"
+
+only_comments=$(governed_file only-comments '# nothing governed\n\n   \n')
+run_case "G7 a file with only comments and blank lines lists no governed path" 1 \
+  "lists no governed path" \
+  GOVERNED_PATHS_FILE="$only_comments" PR_FILES_JSON="$docs_only" PR_LABELS_JSON="$LABEL_NONE"
+
+bom=$(governed_file bom '\xef\xbb\xbfmise.toml\n')
+run_case "G8 a byte order mark fails closed naming the first line" 1 "line 1: $NOT_PRINTABLE" \
+  GOVERNED_PATHS_FILE="$bom" PR_FILES_JSON="$docs_only" PR_LABELS_JSON="$LABEL_NONE"
+
+inner_cr=$(governed_file inner-cr 'mise.toml\r.mcp.json\n')
+run_case "G9 an inner carriage return fails closed instead of splitting the entry" 1 \
+  "line 1: $NOT_PRINTABLE" \
+  GOVERNED_PATHS_FILE="$inner_cr" PR_FILES_JSON="$docs_only" PR_LABELS_JSON="$LABEL_NONE"
+
 # --- head branch naming -------------------------------------------------------------------------
 
 run_case "a same-repository branch outside the allowed names fails" 1 "feature/x" \
