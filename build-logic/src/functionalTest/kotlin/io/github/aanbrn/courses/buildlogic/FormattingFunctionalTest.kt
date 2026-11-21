@@ -89,4 +89,54 @@ class FormattingFunctionalTest {
         result.output shouldContain "mise install"
         result.task(":verifyTaplo")?.outcome shouldBe TaskOutcome.FAILED
     }
+
+    @Test
+    fun `a shell script gets the SPDX header on line 2 and shfmt indentation`() {
+        val fixture = GradleFixture.standard(projectDir)
+        fixture.run("spotlessApply")
+        fixture.file(
+            "scripts/run.sh",
+            "#!/usr/bin/env bash\n# Runs the thing.\nif true; then\n\techo hi\nfi\n",
+        )
+
+        val failed = fixture.runAndFail("spotlessShellCheck")
+        failed.output shouldContain "run.sh"
+
+        fixture.run("spotlessApply")
+
+        fixture.read("scripts/run.sh") shouldBe
+            "#!/usr/bin/env bash\n# SPDX-License-Identifier: MIT\n# Runs the thing.\n" +
+                "if true; then\n  echo hi\nfi\n"
+        fixture.run("spotlessShellCheck").task(":spotlessShellCheck")?.outcome shouldBe
+            TaskOutcome.SUCCESS
+    }
+
+    @Test
+    fun `a missing shfmt fails the shell tasks with a mise install hint but not configuration`() {
+        val fixture = GradleFixture.standard(projectDir)
+        fixture.file("scripts/run.sh", "#!/usr/bin/env bash\necho hi\n")
+
+        fixture.runWithout("shfmt", "help").task(":help")?.outcome shouldBe TaskOutcome.SUCCESS
+
+        val result = fixture.runAndFailWithout("shfmt", "spotlessShellCheck")
+
+        result.output shouldContain "mise install"
+        result.task(":verifyShfmt")?.outcome shouldBe TaskOutcome.FAILED
+    }
+
+    @Test
+    fun `properties with trailing whitespace and no final newline fail spotlessCheck and are fixed`() {
+        val fixture = GradleFixture.standard(projectDir)
+        fixture.run("spotlessApply")
+        fixture.file("data/messy.properties", "key=value   \nother=1")
+
+        val failed = fixture.runAndFail("spotlessMiscCheck")
+        failed.output shouldContain "messy.properties"
+
+        fixture.run("spotlessApply")
+
+        fixture.read("data/messy.properties") shouldBe "key=value\nother=1\n"
+        fixture.run("spotlessMiscCheck").task(":spotlessMiscCheck")?.outcome shouldBe
+            TaskOutcome.SUCCESS
+    }
 }
