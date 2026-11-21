@@ -681,12 +681,48 @@ boundary_case tooling/convention-sample/build.gradle.kts ungoverned
 boundary_case renovate.json governed
 boundary_case renovate.jsonc governed
 boundary_case '.mise/locks/pipx-reuse/6.3.0~068c1fb0/uv.lock' governed
+boundary_case .gitlab/renovate.json governed
+boundary_case .gitlab/renovate.jsonc governed
+boundary_case .gitlab/renovate.json5 governed
+boundary_case .renovaterc governed
+boundary_case .renovaterc.json governed
+boundary_case .renovaterc.jsonc governed
+boundary_case .renovaterc.json5 governed
+boundary_case package.json governed
+boundary_case .mise.toml governed
+boundary_case mise.local.toml governed
+boundary_case .mise.local.toml governed
+boundary_case mise/config.toml governed
+boundary_case .mise/config.toml governed
+boundary_case .mise/config.local.toml governed
+boundary_case .mise/conf.d/tools.toml governed
+boundary_case .config/mise.toml governed
+boundary_case .config/mise.local.toml governed
+boundary_case .config/mise/config.toml governed
+boundary_case .tool-versions governed
+boundary_case .miserc.toml governed
+boundary_case .miserc.local.toml governed
+boundary_case .config/miserc.toml governed
+
+# Recorded exclusions, each explained in governance/governed-paths.txt: an environment file, the
+# lockfile of an alternate mise config, a mise config below the root and a nested package.json.
+boundary_case mise.ci.toml ungoverned
+boundary_case mise.local.lock ungoverned
+boundary_case tooling/convention-sample/mise.toml ungoverned
+boundary_case frontend/package.json ungoverned
 
 # A root renovate.json beats the governed renovate.json5, and the file does not exist yet: adding it
 # must still need the label.
 run_case "a pull request adding renovate.json without the label fails" 1 "renovate\.json" \
   PR_FILES_JSON="$(files_of adds-renovate-json "$(entry renovate.json added)")" \
   PR_LABELS_JSON="$LABEL_NONE"
+
+# The exemption is not extended: a bot adding a sidecar lockfile adds files, so it needs the label.
+# This pins the accepted cost of governing .mise/locks/**.
+run_case "renovate adding a mise sidecar lockfile needs the label" 1 "\.mise/locks/npm-renovate" \
+  PR_FILES_JSON="$(files_of adds-sidecar \
+    "$(entry '.mise/locks/npm-renovate/44.240.0~0123abcd/package.json' added)")" \
+  PR_LABELS_JSON="$LABEL_NONE" PR_AUTHOR="$BOT" PR_HEAD_REF=renovate/mise
 
 # --- head branch naming -------------------------------------------------------------------------
 

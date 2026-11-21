@@ -53,13 +53,13 @@ findings:
     title: "The gate runs from the pull request's own merge commit, so a PR can edit the gate that is meant to hold it"
   - id: WR-07
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "The governed boundary omits files that carry the same authority as governed ones"
   - id: IN-06
     severity: info
     disposition: open
     title: "Invisible characters are written literally in the Kotlin test source"
-open: 8
+open: 7
 total: 14
 recorded: 2026-11-21T16:30:00.000Z
 ---
@@ -80,7 +80,7 @@ recorded: 2026-11-21T16:30:00.000Z
 | IN-05 | info | open | 01-REVIEW.md |
 | WR-05 | warning | fixed | 01-REVIEW.md — re-review after gap closure; fixed by plan 01-18 |
 | WR-06 | warning | open | 01-REVIEW.md — re-review after gap closure |
-| WR-07 | warning | open | 01-REVIEW.md — re-review after gap closure |
+| WR-07 | warning | fixed | 01-REVIEW.md — re-review after gap closure; fixed by plan 01-19 |
 | IN-06 | info | open | 01-REVIEW.md — re-review after gap closure |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
