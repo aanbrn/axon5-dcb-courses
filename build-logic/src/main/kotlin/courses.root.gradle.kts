@@ -124,10 +124,12 @@ spotless {
         shfmt("*").pathToExe(shfmtPath.get().ifEmpty { "shfmt" })
         // The delimiter matches the first line that is not an SPDX line, so only the SPDX line is
         // managed, and the shebang is skipped so that the header lands on line 2.
+        // REUSE-IgnoreStart
         licenseHeaderFile(
                 "config/spotless/license-header-shell.txt",
                 "^(?!# SPDX-License-Identifier: )",
             )
+            // REUSE-IgnoreEnd
             .skipLinesMatching("^#!.+?$")
     }
     format("misc") {

@@ -104,9 +104,12 @@ class FormattingFunctionalTest {
 
         fixture.run("spotlessApply")
 
-        fixture.read("scripts/run.sh") shouldBe
+        // REUSE-IgnoreStart
+        val expected =
             "#!/usr/bin/env bash\n# SPDX-License-Identifier: MIT\n# Runs the thing.\n" +
                 "if true; then\n  echo hi\nfi\n"
+        // REUSE-IgnoreEnd
+        fixture.read("scripts/run.sh") shouldBe expected
         fixture.run("spotlessShellCheck").task(":spotlessShellCheck")?.outcome shouldBe
             TaskOutcome.SUCCESS
     }

@@ -106,7 +106,7 @@ class GradleFixture(private val projectDir: Path) {
         file(
             "settings.gradle.kts",
             """
-            // SPDX-License-Identifier: MIT
+            $HEADER
             pluginManagement { includeBuild("$buildLogic") }
 
             plugins { id("courses.settings") }
@@ -126,7 +126,10 @@ class GradleFixture(private val projectDir: Path) {
     /** Creates fixtures with the project layout every convention test starts from. */
     companion object {
         /** The SPDX header every Kotlin source and script in a fixture starts with. */
+        // REUSE-IgnoreStart
         const val HEADER = "// SPDX-License-Identifier: MIT"
+
+        // REUSE-IgnoreEnd
 
         /**
          * Creates a fixture in [projectDir] with the `courses.root` plugin on the root project, the
