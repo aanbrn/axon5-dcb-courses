@@ -66,7 +66,9 @@ fun pathOf(tool: String): Provider<String> =
 // Gradle run that does not format (such as the CodeQL compile) works without mise.
 val taploConfig = layout.projectDirectory.file(".taplo.toml")
 val taploPath = pathOf("taplo")
+val shfmtPath = pathOf("shfmt")
 
+/** Registers the task that checks that the formatter binary [tool], found at [path], runs. */
 fun registerBinaryCheck(tool: String, path: Provider<String>) =
     tasks.register<VerifyFormatterBinary>("verify${tool.replaceFirstChar { it.uppercase() }}") {
         toolName.set(tool)
@@ -78,6 +80,7 @@ fun registerBinaryCheck(tool: String, path: Provider<String>) =
     }
 
 val verifyTaplo = registerBinaryCheck("taplo", taploPath)
+val verifyShfmt = registerBinaryCheck("shfmt", shfmtPath)
 
 // The one tracked file under `.claude` that is project-owned; the rest of `.claude` and all of
 // `.planning` belong to GSD and stay outside the formatting contract.
@@ -115,10 +118,42 @@ spotless {
             listOf("fmt", "--config", taploConfig.asFile.absolutePath, "-"),
         )
     }
+    shell {
+        target(sources("**/*.sh"))
+        // The version is pinned once, in `mise.toml`; `*` accepts whatever that provides.
+        shfmt("*").pathToExe(shfmtPath.get().ifEmpty { "shfmt" })
+        // The delimiter matches the first line that is not an SPDX line, so only the SPDX line is
+        // managed, and the shebang is skipped so that the header lands on line 2.
+        licenseHeaderFile(
+                "config/spotless/license-header-shell.txt",
+                "^(?!# SPDX-License-Identifier: )",
+            )
+            .skipLinesMatching("^#!.+?$")
+    }
+    format("misc") {
+        target(
+            sources(
+                    "**/*.properties",
+                    "**/*.scenarios",
+                    "**/*.txt",
+                    ".editorconfig",
+                    ".gitattributes",
+                    ".gitignore",
+                    ".nvmrc",
+                    ".java-version",
+                )
+                .matching { exclude("gradle/gradle-daemon-jvm.properties") },
+        )
+        trimTrailingWhitespace()
+        endWithNewline()
+        leadingTabsToSpaces(2)
+    }
 }
 
-// The binary and its version, and the configuration file taplo reads, are inputs of every TOML
-// task, so a cached result never survives a change to either.
+// The binary and its version, and the configuration file the tool reads, are inputs of every TOML
+// and shell task, so a cached result never survives a change to either.
+val editorConfig = layout.projectDirectory.file(".editorconfig")
+
 tasks
     .matching { it.name.startsWith("spotlessToml") }
     .configureEach {
@@ -126,6 +161,16 @@ tasks
         inputs
             .file(taploConfig)
             .withPropertyName("taploConfig")
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    }
+
+tasks
+    .matching { it.name.startsWith("spotlessShell") }
+    .configureEach {
+        inputs.files(verifyShfmt.flatMap { it.output })
+        inputs
+            .file(editorConfig)
+            .withPropertyName("editorConfig")
             .withPathSensitivity(PathSensitivity.RELATIVE)
     }
 

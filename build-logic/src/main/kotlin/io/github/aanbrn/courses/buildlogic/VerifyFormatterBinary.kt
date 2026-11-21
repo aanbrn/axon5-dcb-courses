@@ -45,22 +45,13 @@ constructor(private val execOperations: ExecOperations) : DefaultTask() {
     @TaskAction
     fun verify() {
         val path = executable.get()
-        if (path.isEmpty()) {
-            throw missing(null)
-        }
         val stdout = ByteArrayOutputStream()
-        val result =
-            try {
-                execOperations.exec {
-                    commandLine(path, "--version")
-                    standardOutput = stdout
-                    isIgnoreExitValue = true
-                }
-            } catch (e: GradleException) {
-                throw missing(e)
-            }
-        if (result.exitValue != 0) {
-            throw missing(null)
+        if (path.isEmpty() || !runsVersion(path, stdout)) {
+            throw GradleException(
+                "${toolName.get()} is not available on PATH, but mise.toml pins it. Run " +
+                    "`mise install`, then activate mise in the shell or run the build as " +
+                    "`mise x -- ./gradlew ...`.",
+            )
         }
         output.get().asFile.apply {
             parentFile.mkdirs()
@@ -68,10 +59,16 @@ constructor(private val execOperations: ExecOperations) : DefaultTask() {
         }
     }
 
-    private fun missing(cause: Throwable?): GradleException =
-        GradleException(
-            "${toolName.get()} is not available on PATH, but mise.toml pins it. Run `mise install`, " +
-                "then activate mise in the shell or run the build as `mise x -- ./gradlew ...`.",
-            cause,
-        )
+    private fun runsVersion(path: String, stdout: ByteArrayOutputStream): Boolean =
+        try {
+            execOperations
+                .exec {
+                    commandLine(path, "--version")
+                    standardOutput = stdout
+                    isIgnoreExitValue = true
+                }
+                .exitValue == 0
+        } catch (_: GradleException) {
+            false
+        }
 }
