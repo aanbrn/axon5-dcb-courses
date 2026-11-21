@@ -677,6 +677,17 @@ boundary_case gradlew.bat ungoverned
 boundary_case scripts/test-apply-github-settings.sh ungoverned
 boundary_case tooling/convention-sample/build.gradle.kts ungoverned
 
+# Alternate Renovate config names and mise files (WR-07).
+boundary_case renovate.json governed
+boundary_case renovate.jsonc governed
+boundary_case '.mise/locks/pipx-reuse/6.3.0~068c1fb0/uv.lock' governed
+
+# A root renovate.json beats the governed renovate.json5, and the file does not exist yet: adding it
+# must still need the label.
+run_case "a pull request adding renovate.json without the label fails" 1 "renovate\.json" \
+  PR_FILES_JSON="$(files_of adds-renovate-json "$(entry renovate.json added)")" \
+  PR_LABELS_JSON="$LABEL_NONE"
+
 # --- head branch naming -------------------------------------------------------------------------
 
 run_case "a same-repository branch outside the allowed names fails" 1 "feature/x" \

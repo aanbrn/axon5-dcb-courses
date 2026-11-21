@@ -38,9 +38,16 @@ CODEOWNERS
 docs/CODEOWNERS
 governance/**
 
-# Tool pins and their update policy.
+# Tool pins: the mise config CI installs from, its lockfile, and the sidecar lockfiles that
+# mise.lock references for the npm and pipx tools.
 mise.toml
 mise.lock
+.mise/locks/**
+
+# Renovate configuration. Renovate reads the first of these names it finds, and both new names
+# come before renovate.json5.
+renovate.json
+renovate.jsonc
 renovate.json5
 
 # CI workflows, and the only writer of the repository settings and ruleset.
