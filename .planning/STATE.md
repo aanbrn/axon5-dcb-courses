@@ -4,10 +4,10 @@ current_phase: 01
 current_phase_name: Repository, Build & CI Foundation
 status: verifying
 stopped_at: Completed 01-20-PLAN.md
-last_updated: "2026-11-21T15:38:52.073Z"
+last_updated: "2026-11-21T16:39:52.758Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 01 execution started
-state_head: 271fac211f0ca675ad343003cb6493fd02c9ea7b
+state_head: c06f777c56b209e4eaa770002a51d8f3e0e5aa47
 progress:
   total_phases: 13
   completed_phases: 0
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 Phase: 01 (Repository, Build & CI Foundation) — EXECUTING
 Plan: 20 of 20
 Status: Phase complete — ready for verification
-Last activity: 2026-11-21 — Phase 01 execution started
+Last activity: 2026-11-21 - Completed quick task 261121-wjt: ADR-0004 on GSD configuration and COVERAGE.md
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -130,6 +130,12 @@ None yet.
 - [Phase 2/3]: Decision-record capture relies on an `@Internal` Axon SPI; fallback is explicit per-slice stamping plus an architecture rule
 - [Phase 8/10]: `EventCriteria` expressiveness for schedule overlap and the waiting-list head is unverified; fallback is passing candidates in the command and re-validating in the decision
 - [Phases 1, 2, 13]: GitHub repository settings, third-party skills/MCP servers and upstream issue publication need explicit author approval at execution time
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 261121-wjt | ADR-0004 on GSD configuration and COVERAGE.md | 2026-11-21 | c06f777 | [261121-wjt-adr-0004-on-gsd-configuration-and-covera](./quick/261121-wjt-adr-0004-on-gsd-configuration-and-covera/) |
 
 ## Deferred Items
 
