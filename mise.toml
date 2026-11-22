@@ -23,7 +23,7 @@ editorconfig-checker = "4.0.2"
 # uv and Python install the pipx tools from their committed dependency locks (.mise/locks): such
 # installs need uv >= 0.12.10 and a mise-installed interpreter, so both are pinned here instead of
 # relying on whatever uv or Python the machine or runner happens to have.
-python = "3.14.10"
+python = "3.15.2"
 uv = "0.13.8"
 "pipx:reuse" = { version = "6.3.0", extras = "charset-normalizer" }
 "github:gradle/gradle-profiler" = "0.26.0"
@@ -34,6 +34,6 @@ uv = "0.13.8"
 # Exact-version trust-policy exception, approved by the author: renovate pulls @yarnpkg/libzip@3.2.2
 # transitively; that release was published manually by the Yarn lead maintainer without provenance
 # (3.2.0 had it), which trips trustPolicy=no-downgrade. Remove once renovate no longer pulls it.
-"npm:renovate" = { version = "44.239.1", trust_policy_excludes = ["@yarnpkg/libzip@3.2.2"] }
+"npm:renovate" = { version = "44.252.7", trust_policy_excludes = ["@yarnpkg/libzip@3.2.2"] }
 jq = "1.8.2"
 gh = "2.104.0"
