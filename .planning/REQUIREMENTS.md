@@ -9,14 +9,14 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Foundation & Infrastructure
 
-- [ ] **INFRA-01**: Developer can build the whole backend with one Gradle command from a multi-project build with convention plugins (`build-logic`) and a version catalog
+- [x] **INFRA-01**: Developer can build the whole backend with one Gradle command from a multi-project build with convention plugins (`build-logic`) and a version catalog
 - [x] **INFRA-09**: Every version is pinned in exactly one place per ecosystem: the Gradle version catalog holds all libraries, BOMs (consumed through the `:platform` module, no dependency-management plugin), Gradle plugins, tool versions and all container images used anywhere — infrastructure images for compose and integration tests (Axon Server, PostgreSQL, Grafana LGTM, Toxiproxy, etc.) as well as Paketo builder/run images and individual buildpacks — as full references with tag + digest; integration tests receive them as system properties declared as task inputs (no image literals in test code), docker compose consumes a Gradle-generated versions env file (no image literals in compose files, both checked in CI), and Renovate updates tag and digest together; the JDK version lives only in `.java-version` (read by the Gradle toolchain convention, CI `setup-java` via `java-version-file`, mise/jenv/IDE; `gradle/gradle-daemon-jvm.properties` is generated from it and checked for consistency); the Node.js version lives only in `.nvmrc` (read by nvm, mise, `setup-node` and the Gradle Node plugin convention) and the pnpm version in the `packageManager` field of `package.json`; npm packages use exact versions in `package.json` plus `pnpm-lock.yaml`; GitHub Actions are pinned by SHA in workflows; version literals in build scripts are rejected by an automated check; Renovate covers all of these sources
-- [ ] **INFRA-11**: A dedicated `:platform` module (`java-platform`) is the single alignment point for JVM dependencies: it imports all BOMs (Spring Boot, Axoniq/Axon Framework, Testcontainers, Kotlin, Kotest, Jackson, etc.) and declares `api` constraints for libraries not covered by a BOM and for deliberate overrides (e.g. Kotlin over Boot's managed version), referencing only version-catalog aliases; convention plugins apply `platform(project(":platform"))` to every JVM module and every relevant configuration (main, all test suites, test fixtures, load tests)
-- [ ] **INFRA-12**: `build-logic` (included build with convention plugins) is first-class code: it uses the same version catalog (plugin dependencies declared as catalog libraries, type-safe catalog access in precompiled script plugins, no version literals), is formatted, statically analysed and KDoc-documented under the same rules and pre-commit/CI checks as application code, its convention plugins have Gradle TestKit functional tests (including configuration-cache compatibility), and it meets the same configuration-cache/isolated-projects and lazy-configuration requirements
-- [ ] **INFRA-13**: `.gitattributes` defines repository-wide file handling consistent with `.editorconfig`: `text=auto eol=lf` by default, strict LF for `gradlew` and shell scripts, CRLF for `*.bat`/`*.cmd`, `binary` for images, fonts and jars; `linguist-generated` for generated client code and lock/verification files and `linguist-documentation` for docs so GitHub language stats and PR diffs stay meaningful; `-diff` for machine-generated lock metadata; CI verifies that the working tree is normalised
-- [ ] **INFRA-16**: The repository is REUSE-compliant: every source file (Kotlin, Gradle KTS, TS/TSX, CSS, shell, etc.) carries a single `SPDX-License-Identifier: MIT` line (added and checked by Spotless where supported); copyright and licensing for all files, including those that cannot carry headers (JSON, images, generated code), are declared once in `REUSE.toml` (`precedence = "aggregate"`); `reuse lint` runs in pre-commit and CI, and the README shows the REUSE badge
+- [x] **INFRA-11**: A dedicated `:platform` module (`java-platform`) is the single alignment point for JVM dependencies: it imports all BOMs (Spring Boot, Axoniq/Axon Framework, Testcontainers, Kotlin, Kotest, Jackson, etc.) and declares `api` constraints for libraries not covered by a BOM and for deliberate overrides (e.g. Kotlin over Boot's managed version), referencing only version-catalog aliases; convention plugins apply `platform(project(":platform"))` to every JVM module and every relevant configuration (main, all test suites, test fixtures, load tests)
+- [x] **INFRA-12**: `build-logic` (included build with convention plugins) is first-class code: it uses the same version catalog (plugin dependencies declared as catalog libraries, type-safe catalog access in precompiled script plugins, no version literals), is formatted, statically analysed and KDoc-documented under the same rules and pre-commit/CI checks as application code, its convention plugins have Gradle TestKit functional tests (including configuration-cache compatibility), and it meets the same configuration-cache/isolated-projects and lazy-configuration requirements
+- [x] **INFRA-13**: `.gitattributes` defines repository-wide file handling consistent with `.editorconfig`: `text=auto eol=lf` by default, strict LF for `gradlew` and shell scripts, CRLF for `*.bat`/`*.cmd`, `binary` for images, fonts and jars; `linguist-generated` for generated client code and lock/verification files and `linguist-documentation` for docs so GitHub language stats and PR diffs stay meaningful; `-diff` for machine-generated lock metadata; CI verifies that the working tree is normalised
+- [x] **INFRA-16**: The repository is REUSE-compliant: every source file (Kotlin, Gradle KTS, TS/TSX, CSS, shell, etc.) carries a single `SPDX-License-Identifier: MIT` line (added and checked by Spotless where supported); copyright and licensing for all files, including those that cannot carry headers (JSON, images, generated code), are declared once in `REUSE.toml` (`precedence = "aggregate"`); `reuse lint` runs in pre-commit and CI, and the README shows the REUSE badge
 - [ ] **INFRA-17**: Environment variables are defined once per service in a descriptor (name, description, image default, secret flag), from which Gradle generates: image defaults passed to buildpack builds as `BPE_DEFAULT_*` (overridable at runtime), OCI image labels documenting each variable and its default so they are visible via `docker image inspect` (Paketo Image Labels buildpack), `.env.example`, and the configuration reference page; application config keeps local-development defaults (`${VAR:local-default}`); secrets never get image defaults or labels; CI verifies generated artifacts are up to date; whether buildpack env can appear in `Config.Env` directly is verified in Phase 1
-- [ ] **INFRA-14**: `.gitignore` comprehensively covers Gradle, Kotlin, Node/pnpm, IDE files, `.env`, test/Playwright/coverage artifacts and local tool state; `.editorconfig` explicitly defines settings for every file type in the repository, and formatter configurations are verified not to conflict with it
+- [x] **INFRA-14**: `.gitignore` comprehensively covers Gradle, Kotlin, Node/pnpm, IDE files, `.env`, test/Playwright/coverage artifacts and local tool state; `.editorconfig` explicitly defines settings for every file type in the repository, and formatter configurations are verified not to conflict with it
 - [ ] **INFRA-15**: Shared IDE run configurations are versioned (IntelliJ run configurations for services, compose and test suites; recommended VS Code extensions), while all other IDE state stays ignored
 - [x] **INFRA-10**: The Gradle build uses every applicable speed-up mechanism: configuration cache enabled with problems failing the build; local and CI build cache (`gradle/actions/setup-gradle`, encrypted configuration cache, cache writes from `main` only); parallel execution and file-system watching; isolated-projects-compatible build logic (no cross-project configuration; isolated projects evaluated in Phase 1); convention plugins in an included `build-logic` build (no `buildSrc`); lazy configuration API and cacheable tasks with declared inputs/outputs (including frontend, client generation and docs tasks); Gradle daemon JVM criteria and tuned daemon/Kotlin daemon JVM args; K2 incremental compilation without kapt; parallel test forks and separately parallelised test suites in CI; Testcontainers singletons (and local reuse); reused buildpack caches; build performance tracked with gradle-profiler scenarios; Build Scans optional and only with author approval
 - [ ] **INFRA-02**: Shared contracts (commands, events, queries, shared kernel with tag constants and sealed result types) live in dedicated modules with no Spring or framework logic
@@ -134,25 +134,25 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **TEST-16**: Frontend code coverage is measured with Vitest (v8 provider) with thresholds per FSD layer (higher for `shared`/`entities`/`features`, lower for `app`/`pages`) and the generated API client excluded
 - [ ] **TEST-17**: Coverage is reported for backend and frontend as CI artifacts (HTML plus XML/LCOV), in the job summary and as a PR comment, with a self-generated README badge (no external coverage SaaS without the author's approval); thresholds only ratchet upwards unless deliberately changed
 - [x] **TEST-09**: All produced artifacts (Kotlin, Gradle KTS, TS/TSX, JSON, YAML, Markdown) are automatically formatted by one command and checked for style compliance, with a shared `.editorconfig`, a pre-commit hook formatting changed files, CI failing on violations, and generated code excluded
-- [ ] **TEST-10**: Code is idiomatic Kotlin with KDoc on public contracts and decision logic; KDoc is auto-formatted (formatter with KDoc support, e.g. ktfmt, instead of ktlint), its presence and quality on public API are enforced by static analysis (detekt `comments` rules), and broken KDoc references fail the build (Dokka `failOnWarning`)
+- [x] **TEST-10**: Code is idiomatic Kotlin with KDoc on public contracts and decision logic; KDoc is auto-formatted (formatter with KDoc support, e.g. ktfmt, instead of ktlint), its presence and quality on public API are enforced by static analysis (detekt `comments` rules), and broken KDoc references fail the build (Dokka `failOnWarning`)
 - [ ] **TEST-18**: Mapping between layers (API ↔ commands/queries, query results ↔ DTOs) is done by explicit Kotlin extension functions next to the layer boundary (`toCommand`, `toDto`, `toView`), without mapping generators; naming and placement are enforced by architecture tests
 - [ ] **TEST-11**: JVM test levels (unit, component, integration) are separate Gradle JVM Test Suites with their own dependencies and tasks, all included in coverage
 - [ ] **TEST-12**: Shared test data builders and test helpers are published via Gradle Java Test Fixtures (`testFixtures`) instead of being duplicated across modules
-- [ ] **TEST-13**: Static analysis runs for Kotlin (detekt or equivalent) and TypeScript (Biome) with the build failing on violations
+- [x] **TEST-13**: Static analysis runs for Kotlin (detekt or equivalent) and TypeScript (Biome) with the build failing on violations
 - [ ] **TEST-14**: Test toolchain is standardised: JUnit 6 (Jupiter) as the only JVM runner, Kotest Assertions for assertions, `kotest-property` for property-based invariant tests, AxonTestFixture for DCB decisions, MockK (minimal mocking), Awaitility for async, Testcontainers for infrastructure; frontend uses Vitest, Testing Library and MSW
 - [ ] **TEST-15**: Tests read as a business specification: Kotlin test methods and `@Nested` classes use backticked prose names in business language (no JVM-forbidden characters; prose names only in test sources, enforced by static analysis/Konsist); tests are tagged with the business rule ID they prove (`@Tag`) to feed the rule → test catalogue
 
 ### CI/CD & Supply Chain
 
-- [ ] **CICD-01**: GitHub Actions build, run all test levels, report coverage and static analysis on every push and PR
+- [x] **CICD-01**: GitHub Actions build, run all test levels, report coverage and static analysis on every push and PR
 - [ ] **CICD-02**: Container images for all services and the UI are built with Cloud Native Buildpacks (Paketo): Spring Boot `bootBuildImage` for JVM services, Paketo Web Servers buildpack (nginx with custom config: SPA routing, `/api` proxy to the BFF with SSE-safe buffering) for the frontend; no hand-written Dockerfiles for application images
 - [ ] **CICD-10**: Image build tasks always set fully qualified image names from one convention-plugin pattern `ghcr.io/<owner>/<rootProject.name>-<project.name>:<project.version>` (registry and owner configurable via `gradle.properties` for forks; version from the release-please-managed version file, SNAPSHOT between releases); CI adds a short git SHA tag for `main` builds and `latest` only for releases; signing and attestation target the digest; images carry standard OCI labels (`source`, `version`, `revision`, `created`, `licenses`, `title`, `description`); docker compose references the same names via the generated env file
-- [ ] **CICD-03**: All Actions and base images are pinned by SHA/digest
-- [ ] **CICD-04**: Dependency and tool version updates are tracked automatically (Renovate) with grouping and minimum release age
+- [x] **CICD-03**: All Actions and base images are pinned by SHA/digest
+- [x] **CICD-04**: Dependency and tool version updates are tracked automatically (Renovate) with grouping and minimum release age
 - [ ] **CICD-05**: Dependencies and built images are scanned for vulnerabilities, failing on fixable high-severity issues
-- [ ] **CICD-06**: Secret leaks are detected in the repository (full history) and in PRs
+- [x] **CICD-06**: Secret leaks are detected in the repository (full history) and in PRs
 - [ ] **CICD-07**: SBOMs are generated and images are signed with provenance attestations
-- [ ] **CICD-08**: Workflows and scripts are linted locally (pre-commit) and in CI: actionlint for GitHub Actions workflows (with shellcheck for `run:` blocks), zizmor for Actions security issues (template injection, excessive permissions, unpinned actions, cache poisoning, dangerous triggers), shellcheck for all shell scripts, and `docker compose config` validation for compose files; tool versions pinned in `mise.toml`
+- [x] **CICD-08**: Workflows and scripts are linted locally (pre-commit) and in CI: actionlint for GitHub Actions workflows (with shellcheck for `run:` blocks), zizmor for Actions security issues (template injection, excessive permissions, unpinned actions, cache poisoning, dangerous triggers), shellcheck for all shell scripts, and `docker compose config` validation for compose files; tool versions pinned in `mise.toml`
 - [ ] **CICD-09**: Dependency licences (JVM and npm) are reported and checked in CI against an allowlist, with Axoniq commercial-terms modules explicitly listed and justified; a NOTICE file lists third-party attributions and the Axoniq terms
 
 ### Observability
@@ -181,16 +181,16 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **GH-01**: Repository metadata is complete and managed as code (applied via `gh` after author approval): description, topics, homepage (docs site), social preview image, unused features (e.g. wiki) disabled
 - [ ] **GH-02**: README showcases the project with badges (CI, coverage, license, OpenSSF Scorecard, Axon/Kotlin/Spring Boot versions) and a UI screenshot or animation
 - [ ] **GH-03**: Community health files exist: CONTRIBUTING, CODE_OF_CONDUCT, SUPPORT, CODEOWNERS, and SECURITY.md stating supported versions (latest release and `main`), reporting only via private vulnerability reporting, realistic response timelines (acknowledgement, assessment, fix, disclosure), scope (non-production teaching reference, no authentication in v1; dependency vulnerabilities routed upstream) and a safe-harbour statement
-- [ ] **GH-08**: A single PR template matches the structure of the `/gsd-ship` PR body (summary, user stories and acceptance criteria, risks and dependencies, verification, checklist), so GSD-generated and manual PRs (Renovate, contributors) look the same
+- [x] **GH-08**: A single PR template matches the structure of the `/gsd-ship` PR body (summary, user stories and acceptance criteria, risks and dependencies, verification, checklist), so GSD-generated and manual PRs (Renovate, contributors) look the same
 - [ ] **GH-09**: YAML issue forms exist for bug report (mandatory reproduction and versions), feature request and documentation feedback; blank issues are disabled and `config.yml` routes questions to Discussions and vulnerabilities to private vulnerability reporting
 - [ ] **GH-10**: GitHub Discussions is enabled with categories (Q&A, Ideas, Show and tell) and discussion templates
-- [ ] **GH-11**: Labels are managed as code (`labels.yml` synced by CI), aligned with Conventional Commit types, release-please, Renovate and the upstream register
+- [x] **GH-11**: Labels are managed as code (`labels.yml` synced by CI), aligned with Conventional Commit types, release-please, Renovate and the upstream register
 - [ ] **GH-12**: In-repository templates exist for ADRs (MADR), documentation pages, Event Modeling slice descriptions, upstream records (`docs/upstream/`) and upstream issues (minimal reproduction), and are used by the project skills
 - [ ] **GH-13**: `CITATION.cff` enables GitHub's "Cite this repository" for references from articles and talks
 - [ ] **GH-04**: Documentation site is published to GitHub Pages automatically from CI
 - [ ] **GH-05**: Commits and PR titles follow Conventional Commits (checked locally by the pre-commit tooling and in CI); release-please exclusively owns version tags (`vX.Y.Z`), changelogs and GitHub Releases (GSD milestone tagging disabled); release images are published to GHCR, signed and attested
-- [ ] **GH-06**: Repository security settings are enabled: `main` protected by a ruleset (changes only via PR, required status checks, linear history, no force-push or deletion, 0 required approvals for the solo author, bypass for admins only), secret scanning with push protection, Dependabot alerts, private vulnerability reporting, CodeQL, OpenSSF Scorecard workflow
-- [ ] **GH-07**: Repository is configured for the GSD workflow: one branch per phase (`gsd/phase-{N}-{slug}`), each phase shipped via `/gsd-ship` as a PR; only squash merge is enabled, using the PR title as the commit title and the PR body (GSD planning summary) as the commit message; head branches are deleted after merge
+- [x] **GH-06**: Repository security settings are enabled: `main` protected by a ruleset (changes only via PR, required status checks, linear history, no force-push or deletion, 0 required approvals for the solo author, bypass for admins only), secret scanning with push protection, Dependabot alerts, private vulnerability reporting, CodeQL, OpenSSF Scorecard workflow
+- [x] **GH-07**: Repository is configured for the GSD workflow: one branch per phase (`gsd/phase-{N}-{slug}`), each phase shipped via `/gsd-ship` as a PR; only squash merge is enabled, using the PR title as the commit title and the PR body (GSD planning summary) as the commit message; head branches are deleted after merge
 
 ### Upstream-first
 
@@ -201,8 +201,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Developer Tooling
 
-- [ ] **TOOL-01**: All developer and CI tools are inventoried in `docs/tooling.md` (purpose, version source, installation): git, gh, Docker-compatible engine (colima/OrbStack/Docker Desktop), docker compose, pack, JDK, Node.js/pnpm, lefthook, gitleaks, trivy, grype, syft, cosign, Structurizr, act, etc.
-- [ ] **TOOL-02**: CLI tools not managed by Gradle are pinned in `mise.toml` and kept up to date by Renovate
+- [x] **TOOL-01**: All developer and CI tools are inventoried in `docs/tooling.md` (purpose, version source, installation): git, gh, Docker-compatible engine (colima/OrbStack/Docker Desktop), docker compose, pack, JDK, Node.js/pnpm, lefthook, gitleaks, trivy, grype, syft, cosign, Structurizr, act, etc.
+- [x] **TOOL-02**: CLI tools not managed by Gradle are pinned in `mise.toml` and kept up to date by Renovate
 - [ ] **TOOL-03**: A `doctor` command verifies the local environment (required tools and versions, Docker engine, Testcontainers connectivity) and explains how to fix problems
 - [ ] **TOOL-04**: The setup works with colima (Testcontainers `DOCKER_HOST`/Ryuk configuration documented and verified) as well as Docker Desktop
 
@@ -212,7 +212,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **AIDEV-02**: Project-specific skills encode the project's conventions (e.g. add a DCB command slice, add a projection, write an ADR, draft an upstream issue) and live in a repository-local Claude Code plugin outside `.claude/` (e.g. `tooling/claude-plugin/` with its own marketplace file), so they never mix with GSD-managed files
 - [ ] **AIDEV-03**: `.claude/` is tracked selectively: only `.claude/settings.json` (marketplace and plugin registration) and `.claude/CLAUDE.md` are committed; the GSD installation and `settings.local.json` are ignored, and the GSD version and install command are recorded in the tooling inventory and checked by `doctor`
 - [ ] **AIDEV-04**: Shared MCP servers (Context7 for up-to-date library documentation, Playwright for browser-driven UI verification) are configured in the project-scope `.mcp.json` at the repository root with pinned versions and no secrets (environment variable references only); personal MCP servers (IntelliJ, optionally GitHub) are configured in local scope and documented with setup instructions; all MCP servers are listed in the tooling inventory, checked by `doctor`, and added only with the author's approval
-- [ ] **AIDEV-05**: GSD project settings are enforced as policy: a CI test validates `.planning/config.json` against an explicit policy (e.g. branching strategy, tagging, commit_docs, runtime, no foreign model overrides) and fails on any deviation until the policy itself is deliberately changed
+- [x] **AIDEV-05**: GSD project settings are enforced as policy: a CI test validates `.planning/config.json` against an explicit policy (e.g. branching strategy, tagging, commit_docs, runtime, no foreign model overrides) and fails on any deviation until the policy itself is deliberately changed
 - [x] **AIDEV-06**: Changes to governance files (`.planning/config.json`, `.claude/settings.json`, `.mcp.json`, `.github/**`, `mise.toml`, Renovate config, CODEOWNERS) fail a CI governance check unless the PR carries a `governance-approved` label applied by a maintainer
 - [ ] **AIDEV-07**: GSD installation integrity is protected: GSD is installed at a pinned version (never `@latest`), `doctor` verifies installed files against the SHA-256 hashes in `gsd-file-manifest.json` and reports modified hooks or unexpected files, `doctor` warns about global `~/.gsd/defaults.json` keys that leak into projects, and GSD updates happen only deliberately via `/gsd-update` with changelog and hook diff review
 - [x] **AIDEV-08**: Claude Code permission rules in `.claude/settings.json` require explicit confirmation (`ask`) for edits to governance files and for GSD `config-set` calls, so the agent cannot silently change project settings
@@ -270,14 +270,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 1 | Gaps Found |
+| INFRA-01 | Phase 1 | Complete |
 | INFRA-09 | Phase 1 | Complete |
-| INFRA-11 | Phase 1 | Gaps Found |
-| INFRA-12 | Phase 1 | Gaps Found |
-| INFRA-13 | Phase 1 | Gaps Found |
-| INFRA-16 | Phase 1 | Gaps Found |
+| INFRA-11 | Phase 1 | Complete |
+| INFRA-12 | Phase 1 | Complete |
+| INFRA-13 | Phase 1 | Complete |
+| INFRA-16 | Phase 1 | Complete |
 | INFRA-17 | Phase 6 | Pending |
-| INFRA-14 | Phase 1 | Gaps Found |
+| INFRA-14 | Phase 1 | Complete |
 | INFRA-15 | Phase 6 | Pending |
 | INFRA-10 | Phase 1 | Complete |
 | INFRA-02 | Phase 2 | Pending |
@@ -359,22 +359,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-16 | Phase 7 | Pending |
 | TEST-17 | Phase 7 | Pending |
 | TEST-09 | Phase 1 | Complete |
-| TEST-10 | Phase 1 | Gaps Found |
+| TEST-10 | Phase 1 | Complete |
 | TEST-18 | Phase 5 | Pending |
 | TEST-11 | Phase 2 | Pending |
 | TEST-12 | Phase 2 | Pending |
-| TEST-13 | Phase 1 | Gaps Found |
+| TEST-13 | Phase 1 | Complete |
 | TEST-14 | Phase 2 | Pending |
 | TEST-15 | Phase 3 | Pending |
-| CICD-01 | Phase 1 | Gaps Found |
+| CICD-01 | Phase 1 | Complete |
 | CICD-02 | Phase 6 | Pending |
 | CICD-10 | Phase 6 | Pending |
-| CICD-03 | Phase 1 | Gaps Found |
-| CICD-04 | Phase 1 | Pending |
+| CICD-03 | Phase 1 | Complete |
+| CICD-04 | Phase 1 | Complete |
 | CICD-05 | Phase 6 | Pending |
-| CICD-06 | Phase 1 | Gaps Found |
+| CICD-06 | Phase 1 | Complete |
 | CICD-07 | Phase 12 | Pending |
-| CICD-08 | Phase 1 | Gaps Found |
+| CICD-08 | Phase 1 | Complete |
 | CICD-09 | Phase 2 | Pending |
 | OBS-01 | Phase 12 | Pending |
 | OBS-02 | Phase 12 | Pending |
@@ -394,29 +394,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GH-01 | Phase 13 | Pending |
 | GH-02 | Phase 13 | Pending |
 | GH-03 | Phase 13 | Pending |
-| GH-08 | Phase 1 | Gaps Found |
+| GH-08 | Phase 1 | Complete |
 | GH-09 | Phase 13 | Pending |
 | GH-10 | Phase 13 | Pending |
-| GH-11 | Phase 1 | Gaps Found |
+| GH-11 | Phase 1 | Complete |
 | GH-12 | Phase 2 | Pending |
 | GH-13 | Phase 13 | Pending |
 | GH-04 | Phase 7 | Pending |
 | GH-05 | Phase 12 | Pending |
-| GH-06 | Phase 1 | Pending |
-| GH-07 | Phase 1 | Gaps Found |
+| GH-06 | Phase 1 | Complete |
+| GH-07 | Phase 1 | Complete |
 | UPS-01 | Phase 2 | Pending |
 | UPS-02 | Phase 2 | Pending |
 | UPS-03 | Phase 2 | Pending |
 | UPS-04 | Phase 2 | Pending |
-| TOOL-01 | Phase 1 | Gaps Found |
-| TOOL-02 | Phase 1 | Gaps Found |
+| TOOL-01 | Phase 1 | Complete |
+| TOOL-02 | Phase 1 | Complete |
 | TOOL-03 | Phase 2 | Pending |
 | TOOL-04 | Phase 2 | Pending |
 | AIDEV-01 | Phase 2 | Pending |
 | AIDEV-02 | Phase 8 | Pending |
 | AIDEV-03 | Phase 2 | Pending |
 | AIDEV-04 | Phase 2 | Pending |
-| AIDEV-05 | Phase 1 | Gaps Found |
+| AIDEV-05 | Phase 1 | Complete |
 | AIDEV-06 | Phase 1 | Complete |
 | AIDEV-07 | Phase 2 | Pending |
 | AIDEV-08 | Phase 1 | Complete |

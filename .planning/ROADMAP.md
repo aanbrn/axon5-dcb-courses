@@ -12,7 +12,7 @@ The journey starts with a repository that already meets reference quality before
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Repository, Build & CI Foundation** - Reference-quality build, formatting, CI and governance before any runtime code
+- [x] **Phase 1: Repository, Build & CI Foundation** - Reference-quality build, formatting, CI and governance before any runtime code (completed 2026-11-22)
 - [ ] **Phase 2: Runtime Infrastructure & DCB Spikes** - Axon Server DCB proven, test infrastructure ready, high-risk unknowns resolved in ADRs
 - [ ] **Phase 3: Command Walking Skeleton** - Core invariants (unique name, capacity, per-student limit) enforced by DCB under real concurrency
 - [ ] **Phase 4: Read Side & Live Queries** - Query service with idempotent PostgreSQL projections, QueryBus queries and subscription queries
@@ -39,7 +39,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Every push and pull request runs a GitHub Actions workflow with SHA-pinned actions. It builds, tests and analyses the code, lints workflows and scripts (actionlint, zizmor, shellcheck) and scans the full history for leaked secrets. Renovate proposes grouped updates with a minimum release age for every version source (catalog, `.java-version`, `mise.toml`, Actions).
   4. `main` changes only through squash-merged pull requests from `gsd/phase-*` branches that pass the required checks. The ruleset enforces linear history and blocks force-push, and head branches are deleted after merge. The PR template mirrors the `/gsd-ship` body, and labels are synced from `labels.yml`. Secret scanning with push protection, Dependabot alerts, private vulnerability reporting, CodeQL and OpenSSF Scorecard are active.
   5. A pull request fails CI if it changes `.planning/config.json` against the declared policy or touches governance files without the `governance-approved` label. The agent must ask for confirmation before it edits governance files or runs GSD `config-set`.
-**Plans:** 21/21 plans executed
+**Plans:** 21/21 plans complete
 
 Plans:
 - [x] 01-18-PLAN.md
@@ -293,7 +293,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Repository, Build & CI Foundation | 21/21 | In Progress | - |
+| 1. Repository, Build & CI Foundation | 21/21 | Complete    | 2026-11-22 |
 | 2. Runtime Infrastructure & DCB Spikes | 0/TBD | Not started | - |
 | 3. Command Walking Skeleton | 0/TBD | Not started | - |
 | 4. Read Side & Live Queries | 0/TBD | Not started | - |

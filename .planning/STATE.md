@@ -1,43 +1,43 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 01
-current_phase_name: Repository, Build & CI Foundation
-status: verifying
-stopped_at: Completed 01-21-PLAN.md
-last_updated: "2026-11-22T02:21:42.909Z"
+current_phase: 2
+current_phase_name: Runtime Infrastructure & DCB Spikes
+status: planning
+stopped_at: Phase 01 complete, ready to plan Phase 2
+last_updated: "2026-11-22T02:39:37.261Z"
 last_activity: 2026-11-22
-last_activity_desc: "Phase 01 shipped as draft PR #2 (verification gate bypassed once; awaiting UAT tests 7-8)"
-state_head: e1a038df8f4ad117434e0b9bbeafcf7ebfd5504a
+last_activity_desc: Phase 01 complete, transitioned to Phase 2
+state_head: 93f6684af96bab269ef2a664ce1029d606c11812
 progress:
   total_phases: 13
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 21
   completed_plans: 21
-  percent: 0
+  percent: 8
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-11-20)
+See: .planning/PROJECT.md (updated 2026-11-22)
 
 **Core value:** Show convincingly, in working, tested and documented code, how DCB enforces business invariants that span multiple entities without aggregates, and why that beats the aggregate-based approach.
-**Current focus:** Phase 01 — Repository, Build & CI Foundation
+**Current focus:** Phase 2 — Runtime Infrastructure & DCB Spikes
 
 ## Current Position
 
-Phase: 01 (Repository, Build & CI Foundation) — EXECUTING
-Plan: 21 of 21
-Status: Phase complete — ready for verification
-Last activity: 2026-11-22 -- Phase 01 shipped as draft PR #2 (verification gate bypassed once; awaiting UAT tests 7-8)
+Phase: 2 — Runtime Infrastructure & DCB Spikes
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-11-22 — Phase 01 complete, transitioned to Phase 2
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 8%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
+- Total plans completed: 21
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -45,7 +45,7 @@ Progress: [░░░░░░░░░░] 0%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01 | 21 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -131,7 +131,9 @@ None yet.
 - [Phase 2]: Unlicensed Axon Server behaviour (12-hour shutdown vs 14-day limit, restart effect) may affect the `docker compose up` quick start and CI
 - [Phase 2/3]: Decision-record capture relies on an `@Internal` Axon SPI; fallback is explicit per-slice stamping plus an architecture rule
 - [Phase 8/10]: `EventCriteria` expressiveness for schedule overlap and the waiting-list head is unverified; fallback is passing candidates in the command and re-validating in the decision
-- [Phases 1, 2, 13]: GitHub repository settings, third-party skills/MCP servers and upstream issue publication need explicit author approval at execution time
+- [Phases 2, 13]: Third-party skills/MCP servers and upstream issue publication need explicit author approval at execution time (Phase 1 repository settings and the `main` ruleset are applied)
+- [Phase 1, post-merge]: UAT tests 9-11 run after PR #2 merges: CodeQL, Scorecard and label sync from `main`, Renovate onboarding PR #1 and first grouped PRs, REUSE registration (deferred follow-ups in `01-UAT.md`)
+- [Tooling]: GSD hooks fail in Claude Code sessions started inside a git worktree (hooks resolve under `$CLAUDE_PROJECT_DIR`, the worktree has no `.claude/hooks/`); deferred follow-up from UAT test 3
 
 ### Quick Tasks Completed
 
@@ -150,6 +152,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-22T01:06:53.671Z
-Stopped at: Completed 01-21-PLAN.md
+Last session: 2026-11-22T02:45:00.000Z
+Stopped at: Phase 01 complete, ready to plan Phase 2
 Resume file: None
