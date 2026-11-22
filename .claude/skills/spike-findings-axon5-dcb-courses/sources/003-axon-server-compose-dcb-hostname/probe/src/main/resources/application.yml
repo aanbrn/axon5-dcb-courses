@@ -1,0 +1,8 @@
+spring.application.name: probe
+axon:
+  axonserver:
+    servers: ${AXON_SERVERS:localhost:8124}
+  converter:
+    general: jackson
+logging.level:
+  io.axoniq.axonserver.connector: INFO

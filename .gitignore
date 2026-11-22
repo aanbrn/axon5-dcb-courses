@@ -4,6 +4,10 @@
 /.claude/*
 !/.claude/settings.json
 !/.claude/CLAUDE.md
+# D-39: the GSD spike wrap-up skill is tracked as a narrow exception
+!/.claude/skills/
+/.claude/skills/*
+!/.claude/skills/spike-findings-*/
 
 # GSD state-contract snapshot: derived from ROADMAP.md/STATE.md and rewritten at every step boundary
 /.planning/state.json
