@@ -72,7 +72,7 @@ abstract class BuildScriptLintCheck : DefaultTask() {
         findings.forEach { appendLine("  ${it.render()}") }
         appendLine()
         appendLine(
-            "Versions belong in gradle/libs.versions.toml, and the JDK major version in " + ".java-version (INFRA-09).",
+            "Versions belong in gradle/libs.versions.toml, and the JDK major version in .java-version (INFRA-09).",
         )
         append(
             "Use lazy task APIs (register, named, configureEach) and configure each project " +

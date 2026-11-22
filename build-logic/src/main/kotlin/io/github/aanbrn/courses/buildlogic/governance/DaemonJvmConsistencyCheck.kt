@@ -67,7 +67,7 @@ abstract class DaemonJvmConsistencyCheck : DefaultTask() {
         }
         return text.substringBefore('.').toIntOrNull()
             ?: fail(
-                "$JAVA_VERSION_PATH must start with a numeric JDK major version such as 25, but " + "it holds '$text'.",
+                "$JAVA_VERSION_PATH must start with a numeric JDK major version such as 25, but it holds '$text'.",
             )
     }
 
@@ -83,6 +83,6 @@ abstract class DaemonJvmConsistencyCheck : DefaultTask() {
         const val PROPERTIES_PATH = "gradle/gradle-daemon-jvm.properties"
         const val KEY = "toolchainVersion"
         const val REGENERATE =
-            "Run `./gradlew updateDaemonJvm` after writing the JDK major version to " + "$JAVA_VERSION_PATH."
+            "Run `./gradlew updateDaemonJvm` after writing the JDK major version to $JAVA_VERSION_PATH."
     }
 }

@@ -201,7 +201,7 @@ tasks.named<UpdateDaemonJvm>("updateDaemonJvm") {
             val major =
                 text.trim().substringBefore('.').toIntOrNull()
                     ?: throw GradleException(
-                        ".java-version must hold a numeric JDK major version, " + "but it holds '${text.trim()}'",
+                        ".java-version must hold a numeric JDK major version, but it holds '${text.trim()}'",
                     )
             JavaLanguageVersion.of(major)
         },
