@@ -14,13 +14,12 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
 /**
- * Fails the build when a build script or build-logic source holds a version literal or uses an
- * eager or cross-project Gradle API.
+ * Fails the build when a build script or build-logic source holds a version literal or uses an eager or cross-project
+ * Gradle API.
  *
- * Versions live in the version catalog and `.java-version` only (INFRA-09), and the build must stay
- * compatible with lazy task configuration, the configuration cache and isolated projects
- * (INFRA-10). Each finding is reported as `path:line: [rule] source line`, sorted by path and then
- * line number, so the report is identical on every run.
+ * Versions live in the version catalog and `.java-version` only (INFRA-09), and the build must stay compatible with
+ * lazy task configuration, the configuration cache and isolated projects (INFRA-10). Each finding is reported as
+ * `path:line: [rule] source line`, sorted by path and then line number, so the report is identical on every run.
  */
 @CacheableTask
 abstract class BuildScriptLintCheck : DefaultTask() {
@@ -61,9 +60,7 @@ abstract class BuildScriptLintCheck : DefaultTask() {
             if (isComment(text)) {
                 emptyList()
             } else {
-                rules
-                    .filter { it.pattern.containsMatchIn(text) }
-                    .map { Finding(path, index + 1, it.name, text) }
+                rules.filter { it.pattern.containsMatchIn(text) }.map { Finding(path, index + 1, it.name, text) }
             }
         }
 
@@ -75,8 +72,7 @@ abstract class BuildScriptLintCheck : DefaultTask() {
         findings.forEach { appendLine("  ${it.render()}") }
         appendLine()
         appendLine(
-            "Versions belong in gradle/libs.versions.toml, and the JDK major version in " +
-                ".java-version (INFRA-09).",
+            "Versions belong in gradle/libs.versions.toml, and the JDK major version in " + ".java-version (INFRA-09).",
         )
         append(
             "Use lazy task APIs (register, named, configureEach) and configure each project " +
@@ -112,7 +108,6 @@ abstract class BuildScriptLintCheck : DefaultTask() {
                 Rule("cross-project", Regex("\\bafterEvaluate\\b")),
             )
 
-        val PROPERTY_RULES =
-            listOf(Rule("version-literal", Regex("^[\\w.-]*[vV]ersion\\s*[=:]\\s*\\d")))
+        val PROPERTY_RULES = listOf(Rule("version-literal", Regex("^[\\w.-]*[vV]ersion\\s*[=:]\\s*\\d")))
     }
 }

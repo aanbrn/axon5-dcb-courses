@@ -13,8 +13,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
 /**
- * Proves `checkClaudeAskRules` keeps the Claude Code ask rules in `.claude/settings.json` in sync
- * with the governed paths: one `Edit(/<path>)` rule per path, plus `Bash(*config-set*)`.
+ * Proves `checkClaudeAskRules` keeps the Claude Code ask rules in `.claude/settings.json` in sync with the governed
+ * paths: one `Edit(/<path>)` rule per path, plus `Bash(*config-set*)`.
  */
 class AskRulesCheckFunctionalTest {
     @TempDir lateinit var projectDir: Path
@@ -76,8 +76,7 @@ class AskRulesCheckFunctionalTest {
     @Test
     fun `additional ask rules and other permission lists are allowed`() {
         val rules = (EXPECTED + "Bash(rm *)").joinToString { "\"$it\"" }
-        val extended =
-            """{"permissions": {"ask": [$rules], "allow": ["Bash(ls)"], "deny": ["Read(/.env)"]}}"""
+        val extended = """{"permissions": {"ask": [$rules], "allow": ["Bash(ls)"], "deny": ["Read(/.env)"]}}"""
 
         val result = fixture(extended).run(TASK)
 

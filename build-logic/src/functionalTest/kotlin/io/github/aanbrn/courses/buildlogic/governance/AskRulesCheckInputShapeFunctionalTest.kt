@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
 /**
- * Proves `checkClaudeAskRules` rejects `.claude/settings.json` and governed path lists that are
- * malformed or empty instead of passing vacuously.
+ * Proves `checkClaudeAskRules` rejects `.claude/settings.json` and governed path lists that are malformed or empty
+ * instead of passing vacuously.
  */
 class AskRulesCheckInputShapeFunctionalTest {
     @TempDir lateinit var projectDir: Path
@@ -38,8 +38,7 @@ class AskRulesCheckInputShapeFunctionalTest {
 
     @Test
     fun `an ask value that is not a list fails`() {
-        val output =
-            fixture("""{"permissions": {"ask": "Edit(/mise.toml)"}}""").runAndFail(TASK).output
+        val output = fixture("""{"permissions": {"ask": "Edit(/mise.toml)"}}""").runAndFail(TASK).output
 
         output shouldContain "permissions.ask is not a list"
     }

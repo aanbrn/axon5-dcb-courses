@@ -38,8 +38,7 @@ class DaemonJvmCheckFunctionalTest {
         fixture.file(".java-version", "25.0.1\n")
         properties("25")
 
-        fixture.run("checkDaemonJvm").task(":checkDaemonJvm")?.outcome shouldBeIn
-            GradleFixture.PASSED
+        fixture.run("checkDaemonJvm").task(":checkDaemonJvm")?.outcome shouldBeIn GradleFixture.PASSED
     }
 
     @Test
@@ -74,8 +73,7 @@ class DaemonJvmCheckFunctionalTest {
         fixture.file(".java-version", "latest\n")
         properties("25")
 
-        fixture.runAndFail("checkDaemonJvm").output shouldContain
-            ".java-version must start with a numeric JDK major"
+        fixture.runAndFail("checkDaemonJvm").output shouldContain ".java-version must start with a numeric JDK major"
     }
 
     @Test

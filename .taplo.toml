@@ -1,7 +1,7 @@
 # taplo formatting settings. Keep them equal to the `[*.toml]` section of `.editorconfig`.
 [formatting]
 indent_string = "  "
-column_width = 100
+column_width = 120
 align_entries = false
 reorder_keys = false
 array_auto_expand = true
