@@ -22,9 +22,14 @@ dependencies {
     testImplementation(libs.kotest.assertions.core)
 }
 
+// The root directory through the isolated-projects view, the only safe way to read root files under isolated
+// projects. Gradle still marks `Project.isolated` @Incubating; a Gradle upgrade that changes it fails this build
+// in its Renovate pull request.
+@Suppress("UnstableApiUsage") val rootDirectory: Directory = isolated.rootProject.projectDirectory
+
 // `.java-version` is the only place the JDK version lives (INFRA-09).
 val javaLanguageVersion: Provider<JavaLanguageVersion> =
-    providers.fileContents(isolated.rootProject.projectDirectory.file(".java-version")).asText.map { text ->
+    providers.fileContents(rootDirectory.file(".java-version")).asText.map { text ->
         val major =
             text.trim().substringBefore('.').toIntOrNull()
                 ?: throw GradleException(
@@ -49,7 +54,7 @@ tasks.withType<Test>().configureEach {
 // Strict analysis without a baseline; the overrides live in one shared file.
 detekt {
     buildUponDefaultConfig.set(true)
-    config.setFrom(isolated.rootProject.projectDirectory.file("config/detekt/detekt.yml"))
+    config.setFrom(rootDirectory.file("config/detekt/detekt.yml"))
 }
 
 dokka { dokkaPublications.html { failOnWarning.set(true) } }
