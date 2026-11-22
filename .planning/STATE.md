@@ -4,10 +4,10 @@ current_phase: 2
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: planning
 stopped_at: Phase 01 complete, ready to plan Phase 2
-last_updated: "2026-11-22T05:54:45.461Z"
+last_updated: "2026-11-22T06:19:40.149Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 01 complete, transitioned to Phase 2
-state_head: 7ab7f48b0b9081cfa5ad9d57477cc2747a2ac6af
+state_head: 6caa5b7ad9e4458f617012d564975e5f136e640e
 progress:
   total_phases: 13
   completed_phases: 1
@@ -145,6 +145,7 @@ None yet.
 | 5 | Guard .mise in .gitignore: track only the sidecar lockfiles under .mise/locks | 2026-11-22 | 1527882 | — |
 | 261122-gdy | Raise the maximum line width from 100 to 120 for every formatter (detekt backstop 140) | 2026-11-22 | d1a0fb8 | [261122-gdy-raise-the-maximum-line-width-from-100-to](./quick/261122-gdy-raise-the-maximum-line-width-from-100-to/) |
 | 7 | Renovate governance exemption covers version-only moves of mise sidecar lockfiles | 2026-11-22 | 7ab7f48 | — |
+| 8 | Record the agent git workflow (branches, no force-push, worktree finishing) in .claude/CLAUDE.md | 2026-11-22 | 6caa5b7 | — |
 
 ## Deferred Items
 
