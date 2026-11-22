@@ -383,6 +383,10 @@ AIDEV-01, AIDEV-03, AIDEV-04, AIDEV-07. Domain decisions (commands, invariants) 
 - JUnit in-fork parallelism for component and integration tests: revisit with measurements (D-22).
 - `--fix` mode for `doctor`: not adopted (D-28).
 - Frontend, Playwright and Paketo skills: installed in their phases per the survey verdicts (D-40).
+- Container image builds (CICD-02, CICD-10): images are built by a separate task (for example an `images` aggregate
+  over `bootBuildImage` and the UI `BootBuildImage` task) and a separate CI job, not as part of `check`/`build`.
+  Image builds are slow (about 4 minutes cold in spike 005) and need a Docker daemon; D-19 covers test suites only.
+  Decided in Phase 6.
 
 </deferred>
 
