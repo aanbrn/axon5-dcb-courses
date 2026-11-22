@@ -50,7 +50,7 @@ class ExecutableOnPathFunctionalTest {
         executable(
             loggingDir,
             "node",
-            "#!/bin/sh\necho \"$*\" >> '$log'\nexec '${realExecutable("node")}' \"$@\"\n",
+            "#!/bin/sh\necho \"$*\" >> '$log'\nexec '${realNode()}' \"$@\"\n",
         )
         val oldDir = toolsDir.resolve("old")
         executable(oldDir, "node", "#!/bin/sh\necho v1.0.0\n")
@@ -85,7 +85,7 @@ class ExecutableOnPathFunctionalTest {
         executable(
             loggingDir,
             "node",
-            "#!/bin/sh\necho \"$*\" >> '$log'\nexec '${realExecutable("node")}' \"$@\"\n",
+            "#!/bin/sh\necho \"$*\" >> '$log'\nexec '${realNode()}' \"$@\"\n",
         )
 
         val result = fixture.run("spotlessPrettierCheck", "--no-build-cache", path = onPath(loggingDir))
@@ -225,17 +225,17 @@ class ExecutableOnPathFunctionalTest {
     }
 
     /**
-     * The absolute path of the first executable regular file called [name] on the test JVM's `PATH`, found
+     * The absolute path of the first executable regular file called `node` on the test JVM's `PATH`, found
      * independently of the production resolver.
      */
-    private fun realExecutable(name: String): String =
+    private fun realNode(): String =
         System.getenv("PATH")
             .orEmpty()
             .split(File.pathSeparator)
             .filter { it.isNotEmpty() && File(it).isAbsolute }
-            .map { File(it, name) }
+            .map { File(it, "node") }
             .firstOrNull { it.isFile && it.canExecute() }
-            ?.absolutePath ?: error("No executable '$name' on the test JVM's PATH")
+            ?.absolutePath ?: error("No executable 'node' on the test JVM's PATH")
 
     /** The test JVM's `PATH` with [first] put in front of it. */
     private fun onPath(vararg first: Path): String =
