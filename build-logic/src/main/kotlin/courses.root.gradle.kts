@@ -55,6 +55,8 @@ fun executableOnPath(name: String): Provider<String> =
 val nodePath = executableOnPath("node")
 val verifyNodeVersion =
     tasks.register<VerifyNodeVersion>("verifyNodeVersion") {
+        group = "verification"
+        description = "Fails when the node on the build's PATH is not the major version .nvmrc names."
         nvmrc.set(layout.projectDirectory.file(".nvmrc"))
         executable.set(nodePath)
         output.set(layout.buildDirectory.file("verifyNodeVersion/node-major.txt"))
@@ -74,6 +76,8 @@ val shfmtPath = executableOnPath("shfmt").orElse("")
 /** Registers the task that checks that the formatter binary [tool], found at [path], runs. */
 fun registerBinaryCheck(tool: String, path: Provider<String>) =
     tasks.register<VerifyFormatterBinary>("verify${tool.replaceFirstChar { it.uppercase() }}") {
+        group = "verification"
+        description = "Fails with a mise install hint when the $tool formatter binary is missing from the build's PATH."
         toolName.set(tool)
         executable.set(path)
         output.set(layout.buildDirectory.file("verify-formatter-binary/$tool.txt"))
