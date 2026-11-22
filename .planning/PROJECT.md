@@ -136,6 +136,8 @@ Show convincingly — in working, tested, documented code — how DCB enforces b
 | CodeQL analyses workflows only; Kotlin analysis deferred (ADR-0002) | Two extraction spikes saw no Kotlin source under isolated projects | — Deferred with re-enable criteria in ADR-0002 |
 | Gradle dependency locking and `verification-metadata.xml` deferred to Phase 6 (CICD-05) | No runtime dependencies yet; checksum verification lands with the release pipeline | — Deferred |
 | Python and uv pinned in `mise.toml` for the pipx tools | Installing pipx tools from their committed dependency locks needs uv >= 0.12.10 and a mise-installed interpreter (CI failure on PR #2) | ✓ Phase 1 |
+| Any dependency whose version a BOM manages (Spring Boot's Jackson, a BOM's transitive libraries) may move ahead of that BOM through explicit `:platform` alignment: catalog BOMs get their own Renovate group, other libraries an `api` constraint referencing a catalog alias when needed (for example a CVE). Modules of one release train (Axon with Axoniq, Kotlin compiler with stdlib, Spring Boot's own modules) move only together | Fixes and security releases often cannot wait for the next release of the BOM owner; CI, not the BOM owner's version, proves compatibility (from Phase 2 also by serialization round-trip tests). Replaces the planner-introduced "Jackson mirrors Spring Boot" rule | ✓ 2026-11-22 (author decision) |
+| Node.js 26 LTS instead of 24 | Node 26 became LTS (Lithium) in October 2026; switching before any frontend code exists is the cheapest point | ✓ 2026-11-22 (author decision) |
 
 ## Evolution
 

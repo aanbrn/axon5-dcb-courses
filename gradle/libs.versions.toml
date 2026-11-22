@@ -14,7 +14,8 @@ spring-boot = "4.1.3"
 # Shared by the Axon Framework and Axoniq Framework BOMs, which release together.
 axon = "5.4.2"
 testcontainers = "2.0.5"
-# The jackson-bom.version that spring-boot-dependencies declares for the spring-boot version above.
+# Aligned explicitly through :platform and free to move ahead of the version Spring Boot manages
+# (fixes and security releases need not wait for a Spring Boot release); CI checks compatibility.
 jackson = "3.3.0"
 
 [libraries]
