@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Repository, Build & CI Foundation
 status: verifying
-stopped_at: Completed 01-20-PLAN.md
-last_updated: "2026-11-21T16:39:52.758Z"
-last_activity: 2026-11-21
+stopped_at: Completed 01-21-PLAN.md
+last_updated: "2026-11-22T01:06:53.767Z"
+last_activity: 2026-11-22
 last_activity_desc: Phase 01 execution started
-state_head: c06f777c56b209e4eaa770002a51d8f3e0e5aa47
+state_head: 1b7cd6c5b15f18bc07273c725a7e05faa77f5219
 progress:
   total_phases: 13
   completed_phases: 0
-  total_plans: 20
-  completed_plans: 20
+  total_plans: 21
+  completed_plans: 21
   percent: 0
 ---
 
@@ -28,9 +28,9 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 01 (Repository, Build & CI Foundation) — EXECUTING
-Plan: 20 of 20
+Plan: 21 of 21
 Status: Phase complete — ready for verification
-Last activity: 2026-11-21 - Completed quick task 261121-wjt: ADR-0004 on GSD configuration and COVERAGE.md
+Last activity: 2026-11-22 — Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -76,6 +76,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P18 | 24 min | 2 tasks | 3 files |
 | Phase 01 P19 | 6 min | 2 tasks | 4 files |
 | Phase 01 P20 | 3 min | 2 tasks | 3 files |
+| Phase 01 P21 | 75min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -119,6 +120,7 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-18: NUL strings are not rejected up front; the check-pr.sh reading fails closed through a checked jq status and an entry-count guard (WR-05)
 - [Phase 01]: Plan 01-19: governed every Renovate config name and every mise config, rc and sidecar-lock location CI reads (54 entries); the renovate[bot] version-only exemption stays unchanged and its sidecar cost is a recorded follow-up
 - [Phase 01]: WR-06 accepted as a residual for a one-maintainer repository and recorded in ADR-0003: governance.yml keeps pull_request and the merge-ref checkout; revisit on a second maintainer or external contributors
+- [Phase 01]: 01-21: Spotless gets nodeExecutable only; node, taplo and shfmt resolved by ExecutableOnPath over the build's PATH, relative and empty entries skipped; production wiring stays lazy and the value source's cache precision is proven in fixture scripts (F-1)
 
 ### Pending Todos
 
@@ -147,6 +149,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T15:38:51.968Z
-Stopped at: Completed 01-20-PLAN.md
+Last session: 2026-11-22T01:06:53.671Z
+Stopped at: Completed 01-21-PLAN.md
 Resume file: None
