@@ -51,9 +51,8 @@ fun sources(vararg globs: String): FileTree =
 fun executableOnPath(name: String): Provider<String> =
     providers.of(ExecutableOnPath::class.java) { parameters.executableName.set(name) }
 
-// `node` is resolved once from the build's `PATH` through `ExecutableOnPath`. The same absolute
-// path
-// goes to `verifyNodeVersion` and to Spotless's Prettier step, so the guard checks the binary that
+// `node` is resolved once from the build's `PATH` through `ExecutableOnPath`. The same path goes
+// to `verifyNodeVersion` and to Spotless's Prettier step, so the guard checks the binary that
 // formats. The environment provides the version named in `.nvmrc` (mise locally, setup-node in CI).
 val nodePath = executableOnPath("node")
 val verifyNodeVersion =
@@ -66,23 +65,13 @@ val verifyNodeVersion =
         outputs.upToDateWhen { false }
     }
 
-/** The absolute path of [tool] on `PATH`, or an empty string when it is not installed. */
-fun pathOf(tool: String): Provider<String> =
-    providers
-        .exec {
-            commandLine("sh", "-c", "command -v $tool")
-            isIgnoreExitValue = true
-        }
-        .standardOutput
-        .asText
-        .map { it.trim() }
-
-// Spotless runs the formatter binaries pinned in `mise.toml`. A missing binary fails only the
-// formatting tasks of that file type, with a `mise install` hint, never the configuration, so a
-// Gradle run that does not format (such as the CodeQL compile) works without mise.
+// Spotless runs the formatter binaries pinned in `mise.toml`. They are resolved from the build's
+// `PATH` through `ExecutableOnPath`, like `node`. A missing binary fails only the formatting tasks
+// of that file type, with a `mise install` hint, never the configuration, so a Gradle run that does
+// not format (such as the CodeQL compile) works without mise. An empty string means not found.
 val taploConfig = layout.projectDirectory.file(".taplo.toml")
-val taploPath = pathOf("taplo")
-val shfmtPath = pathOf("shfmt")
+val taploPath = executableOnPath("taplo").orElse("")
+val shfmtPath = executableOnPath("shfmt").orElse("")
 
 /** Registers the task that checks that the formatter binary [tool], found at [path], runs. */
 fun registerBinaryCheck(tool: String, path: Provider<String>) =
@@ -143,6 +132,8 @@ spotless {
     shell {
         target(sources("**/*.sh"))
         // The version is pinned once, in `mise.toml`; `*` accepts whatever that provides.
+        // The fallback name is never run: `verifyShfmt` fails first, and the value source is
+        // re-checked on every build.
         shfmt("*").pathToExe(shfmtPath.get().ifEmpty { "shfmt" })
         // The delimiter matches the first line that is not an SPDX line, so only the SPDX line is
         // managed, and the shebang is skipped so that the header lands on line 2.
