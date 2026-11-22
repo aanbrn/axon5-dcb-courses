@@ -41,10 +41,11 @@ abstract class ToolingTableCheck : DefaultTask() {
         val pinned = miseKeys(miseToml.get().asFile.readLines())
         val rows = inventoryRows(inventory.get().asFile.readLines())
         val documented = rows.mapNotNull { it.key }.toSet()
-        val problems =
-            (pinned - documented).sorted().map { "missing in $INVENTORY_PATH: $it" } +
-                (documented - pinned).sorted().map { "missing in $MISE_PATH: $it" } +
-                rows.filter { it.key == null }.map { "no backticked mise.toml key in row: ${it.tool}" }
+        val problems = buildList {
+            (pinned - documented).sorted().mapTo(this) { "missing in $INVENTORY_PATH: $it" }
+            (documented - pinned).sorted().mapTo(this) { "missing in $MISE_PATH: $it" }
+            rows.filter { it.key == null }.mapTo(this) { "no backticked mise.toml key in row: ${it.tool}" }
+        }
         report.get().asFile.apply {
             parentFile.mkdirs()
             writeText(
@@ -83,7 +84,9 @@ abstract class ToolingTableCheck : DefaultTask() {
     }
 
     /** The rows of any Markdown table whose `Version source` cell is `mise`. */
+    @Suppress("ConvertCallChainIntoSequence")
     private fun inventoryRows(lines: List<String>): List<InventoryRow> =
+        // A Markdown table has a few dozen rows, so a lazy sequence adds overhead and no benefit.
         lines
             .map { it.trim() }
             .filter { it.startsWith("|") }

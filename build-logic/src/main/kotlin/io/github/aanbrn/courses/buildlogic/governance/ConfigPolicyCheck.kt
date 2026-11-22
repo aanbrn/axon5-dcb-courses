@@ -92,9 +92,9 @@ abstract class ConfigPolicyCheck : DefaultTask() {
     ) {
         for (key in expected.keys + actual.keys) {
             val child = if (path.isEmpty()) "$key" else "$path.$key"
-            when {
-                key !in actual -> out += "removed: $child"
-                key !in expected -> out += "added: $child"
+            when (key) {
+                !in actual -> out += "removed: $child"
+                !in expected -> out += "added: $child"
                 else -> compare(child, expected[key], actual[key], out)
             }
         }
