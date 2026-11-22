@@ -1,0 +1,52 @@
+root = true
+
+# Defaults for every file. Type-specific sections below override them, so this section stays first.
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Kotlin: ktfmt kotlinlang style (4 spaces, 100 columns).
+[*.{kt,kts}]
+indent_size = 4
+max_line_length = 100
+
+# Structured data formatted by Prettier (JSON, JSON5, YAML) or taplo (TOML), and Java properties.
+[*.{json,json5,yml,yaml,toml,properties}]
+indent_size = 2
+
+# taplo reads the column limit from this section.
+[*.toml]
+max_line_length = 100
+
+# Markdown: Prettier owns the layout (tabWidth 2). Continuation lines of an ordered list item align
+# to the three-column "1. " marker, so a fixed indent size cannot hold; trailing spaces can be a
+# hard line break.
+[*.md]
+indent_size = unset
+trim_trailing_whitespace = false
+
+# Shell: shfmt reads the indent from this section.
+[*.sh]
+indent_size = 2
+
+# Windows scripts keep CRLF endings.
+[*.{bat,cmd}]
+end_of_line = crlf
+
+[*.txt]
+indent_size = 2
+
+[*.scenarios]
+indent_size = 2
+
+# The Gradle wrapper script runs on Unix shells only.
+[gradlew]
+end_of_line = lf
+
+# Test reports, detekt reports and IDE files.
+[*.xml]
+indent_size = 2

@@ -1,0 +1,188 @@
+name: CI
+
+# Build, test, analyse, lint and secret-scan every change. The `ci-success` job is the single stable
+# context the repository ruleset requires (together with `governance-success`, see
+# docs/adr/0001-workflow-permissions-and-required-checks.md). There are no path filters on purpose: a
+# documentation-only pull request still runs every job and still reports `ci-success`.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      # The JDK comes from .java-version and Node.js from .nvmrc through setup-java and setup-node;
+      # mise only provides the CLI tools (INFRA-09).
+      MISE_DISABLE_TOOLS: java,node
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version-file: .java-version
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Read the mise version
+        id: mise-version
+        run: |
+          version="$(sed -nE 's/^min_version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' mise.toml)"
+          test -n "${version}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      # Spotless runs shfmt and taplo from PATH, so `./gradlew build` format-checks shell and TOML
+      # files here exactly as it does locally. mise.lock pins both binaries with checksums.
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
+        with:
+          version: ${{ steps.mise-version.outputs.version }}
+          install_args: aqua:mvdan/sh aqua:tamasfe/taplo
+
+      # The cache is written from main only, so a pull request can never poison what main restores.
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          cache-provider: basic
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # Compile, unit tests, TestKit tests, Spotless, detekt, Dokka and the governance checks.
+      # Build Scans are never published from CI.
+      - name: Build
+        run: ./gradlew build --console=plain
+
+      - name: Upload build reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: build-reports
+          path: "**/build/reports/**"
+          retention-days: 7
+          if-no-files-found: ignore
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      # Node.js comes from .nvmrc through setup-node (the npm:renovate tool needs it); mise only
+      # provides the CLI tools.
+      MISE_DISABLE_TOOLS: java,node
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Read the mise version
+        id: mise-version
+        run: |
+          version="$(sed -nE 's/^min_version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' mise.toml)"
+          test -n "${version}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
+        with:
+          version: ${{ steps.mise-version.outputs.version }}
+          install_args: >-
+            aqua:rhysd/actionlint zizmor shellcheck editorconfig-checker python uv pipx:reuse npm:renovate
+
+      # Every check below lints all tracked files, whatever the pull request changed.
+      - name: Lint workflows (actionlint)
+        run: actionlint
+
+      # Online audits (impostor commits, ref confusion) need the job token to query the GitHub API.
+      - name: Audit workflows (zizmor)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: zizmor --no-progress .github/workflows
+
+      - name: Lint shell scripts (shellcheck)
+        run: git ls-files -z '*.sh' | xargs -0 -r shellcheck
+
+      - name: Check .editorconfig conformance
+        run: editorconfig-checker
+
+      - name: Check licensing metadata (REUSE)
+        run: reuse lint
+
+      # Renormalise a copy of the index, never the real one, and fail when that would change anything.
+      - name: Check line-ending and attribute normalisation
+        run: |
+          temp_index="$(mktemp)"
+          trap 'rm -f "${temp_index}"' EXIT
+          cp "$(git rev-parse --git-path index)" "${temp_index}"
+          export GIT_INDEX_FILE="${temp_index}"
+          git add --renormalize .
+          git diff --cached --exit-code --stat
+
+      - name: Validate the Renovate configuration
+        run: renovate-config-validator --strict renovate.json5
+
+      # Every tracked shell test runs, so a new scripts/**/test-*.sh joins CI without editing this file.
+      - name: Run shell tests
+        run: git ls-files -z -- 'scripts/test-*.sh' 'scripts/*/test-*.sh' | xargs -0 -r -n1 bash
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      MISE_DISABLE_TOOLS: java,node
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Read the mise version
+        id: mise-version
+        run: |
+          version="$(sed -nE 's/^min_version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' mise.toml)"
+          test -n "${version}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
+        with:
+          version: ${{ steps.mise-version.outputs.version }}
+          install_args: gitleaks
+
+      # The full history is scanned on every run; a leak already in history is reported, not purged.
+      - name: Scan the full history for secrets
+        run: gitleaks git --redact --no-banner
+
+  ci-success:
+    name: ci-success
+    needs: [build, lint, secrets]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Verify all required jobs passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: echo "$NEEDS" | jq -e 'all(.[]; .result == "success")' > /dev/null

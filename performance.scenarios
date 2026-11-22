@@ -1,0 +1,40 @@
+# gradle-profiler scenarios for the build (INFRA-10, D-20). They run manually, never in CI:
+#   mise x -- gradle-profiler --benchmark --project-dir . --scenario-file performance.scenarios \
+#     clean_build noop_build abi_change config_cache_hit
+# See docs/performance.md for how to read the results and for the recorded baseline.
+# Warm-up and iteration counts keep the whole run under about 20 minutes.
+
+# Everything from scratch: the root project is cleaned and the build cache is bypassed, so the
+# measurement is real compile, analysis and test work rather than cache hits.
+clean_build {
+  tasks = ["build"]
+  cleanup-tasks = ["clean"]
+  gradle-args = ["--no-build-cache"]
+  warm-ups = 1
+  iterations = 3
+}
+
+# Nothing changed since the previous build: only up-to-date checks may run.
+noop_build {
+  tasks = ["build"]
+  warm-ups = 2
+  iterations = 5
+}
+
+# An ABI-visible change to the sample library, measuring incremental compilation and the tasks that
+# depend on the changed API.
+abi_change {
+  tasks = ["assemble"]
+  apply-abi-change-to = "tooling/convention-sample/src/main/kotlin/io/github/aanbrn/courses/sample/Greeting.kt"
+  warm-ups = 2
+  iterations = 5
+}
+
+# Configuration only: with the configuration cache on, every build after the first one reuses the
+# stored task graph.
+config_cache_hit {
+  tasks = ["help"]
+  gradle-args = ["--configuration-cache"]
+  warm-ups = 2
+  iterations = 8
+}

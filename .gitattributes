@@ -1,0 +1,36 @@
+# Line endings: the repository stores LF; checkouts use LF on every platform. Later rules win.
+* text=auto eol=lf
+
+# The Gradle wrapper script and shell scripts run on Unix shells only.
+gradlew text eol=lf
+*.sh text eol=lf
+
+# Windows scripts keep CRLF endings.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files are never converted, diffed as text or merged line by line.
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.eot binary
+
+# Generated files are collapsed in pull requests and excluded from language statistics.
+gradle/gradle-daemon-jvm.properties linguist-generated
+mise.lock linguist-generated -diff
+gradle/verification-metadata.xml linguist-generated -diff
+pnpm-lock.yaml linguist-generated -diff
+frontend/**/generated/** linguist-generated
+
+# Documentation is excluded from language statistics.
+docs/** linguist-documentation
+docs-site/** linguist-documentation
+.planning/** linguist-documentation

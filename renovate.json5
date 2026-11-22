@@ -1,0 +1,211 @@
+// SPDX-License-Identifier: MIT
+// Renovate configuration for the Mend Renovate GitHub App (D-11).
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["config:best-practices", "helpers:pinGitHubActionDigestsToSemver"],
+  // Never propose a release younger than seven days. Set at the top level so it applies to every
+  // manager, including GitHub Actions digest updates (CICD-04).
+  minimumReleaseAge: "7 days",
+  // Do not let a pending minimum-release-age check create a branch or PR early.
+  internalChecksFilter: "strict",
+
+  // PR conventions: titles read `build(deps): ...`, every PR carries `deps` plus an ecosystem label
+  // from .github/labels.yml, and nothing merges itself unless a rule below opts in (D-12).
+  labels: ["deps"],
+  semanticCommits: "enabled",
+  semanticCommitType: "build",
+  semanticCommitScope: "deps",
+  automerge: false,
+  platformAutomerge: true,
+  automergeType: "pr",
+  automergeStrategy: "squash",
+  // Renovate waives the cooldown for vulnerability fixes, so a security PR can appear before the
+  // release is seven days old. That is the one deliberate exception to the cooldown: such a PR is
+  // never merged by a rule, a human always reviews it.
+  vulnerabilityAlerts: { addLabels: ["security"], automerge: false },
+
+  customManagers: [
+    {
+      customType: "regex",
+      description: "JDK major version in .java-version (no built-in Renovate manager covers it)",
+      managerFilePatterns: ["/(^|/)\\.java-version$/"],
+      matchStrings: ["^(?<currentValue>\\d+(?:\\.\\d+)*)\\s*$"],
+      depNameTemplate: "java",
+      datasourceTemplate: "java-version",
+      versioningTemplate: "loose",
+      // .java-version holds a bare major; reduce every release to its major so a bump stays bare.
+      extractVersionTemplate: "^(?<version>\\d+)",
+    },
+    {
+      customType: "regex",
+      description: "Versions annotated with '# renovate: datasource=... depName=...' in the Gradle version catalog",
+      managerFilePatterns: ["/(^|/)gradle/libs\\.versions\\.toml$/"],
+      matchStrings: [
+        '# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+\\S+ = "(?<currentValue>[^"]+)"',
+      ],
+    },
+    {
+      customType: "regex",
+      description: "mise's own minimum version (min_version) in mise.toml",
+      managerFilePatterns: ["/(^|/)mise\\.toml$/"],
+      matchStrings: ['min_version = "(?<currentValue>[^"]+)"'],
+      depNameTemplate: "jdx/mise",
+      datasourceTemplate: "github-releases",
+      // mise tags releases as v<version>; min_version is written without the leading v.
+      extractVersionTemplate: "^v(?<version>.+)$",
+    },
+  ],
+
+  // Rules apply in order and later rules win, so labels and groups come first, then automerge, then
+  // the JDK restrictions.
+  packageRules: [
+    // Generated sidecar lockfiles of the mise npm and pipx tools: their versions are managed through
+    // mise.toml, so Renovate must not open PRs against the generated package.json and pyproject.toml.
+    {
+      description: "Ignore the generated mise sidecar lockfiles",
+      matchFileNames: [".mise/locks/**"],
+      enabled: false,
+    },
+
+    // Ecosystem labels (names must exist in .github/labels.yml).
+    {
+      description: "Label Gradle catalog, plugin and wrapper updates",
+      matchManagers: ["gradle", "gradle-wrapper"],
+      addLabels: ["deps:gradle"],
+    },
+    {
+      description: "Label GitHub Actions updates",
+      matchManagers: ["github-actions"],
+      addLabels: ["deps:github-actions"],
+    },
+    {
+      description: "Label mise tool updates",
+      matchManagers: ["mise"],
+      addLabels: ["deps:mise"],
+    },
+    {
+      description: "Label JDK updates",
+      matchDepNames: ["java"],
+      addLabels: ["deps:jdk"],
+    },
+    {
+      description: "Label Node.js updates",
+      matchManagers: ["nvm"],
+      addLabels: ["deps:node"],
+    },
+    {
+      description: "Label npm package updates",
+      matchDatasources: ["npm"],
+      addLabels: ["deps:npm"],
+    },
+
+    // Groups: libraries that release together are updated together.
+    {
+      description: "Kotlin compiler, standard library and BOM",
+      matchPackageNames: ["org.jetbrains.kotlin:*", "org.jetbrains.kotlin.*"],
+      groupName: "kotlin",
+    },
+    {
+      description: "JUnit",
+      matchPackageNames: ["org.junit:*", "org.junit.*"],
+      groupName: "junit",
+    },
+    {
+      description: "Kotest",
+      matchPackageNames: ["io.kotest:*", "io.kotest.*"],
+      groupName: "kotest",
+    },
+    {
+      description: "Spring Boot together with the Jackson BOM it manages",
+      matchPackageNames: [
+        "org.springframework.boot:*",
+        "org.springframework.boot.*",
+        "tools.jackson:*",
+        "tools.jackson.*",
+      ],
+      groupName: "spring-boot",
+      prBodyNotes: [
+        "The catalog's `jackson` version mirrors the `jackson-bom.version` that `spring-boot-dependencies` manages for the new Spring Boot version. Check that both agree before merging.",
+      ],
+    },
+    {
+      description: "Axon Framework with Axoniq Framework (they share one catalog version)",
+      matchPackageNames: ["org.axonframework:*", "io.axoniq.framework:*"],
+      groupName: "axon",
+    },
+    {
+      description: "Testcontainers",
+      matchPackageNames: ["org.testcontainers:*"],
+      groupName: "testcontainers",
+    },
+    {
+      description: "Formatting and analysis tools",
+      matchPackageNames: [
+        "com.diffplug.spotless:*",
+        "com.diffplug.spotless.*",
+        "com.facebook:ktfmt",
+        "prettier",
+        "dev.detekt:*",
+        "dev.detekt.*",
+        "org.jetbrains.dokka:*",
+        "org.jetbrains.dokka.*",
+      ],
+      groupName: "formatting and analysis",
+    },
+    {
+      description: "GitHub Actions, everything except major updates",
+      matchManagers: ["github-actions"],
+      matchUpdateTypes: ["minor", "patch", "digest", "pin", "pinDigest"],
+      groupName: "github-actions",
+    },
+    {
+      description: "mise tools, everything except major updates",
+      matchManagers: ["mise"],
+      matchUpdateTypes: ["minor", "patch", "digest"],
+      groupName: "dev tools",
+    },
+
+    // Automerge (D-12): exactly three rules. Platform automerge waits for the ruleset's required checks.
+    {
+      description: "Automerge GitHub Actions digest updates",
+      matchManagers: ["github-actions"],
+      matchUpdateTypes: ["digest", "pinDigest"],
+      automerge: true,
+    },
+    {
+      description: "Automerge patch updates of mise tools",
+      matchManagers: ["mise"],
+      matchUpdateTypes: ["patch"],
+      automerge: true,
+    },
+    {
+      description: "Automerge patch updates of the formatting and analysis tools",
+      matchPackageNames: [
+        "com.diffplug.spotless:*",
+        "com.diffplug.spotless.*",
+        "com.facebook:ktfmt",
+        "prettier",
+        "dev.detekt:*",
+        "dev.detekt.*",
+        "org.jetbrains.dokka:*",
+        "org.jetbrains.dokka.*",
+      ],
+      matchUpdateTypes: ["patch"],
+      automerge: true,
+    },
+
+    // JDK: LTS majors only, written as a bare major in .java-version.
+    {
+      description: "JDK updates: LTS majors only, with the daemon JVM reminder",
+      matchDepNames: ["java"],
+      allowedVersions: "/^(21|25|29|33)$/",
+      // The java-version datasource reports no release timestamps, so under the default
+      // timestamp-required behaviour every JDK release would stay pending forever. Only LTS
+      // majors pass the filter above and the PR needs a manual merge, so waive the age check here.
+      minimumReleaseAgeBehaviour: "timestamp-optional",
+      prBodyNotes: [
+        "Run `./gradlew updateDaemonJvm` on this branch and commit the regenerated `gradle/gradle-daemon-jvm.properties`: `checkDaemonJvm` fails until then. If the JDK major changed, also refresh `mise.lock` with `mise lock`.",
+      ],
+    },
+  ],
+}

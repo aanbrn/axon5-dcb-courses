@@ -1,0 +1,139 @@
+# Governed paths.
+#
+# A pull request that touches one of these paths needs the `governance-approved` label
+# (scripts/governance/check-pr.sh), and Claude Code asks before it edits one
+# (.claude/settings.json, kept in sync by the checkClaudeAskRules Gradle task: exactly one
+# `Edit(/<entry>)` ask rule per entry).
+#
+# Format. One glob per line. `**` matches any characters including `/`; every other character
+# is literal. Blank lines and lines starting with `#` are ignored. Leading and trailing spaces,
+# tabs and carriage returns are stripped. Entries must be printable ASCII. A file without any
+# entry fails closed. The shell gate and the Gradle check read this file with one grammar.
+#
+# Boundary rule. A path is governed when a change to it alone can rewrite the policy, stop a
+# governance check from running, or make one pass without evaluating. That covers the policy
+# files, the checks and their wiring, the root build configuration that applies and selects
+# them, the build that compiles them, the convention plugins applied to the root project and to
+# settings, and the launcher CI runs them with. The policy files include the tool pins and the
+# Renovate update policy, under every file name mise and Renovate read them from.
+#
+# Outside the boundary, on purpose:
+#   - module convention plugins: under isolated projects they cannot reach the root project's
+#     tasks, and checkBuildScripts rejects allprojects, subprojects and afterEvaluate;
+#   - functional tests: a deleted test cannot make a check pass;
+#   - the version catalog (gradle/libs.versions.toml): dependency integrity is CICD-05 in
+#     Phase 6, and the catalog carries the D-12 automerge updates;
+#   - gradlew.bat: CI runs on ubuntu only (D-10);
+#   - scripts/test-apply-github-settings.sh: a test of the settings writer, not the writer;
+#   - module build scripts: they cannot reach the root project under isolated projects;
+#   - mise environment files (mise.<env>.toml, mise.<env>.local.toml): mise reads them only for a
+#     selected environment, and CI can select one only through a governed file, that is a
+#     workflow's MISE_ENV or the mise-action `mise_env` input under .github/**, or the `env` key
+#     of a governed rc file;
+#   - mise config files in subdirectories or outside the checkout: mise reads config from the
+#     filesystem root down to the current directory, and CI runs mise from the repository root.
+#     mise-action adds --monorepo only when a root config declares monorepo.config_roots, and
+#     every root config is governed. The runner's home directory and the checkout's parent
+#     directories are not part of a pull request;
+#   - lockfiles beside the alternate mise config files, for example mise.local.lock: mise checks
+#     each config file's tools against that file's own lockfile, so such a lockfile does nothing
+#     unless its config file, which is governed, declares tools;
+#   - .java-version and .nvmrc: the runtime version sources (INFRA-09). In CI, setup-java and
+#     setup-node read them and mise's java and node are disabled (MISE_DISABLE_TOOLS). mise reads
+#     idiomatic version files only for the tools the governed mise.toml enables;
+#   - a `renovate` section in a package.json below the repository root: Renovate reads repository
+#     config from the root only.
+#
+# Accepted residual. Build code can always subvert in-build checks by other means, for example
+# through reflection or daemon-wide hooks. The list makes the direct routes visible changes, and
+# the maintainer's review covers the rest.
+
+# Project policy and agent settings. GitHub reads CODEOWNERS from the root, `.github/` and `docs/`.
+.planning/config.json
+.claude/settings.json
+.mcp.json
+CODEOWNERS
+docs/CODEOWNERS
+governance/**
+
+# Tool pins. mise reads every one of these names from the repository root, where CI runs
+# `mise install` through jdx/mise-action, and `mise install` trusts the config it reads.
+# mise.local.toml, .mise.local.toml and .mise.toml take precedence over mise.toml and override its
+# pins. The files lower in precedence can still add tools (tools listed only in .tool-versions
+# are not locked) and set [env] entries such as `_.path`, which mise-action exports to later
+# steps. The rc files (.miserc.toml, .miserc.local.toml, .config/miserc.toml) decide which config
+# files mise reads at all. .mise/locks/** holds the sidecar lockfiles that mise.lock references
+# for the npm and pipx tools. A Renovate bump that rewrites a sidecar adds new files, which the
+# version-only exemption never covers, so that pull request needs the label.
+# Source: the mise documentation (configuration, `mise trust`, mise.lock).
+mise.toml
+mise.lock
+.mise/locks/**
+.mise.toml
+mise.local.toml
+.mise.local.toml
+mise/**
+.mise/config.toml
+.mise/config.local.toml
+.mise/conf.d/**
+.config/mise.toml
+.config/mise.local.toml
+.config/mise/**
+.tool-versions
+.miserc.toml
+.miserc.local.toml
+.config/miserc.toml
+
+# Renovate configuration. Renovate reads the first of these names it finds, in this order
+# (docs.renovatebot.com, configuration options), so renovate.json and renovate.jsonc win over
+# renovate.json5. The .github/renovate.* names sit between them in that order and are covered
+# by .github/**. Renovate's source skips the .gitlab/ names on GitHub; they are listed because
+# the documentation names them without that condition, and governing an absent file costs
+# nothing. package.json counts only through a deprecated `renovate` section, but Renovate still
+# reads it from the root.
+renovate.json
+renovate.jsonc
+renovate.json5
+.gitlab/renovate.json
+.gitlab/renovate.jsonc
+.gitlab/renovate.json5
+.renovaterc
+.renovaterc.json
+.renovaterc.jsonc
+.renovaterc.json5
+package.json
+
+# CI workflows, and the only writer of the repository settings and ruleset.
+.github/**
+scripts/apply-github-settings.sh
+
+# The pull request gate.
+scripts/governance/**
+
+# The Gradle governance checks and their wiring: dropping a check from `check` switches it off.
+build-logic/src/main/kotlin/courses.governance.gradle.kts
+build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/governance/**
+
+# Root build configuration. It applies the checks, selects the build that provides them and
+# holds the isolated-projects switch. Gradle reads a Groovy script before the Kotlin one when
+# both exist, and a buildSrc build adds plugins to every build script's classpath.
+build.gradle.kts
+build.gradle
+settings.gradle.kts
+settings.gradle
+gradle.properties
+buildSrc/**
+
+# The build that compiles the checks, and the convention plugins applied to the root project
+# and to settings, where they can reconfigure the governance tasks by name.
+build-logic/build.gradle.kts
+build-logic/build.gradle
+build-logic/settings.gradle.kts
+build-logic/settings.gradle
+build-logic/src/main/kotlin/courses.root.gradle.kts
+build-logic/src/main/kotlin/courses.settings.settings.gradle.kts
+
+# The launcher CI runs the checks with. A no-op gradlew alone would make the build step green.
+gradlew
+gradle/wrapper/**
+gradle/gradle-daemon-jvm.properties

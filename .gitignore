@@ -1,0 +1,44 @@
+/.idea/
+
+# Claude Code: track only project-owned files; GSD install and local settings stay untracked
+/.claude/*
+!/.claude/settings.json
+!/.claude/CLAUDE.md
+
+# GSD state-contract snapshot: derived from ROADMAP.md/STATE.md and rewritten at every step boundary
+/.planning/state.json
+
+# Gradle and Kotlin state
+.gradle/
+build/
+.kotlin/
+out/
+
+# Node and pnpm
+node_modules/
+.pnpm-store/
+npm-debug.log*
+pnpm-debug.log*
+
+# IDE
+*.iml
+.vscode/*
+!.vscode/extensions.json
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Test and coverage artifacts
+test-results/
+playwright-report/
+blob-report/
+coverage/
+
+# gradle-profiler output
+profile-out/
+gradle-user-home/
+
+# OS files
+.DS_Store
