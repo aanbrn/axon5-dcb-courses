@@ -43,9 +43,11 @@ abstract class PrTemplateCheck : DefaultTask() {
             if (actual.take(expected.size) == expected) {
                 emptyList()
             } else {
-                expected.filterNot { it in actual }.map { "missing heading: ## $it" } +
-                    "expected: ${expected.joinToString()}" +
-                    "actual:   ${actual.joinToString()}"
+                buildList {
+                    expected.filterNot { it in actual }.mapTo(this) { "missing heading: ## $it" }
+                    add("expected: ${expected.joinToString()}")
+                    add("actual:   ${actual.joinToString()}")
+                }
             }
         report.get().asFile.apply {
             parentFile.mkdirs()

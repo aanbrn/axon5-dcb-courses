@@ -4,10 +4,10 @@ current_phase: 2
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: planning
 stopped_at: Phase 01 complete, ready to plan Phase 2
-last_updated: "2026-11-22T06:51:14.404Z"
+last_updated: "2026-11-22T08:31:05.180Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 01 complete, transitioned to Phase 2
-state_head: 90339a923a72ce4a341968c77791552ac12d925d
+state_head: fc88954a6a222cadf8ade7326a6052002c5196ea
 progress:
   total_phases: 13
   completed_phases: 1
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-11-22)
 Phase: 2 — Runtime Infrastructure & DCB Spikes
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-22 - Completed quick task 261122-gdy: Raise the maximum line width from 100 to 120 for every formatter (detekt backstop 140)
+Last activity: 2026-11-22 - Completed quick task 261122-kqn: Adopt Qodana JVM Community as a required CI gate for IDE-only inspections
 
 Progress: [█░░░░░░░░░] 8%
 
@@ -148,6 +148,7 @@ None yet.
 | 8 | Record the agent git workflow (branches, no force-push, worktree finishing) in .claude/CLAUDE.md | 2026-11-22 | 6caa5b7 | — |
 | 9 | Record the test class suffix convention (suffix mirrors the Gradle test suite) | 2026-11-22 | 18dc009 | — |
 | 10 | Suppress incubating-API warnings with reasons, describe environment check tasks, plan gates for suppressions and IDE-only inspections | 2026-11-22 | 90339a9 | — |
+| 261122-kqn | Adopt Qodana JVM Community as a required CI gate for IDE-only inspections | 2026-11-22 | fc88954 | [261122-kqn-adopt-qodana-as-a-required-ci-gate-for-i](./quick/261122-kqn-adopt-qodana-as-a-required-ci-gate-for-i/) |
 
 ## Deferred Items
 

@@ -244,7 +244,7 @@ Plans:
   4. A load test of concurrent subscriptions finishes with the capacity and per-student invariants verified.
   5. Merging a release-please PR creates the version tag, changelog and GitHub Release, and publishes images to GHCR with SBOMs, signatures and provenance attestations that cosign can verify. Commit messages and PR titles that do not follow Conventional Commits fail the checks.
 **Plans**: TBD
-**Research**: Yes. Topics: trace context propagation across Axon Server messages, open vs commercial tracing binding (prefer the open `SpanFactory` path), Qodana JVM Community as a CI gate for IDE-only inspections (such as unstable API usage) with a baseline, adopted only if its noise on the real code base is low.
+**Research**: Yes. Topics: trace context propagation across Axon Server messages, open vs commercial tracing binding (prefer the open `SpanFactory` path).
 
 ### Phase 13: Reference Documentation & Final Polish
 **Goal**: A visitor to the repository or the documentation site understands why DCB matters and can run the system in minutes. They can learn the concepts, compare them with aggregates, plan a migration from Axon 4 and see how the project was built. Everything can be done in a reviewed, polished UI.

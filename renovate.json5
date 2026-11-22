@@ -54,6 +54,13 @@
       // mise tags releases as v<version>; min_version is written without the leading v.
       extractVersionTemplate: "^v(?<version>.+)$",
     },
+    {
+      customType: "regex",
+      description: "Qodana linter image (tag and digest) in qodana.yaml",
+      managerFilePatterns: ["/^qodana\\.yaml$/"],
+      matchStrings: ["linter: (?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"],
+      datasourceTemplate: "docker",
+    },
   ],
 
   // Rules apply in order and later rules win, so labels and groups come first, then automerge, then
@@ -100,6 +107,11 @@
       description: "Label npm package updates",
       matchDatasources: ["npm"],
       addLabels: ["deps:npm"],
+    },
+    {
+      description: "Label container image updates",
+      matchDatasources: ["docker"],
+      addLabels: ["deps:docker"],
     },
 
     // Groups: libraries that release together are updated together.
@@ -207,6 +219,16 @@
       minimumReleaseAgeBehaviour: "timestamp-optional",
       prBodyNotes: [
         "Run `./gradlew updateDaemonJvm` on this branch and commit the regenerated `gradle/gradle-daemon-jvm.properties`: `checkDaemonJvm` fails until then. If the JDK major changed, also refresh `mise.lock` with `mise lock`.",
+      ],
+    },
+
+    // Qodana: the image tag must match the IntelliJ IDEA release used for development (docs/tooling.md).
+    {
+      description: "Qodana linter image: year.minor tags only, with the IntelliJ IDEA parity reminder",
+      matchDepNames: ["jetbrains/qodana-jvm-community"],
+      allowedVersions: "/^\\d{4}\\.\\d+$/",
+      prBodyNotes: [
+        "The Qodana tag must equal the IntelliJ IDEA year.minor used for development (docs/tooling.md). If this PR changes the year.minor, update IntelliJ IDEA to the same release, run `scripts/qodana.sh`, and fix or justify every new finding in this PR before merging. A digest-only update needs no IDE change.",
       ],
     },
   ],

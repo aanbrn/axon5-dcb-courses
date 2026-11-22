@@ -80,10 +80,12 @@ abstract class AskRulesCheck : DefaultTask() {
     private fun ruleProblems(governed: List<String>, rules: List<*>): List<String> {
         val expected = governed.map { "Edit(/$it)" }.distinct() + CONFIG_SET_RULE
         val counts = rules.filterIsInstance<String>().groupingBy { it }.eachCount()
-        val notStrings = rules.filterNot { it is String }.map { "$NOT_A_STRING $it" }
-        val missing = expected.filter { it !in counts }.map { "missing: $it" }
-        val duplicated = expected.filter { (counts[it] ?: 0) > 1 }.map { "duplicated: $it" }
-        return (notStrings + missing + duplicated).sorted()
+        return buildList {
+            rules.filterNot { it is String }.mapTo(this) { "$NOT_A_STRING $it" }
+            expected.filter { it !in counts }.mapTo(this) { "missing: $it" }
+            expected.filter { (counts[it] ?: 0) > 1 }.mapTo(this) { "duplicated: $it" }
+        }
+            .sorted()
     }
 
     private fun parse(): Map<*, *> {

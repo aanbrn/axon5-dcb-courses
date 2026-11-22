@@ -122,6 +122,9 @@
 - name: "deps:npm"
   color: "0e8a16"
   description: "An npm dependency update."
+- name: "deps:docker"
+  color: "0e8a16"
+  description: "A container image update."
 
 # Release automation (release-please defaults).
 - name: "autorelease: pending"

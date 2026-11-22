@@ -1,0 +1,41 @@
+# Configuration of the required `qodana` CI gate, which runs the IntelliJ IDEA inspections that the
+# compiler, detekt and ktfmt cannot see. scripts/qodana.sh runs it locally and in CI with exactly the
+# same image and flags; docs/tooling.md explains the IDE parity rule and the local run.
+
+# The configuration schema version.
+version: "1.0"
+
+# The only place the image is pinned. Renovate updates the tag and the digest together. The tag's
+# year.minor must equal the IntelliJ IDEA release used for development, so the gate reproduces the IDE.
+linter: jetbrains/qodana-jvm-community:2026.3@sha256:5420d961a4f3a850adc47fc6565916eb6fe558f3205f511ac7bc75b98812c37e
+
+# The IDE's own default profile, so Qodana reports what the IDE shows, while `qodana.recommended`
+# hides inspections that are enabled by default in the IDE.
+profile:
+  name: Default
+
+# Any problem fails the gate. There is no baseline.
+failThreshold: 0
+
+# Only the profile's inspections run, for IDE parity.
+runPromoInspections: false
+
+exclude:
+  # Build output and Gradle-generated Kotlin DSL accessors (240 findings, none in our code). A new
+  # module adds its build directory here. The gate fails closed: a missing entry shows up as findings
+  # in generated code and never hides real ones.
+  - name: All
+    paths:
+      - build
+      - build-logic/build
+      - platform/build
+      - tooling/convention-sample/build
+      - .gradle
+      - build-logic/.gradle
+      - .kotlin
+      - build-logic/.kotlin
+  # The repeated values are deliberate, because INFRA-14 requires .editorconfig to define settings for
+  # every file type explicitly.
+  - name: EditorConfigOptionRedundancy
+    paths:
+      - .editorconfig
