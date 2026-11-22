@@ -106,7 +106,7 @@ jobs:
         with:
           version: ${{ steps.mise-version.outputs.version }}
           install_args: >-
-            aqua:rhysd/actionlint zizmor shellcheck editorconfig-checker pipx:reuse npm:renovate
+            aqua:rhysd/actionlint zizmor shellcheck editorconfig-checker python uv pipx:reuse npm:renovate
 
       # Every check below lints all tracked files, whatever the pull request changed.
       - name: Lint workflows (actionlint)
