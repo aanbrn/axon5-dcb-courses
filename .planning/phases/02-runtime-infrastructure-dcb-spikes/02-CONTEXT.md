@@ -236,6 +236,27 @@ AIDEV-01, AIDEV-03, AIDEV-04, AIDEV-07. Domain decisions (commands, invariants) 
   exact version plus a Renovate regex manager. Personal MCP servers (IntelliJ, optionally GitHub) stay in local scope
   and are documented.
 
+### Post-Research Decisions (2026-11-22, after spikes 001–005 and 02-RESEARCH.md)
+- **D-43:** The Axon wiring proven by the spikes (`KotlinTagResolver`, the decision-capture `EventStorageEngine`
+  decorator, the handling-side conflict-retry `ConfigurationEnhancer`) and the permanent Axon Server tests (INFRA-04
+  conflict test, INFRA-06 round trip, decision-capture test) live in `backend/command-service`, created in Phase 2 as a
+  plain Kotlin library. Phase 3 turns it into the Spring Boot command service.
+- **D-44 (extends D-04):** Sealed command results carry `@JsonTypeInfo` directly, with `jackson-annotations` as a
+  `compileOnly` metadata dependency of the contracts, the same rule D-04 sets for Axon annotations. The shared Jackson
+  module (`serialization-jackson`) depends on the kernel only, so the D-02 graph stays intact. The spike's mix-in
+  design is recorded as the rejected alternative.
+- **D-45 (clarifies UPS-02):** Only records whose workaround has been removed forbid workaround markers. A `wont-fix`
+  record keeps its markers, because its workaround is permanent.
+- **D-46 (scopes D-26):** Phase 2 verifies the host scenario functionally (the INFRA-04 integration test against
+  `localhost:8124`) and the compose scenario at network level (reachability from a sibling container). Functional
+  in-network gRPC clients arrive with the Phase 3/6 services.
+- **D-47 (corrects D-25 wording):** `.env.example` carries the Platform token line commented out, with an explanation;
+  an empty value is not allowed, because an empty `AXONIQ_PLATFORM_AUTHENTICATION` crashes Axon Server into a zombie
+  state (spike 004). Compose passes it as a bare `- AXONIQ_PLATFORM_AUTHENTICATION` entry, which omits it when unset
+  (verified in research); `doctor` fails on an empty definition.
+- Spike findings in `.planning/spikes/` and the `spike-findings-axon5-dcb-courses` skill are established facts for
+  planning (see `.planning/spikes/WRAP-UP-SUMMARY.md`).
+
 ### Claude's Discretion
 - How the DCB context is created in compose: native Axon Server configuration if it exists, otherwise a one-shot init
   container calling `/v2/cluster/init?dcb=true`.
