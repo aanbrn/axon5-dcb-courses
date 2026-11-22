@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: complete
 phase: 01-repository-build-ci-foundation
 source: [01-VERIFICATION.md, 01-01-SUMMARY.md, 01-02-SUMMARY.md, 01-03-SUMMARY.md, 01-04-SUMMARY.md, 01-05-SUMMARY.md, 01-06-SUMMARY.md, 01-07-SUMMARY.md, 01-08-SUMMARY.md, 01-09-SUMMARY.md, 01-10-SUMMARY.md, 01-11-SUMMARY.md, 01-12-SUMMARY.md, 01-13-SUMMARY.md, 01-14-SUMMARY.md, 01-15-SUMMARY.md, 01-16-SUMMARY.md, 01-17-SUMMARY.md, 01-18-SUMMARY.md, 01-19-SUMMARY.md, 01-20-SUMMARY.md]
 started: 2026-11-21T16:46:16Z
-updated: 2026-11-21T17:57:47Z
+updated: 2026-11-22T02:38:19.070Z
 ---
 
 ## Current Test
@@ -53,37 +53,32 @@ note: "Author confirmed. The gate (01-03 Task 1, blocking-human) put prettier, r
 ### 7. Open the phase PR and let ci.yml and governance.yml run on GitHub
 expected: ci-success (build, lint, secrets jobs) and governance-success are green; the PR carries `governance-approved`; the head branch name passes the naming rule; the `List changed files` step prints `governance: listed N changed files`; adding the label re-runs the check and supersedes the earlier run
 covers: [VERIFICATION human item 1, 01-12 D1/D2/D6 (hosted run), 01-09 D5]
-result: blocked
-blocked_by: prior-phase
-reason: "blocked: needs the phase PR (and, from test 8 on, its merge); /gsd-ship opens it after the G-01-2 gap is fixed"
+result: pass
+evidence: "PR #2 head ff93f70: CI run 44975742539 Build, Lint, Secret scan and ci-success success (verifyNodeVersion and spotlessCheck ran, BUILD SUCCESSFUL); Governance run 44974801705 success after the label was added, superseding failed run 44974612506; log prints 'governance: listed 160 changed files', 'head branch name gsd/phase-01-execution is allowed' and 'governed files are touched and the pull request carries governance-approved'. The first Lint failure (pipx:reuse needs uv and a mise Python) was fixed in e1a038d."
 
 ### 8. Apply the deferred ruleset after both contexts are green
 expected: The read-only dry-run lists the expected deltas; `scripts/apply-github-settings.sh --apply --only ruleset` makes ruleset `main` live (required contexts ci-success and governance-success bound to integration_id 15368, squash-only, linear history, no force-push or deletion, admin-only bypass); the printed bypass actor is the admin role; with the drift-check token set and after `gh variable delete SETTINGS_DRIFT_SECTIONS --repo aanbrn/axon5-dcb-courses`, `--check` reports no drift for all sections
 covers: [VERIFICATION human item 2, 01-14 D4, 01-13 D3, 01-14 D5 (drift-check token)]
-result: blocked
-blocked_by: prior-phase
-reason: "blocked: needs the phase PR (and, from test 8 on, its merge); /gsd-ship opens it after the G-01-2 gap is fixed"
+result: pass
+evidence: "Dry-run listed 'ruleset main: create' (1 delta); --apply --only ruleset reported 'applied; the live settings match the declared ones' and bypass actor 'RepositoryRole 5 mode=pull_request' (Repository admin); live rules on main: deletion, non_fast_forward, required_linear_history, pull_request, required_status_checks; SETTINGS_READ_TOKEN present, SETTINGS_DRIFT_SECTIONS deleted, --check for ruleset repository security reports 'no drift'; PR #2 stays CLEAN."
 
 ### 9. Post-merge CodeQL, Scorecard and first label sync
 expected: Code scanning shows the CodeQL (actions) and Scorecard analyses from main; the first label sync creates, updates and deletes labels so the repository equals `.github/labels.yml`, and a re-run on an unchanged file changes nothing
 covers: [VERIFICATION human item 3, 01-10 D3, 01-12 D8 (hosted run)]
-result: blocked
-blocked_by: prior-phase
-reason: "blocked: needs the phase PR (and, from test 8 on, its merge); /gsd-ship opens it after the G-01-2 gap is fixed"
+result: skipped
+reason: "Deferred follow-up: post-merge check; CodeQL, Scorecard and the label sync run only from main after PR #2 is merged (author decision 2026-11-22)"
 
 ### 10. Close Renovate onboarding PR #1 and check the first grouped PRs
 expected: No onboarding PR; the Mend app opens update PRs grouped per `renovate.json5` with the configured labels, none before the 7-day cooldown (except the documented vulnerability exception and the JDK timestamp-optional waiver), automerge only for the three allowed rules; `npm:renovate`/`pipx:reuse` bumps that rewrite a `.mise/locks/**` sidecar need `governance-approved`
 covers: [VERIFICATION human item 4, 01-11 D7, 01-14 D5 (Renovate app)]
-result: blocked
-blocked_by: prior-phase
-reason: "blocked: needs the phase PR (and, from test 8 on, its merge); /gsd-ship opens it after the G-01-2 gap is fixed"
+result: skipped
+reason: "Deferred follow-up: post-merge check; Renovate reads renovate.json5 only from main, so grouped PRs appear after PR #2 is merged (author decision 2026-11-22)"
 
 ### 11. Register the repository at api.reuse.software
 expected: The README REUSE badge resolves and shows `compliant`
 covers: [VERIFICATION human item 6, 01-06 D5, 01-14 D5 (REUSE registration)]
-result: blocked
-blocked_by: prior-phase
-reason: "blocked: needs the phase PR (and, from test 8 on, its merge); /gsd-ship opens it after the G-01-2 gap is fixed"
+result: skipped
+reason: "Deferred follow-up: post-merge check; REUSE registration lints the default branch, so it needs PR #2 merged (author decision 2026-11-22)"
 
 ### 12. [01-01 D1] ./gradlew build compiles and tests the sample module through build-logic, :platform and the catalog; second run reuses the configuration cache with isolated projects on
 expected: ./gradlew build compiles and tests the sample module through build-logic, :platform and the catalog; second run reuses the configuration cache with isolated projects on
@@ -580,20 +575,22 @@ coverage_id: D3
 ## Summary
 
 total: 93
-passed: 87
+passed: 89
 issues: 1
 pending: 0
-skipped: 0
-blocked: 5
+skipped: 3
+blocked: 0
 
 ## Gaps
 
 - gap_id: G-01-2
   truth: "A Node switch on PATH is seen by the build: verifyNodeVersion checks, and Prettier runs with, the node binary on the current build's PATH, so the Prettier cache is invalidated on a Node major change even with a warm Gradle daemon"
-  status: failed
+  status: resolved
   reason: "User reported: На поиск exec-ом бинаря по PATH полагаться нельзя. Нужно резолвить PATH, используя System.getenv(\"PATH\"), и самому находить полный путь до бинаря. Потом уже пользоваться exec. Это уже рабочий способ."
   severity: major
   test: 2
+  resolved_by: "01-21-PLAN.md"
+  resolved_at: "2026-11-22"
   root_cause: "Two independent causes. (1) VerifyNodeVersion execs `node` by bare name; the JDK resolves a bare command against parentPathv, a native copy of PATH cached once when the daemon JVM initialises ProcessImpl (JDK-6413313), so a warm daemon finds node on the PATH of the client that started it. Gradle 9.9.2 does update System.getenv() and the native environ per build, so System.getenv(\"PATH\") inside a task action is current; only the bare-name lookup is stale. (2) Spotless Prettier (spotless-lib 4.11.0) never runs the verified node: with no explicit executables it searches System.getenv(\"PATH\") npm-first and runs the node next to that npm, so the guard (node-first, stale) and the formatter (npm-first, current) can pick different binaries with or without a daemon."
   artifacts:
     - path: "build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/VerifyNodeVersion.kt"
@@ -615,4 +612,13 @@ blocked: 5
 
 - test: 3
   idea: "GSD hooks fail in a Claude Code session started inside a git worktree: the hooks are registered in the main checkout's .claude/settings.local.json as \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/..., the session in the worktree picks those settings up, but $CLAUDE_PROJECT_DIR points to the worktree, where the gitignored, locally installed .claude/hooks/ does not exist (SessionStart, PreToolUse, PostToolUse and Stop hooks all fail with 'No such file or directory' / MODULE_NOT_FOUND). Every GSD session run from a phase worktree therefore runs without the GSD guards. Options: install GSD locally in each worktree, or register the hooks with absolute paths to the main checkout. GSD tooling setup, not a Phase 1 deliverable."
+  deferred_at: 2026-11-22
+- test: 9
+  idea: "Post-merge: confirm CodeQL (actions) and Scorecard analyses from main, and that the first label sync makes the repository equal .github/labels.yml with an idempotent re-run"
+  deferred_at: 2026-11-22
+- test: 10
+  idea: "Post-merge: close Renovate onboarding PR #1 and check the first grouped PRs (labels, 7-day cooldown, three automerge rules, governance-approved for .mise/locks sidecar bumps)"
+  deferred_at: 2026-11-22
+- test: 11
+  idea: "Post-merge: register the repository at api.reuse.software and confirm the README REUSE badge shows compliant"
   deferred_at: 2026-11-22
