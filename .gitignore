@@ -8,6 +8,11 @@
 # GSD state-contract snapshot: derived from ROADMAP.md/STATE.md and rewritten at every step boundary
 /.planning/state.json
 
+# mise: track only the sidecar lockfiles that mise.lock references by digest; anything else mise
+# or a tool writes under .mise stays local
+/.mise/*
+!/.mise/locks/
+
 # Gradle and Kotlin state
 .gradle/
 build/
