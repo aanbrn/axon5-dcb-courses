@@ -312,3 +312,27 @@ The "Technology Stack" section above is generated from early research (`.plannin
 - JDK version comes only from `.java-version`, Node.js from `.nvmrc`, pnpm from `packageManager`; everything else Gradle consumes comes from the version catalog via the `:platform` module.
 - Entity IDs use TypeID; no MapStruct or other mapping generators; no kapt.
 - Tags and releases are owned by release-please; GSD works on one branch per phase with squash merges.
+
+## Agent Git Workflow
+
+How a Claude Code session takes a change from branch to `main` in this repository. `main` is protected by the
+`main` ruleset, so every change, however small, goes through a pull request.
+
+- **Branch names.** A pull request from a branch of this repository must come from `gsd/phase-<N>-<slug>`
+  (`renovate/*` and `release-please--*` are for bots); `governance-success` fails on any other name. A worktree
+  created by `EnterWorktree` starts on `worktree-<name>`, so rename it before the first push.
+- **No force-push.** Never rewrite a pushed branch. After a rebase, push the result under a new branch name and
+  delete the old remote branch.
+- **Finish the job yourself.** While the session sits in a worktree, the sandbox refuses git commands aimed at the
+  main checkout (`git -C <main>`, `cd <main> && git ...`), and the human's `!` commands too. Do not hand the human
+  terminal steps. After the merge, leave the worktree with `ExitWorktree` (`action: remove`; pass
+  `discard_changes: true` only when its branch is already squash-merged), then, from the main checkout, check
+  `git status --short`, run `git pull --ff-only`, delete the local branch, run `git fetch --prune` and, when
+  `mise.toml` or `mise.lock` changed, `mise install`. If the human deleted the session's worktree, run
+  `ExitWorktree` (`action: keep`) before `EnterWorktree` creates a new one.
+- **Plain git commands in a worktree.** The sandbox refuses compound commands that mix git with loops, `&&` chains,
+  redirects or `cd`; run each git command on its own.
+- **GSD executors run isolated.** The GSD agent isolation guard requires `isolation: "worktree"` on `gsd-executor`
+  dispatches. Commit the quick task's PLAN first, pass the plan commit and its parent as the allowed bases in the
+  embedded worktree branch check, and merge the executor's branch back with
+  `gsd-tools query worktree.cleanup-wave --manifest <file>`.
