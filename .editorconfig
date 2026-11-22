@@ -19,9 +19,10 @@ max_line_length = 120
 [*.{json,json5,yml,yaml,toml,properties}]
 indent_size = 2
 
-# taplo reads the column limit from this section.
+# taplo has no EditorConfig support: it takes its column limit from `column_width` in `.taplo.toml`,
+# which must equal this value.
 [*.toml]
-max_line_length = 100
+max_line_length = 120
 
 # Markdown: Prettier owns the layout (tabWidth 2). Continuation lines of an ordered list item align
 # to the three-column "1. " marker, so a fixed indent size cannot hold; trailing spaces can be a

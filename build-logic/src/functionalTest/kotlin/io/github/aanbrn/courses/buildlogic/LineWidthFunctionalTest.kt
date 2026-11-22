@@ -13,7 +13,8 @@ import org.junit.jupiter.api.io.TempDir
 
 /**
  * Proves that the formatters wrap at the project's 120-column limit: a line of exactly 120 columns is kept, and a line
- * of 121 columns is wrapped. It covers ktfmt for Kotlin and KTS.
+ * of 121 columns is wrapped. It covers ktfmt for Kotlin and KTS, Prettier for JSON and taplo for TOML, each with the
+ * configuration committed in this repository.
  */
 class LineWidthFunctionalTest {
     @TempDir lateinit var projectDir: Path
@@ -50,6 +51,26 @@ class LineWidthFunctionalTest {
                             "\n",
                 ),
         )
+    }
+
+    @Test
+    fun `JSON lines of 120 columns are kept and lines of 121 columns are wrapped`() {
+        GradleFixture.standard(projectDir)
+            .assertWidthBoundary(
+                formats = listOf("Prettier"),
+                kept = mapOf("data/kept.json" to lineOfWidth("[\"a\", \"", "\"]", MAX_WIDTH) + "\n"),
+                wrapped = mapOf("data/wrapped.json" to lineOfWidth("[\"a\", \"", "\"]", MAX_WIDTH + 1) + "\n"),
+            )
+    }
+
+    @Test
+    fun `TOML lines of 120 columns are kept and lines of 121 columns are wrapped`() {
+        GradleFixture.standard(projectDir)
+            .assertWidthBoundary(
+                formats = listOf("Toml"),
+                kept = mapOf("data/kept.toml" to lineOfWidth("items = [\"a\", \"", "\"]", MAX_WIDTH) + "\n"),
+                wrapped = mapOf("data/wrapped.toml" to lineOfWidth("items = [\"a\", \"", "\"]", MAX_WIDTH + 1) + "\n"),
+            )
     }
 }
 
