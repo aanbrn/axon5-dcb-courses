@@ -4,10 +4,10 @@ current_phase: 01
 current_phase_name: Repository, Build & CI Foundation
 status: verifying
 stopped_at: Completed 01-21-PLAN.md
-last_updated: "2026-11-22T02:07:07.589Z"
+last_updated: "2026-11-22T02:21:42.909Z"
 last_activity: 2026-11-22
 last_activity_desc: "Phase 01 shipped as draft PR #2 (verification gate bypassed once; awaiting UAT tests 7-8)"
-state_head: 202a4d2a5609741d283b47ef79d7f28236b44a66
+state_head: e1a038df8f4ad117434e0b9bbeafcf7ebfd5504a
 progress:
   total_phases: 13
   completed_phases: 0
@@ -138,6 +138,7 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 261121-wjt | ADR-0004 on GSD configuration and COVERAGE.md | 2026-11-21 | c06f777 | [261121-wjt-adr-0004-on-gsd-configuration-and-covera](./quick/261121-wjt-adr-0004-on-gsd-configuration-and-covera/) |
+| 2 | Fix CI Lint: pin python 3.14.10 and uv 0.13.8 in mise so pipx:reuse installs from its lock (e1a038d) | 2026-11-22 | e1a038d | — |
 
 ## Deferred Items
 
