@@ -11,12 +11,11 @@ import org.gradle.testkit.runner.TaskOutcome
 /**
  * A throwaway Gradle build in [projectDir] that applies the real conventions from this repository.
  *
- * The fixture includes the actual `build-logic` directory through `pluginManagement { includeBuild
- * }` instead of injecting a plugin classpath, because the typed `libs` accessor used by the
- * precompiled script plugins fails to resolve with an injected classpath.
+ * The fixture includes the actual `build-logic` directory through `pluginManagement { includeBuild }` instead of
+ * injecting a plugin classpath, because the typed `libs` accessor used by the precompiled script plugins fails to
+ * resolve with an injected classpath.
  *
- * @param projectDir the empty directory the fixture build is written to, normally a JUnit temporary
- *   directory.
+ * @param projectDir the empty directory the fixture build is written to, normally a JUnit temporary directory.
  */
 class GradleFixture(private val projectDir: Path) {
     private val buildLogic = requiredProperty("buildLogic")
@@ -62,29 +61,26 @@ class GradleFixture(private val projectDir: Path) {
     /**
      * Runs Gradle with [args] and expects success.
      *
-     * Every run enables the configuration cache and isolated projects, so a convention that breaks
-     * either fails the test that exercised it. When [path] is not null, the build runs in the test
-     * JVM's environment with `PATH` replaced by it, which must be passed by name.
+     * Every run enables the configuration cache and isolated projects, so a convention that breaks either fails the
+     * test that exercised it. When [path] is not null, the build runs in the test JVM's environment with `PATH`
+     * replaced by it, which must be passed by name.
      */
     fun run(vararg args: String, path: String? = null): BuildResult = runner(args, path).build()
 
     /**
-     * Runs Gradle with [args] under the same flags as [run] and expects the build to fail. The
-     * optional [path] replaces `PATH` as it does for [run].
+     * Runs Gradle with [args] under the same flags as [run] and expects the build to fail. The optional [path] replaces
+     * `PATH` as it does for [run].
      */
-    fun runAndFail(vararg args: String, path: String? = null): BuildResult =
-        runner(args, path).buildAndFail()
+    fun runAndFail(vararg args: String, path: String? = null): BuildResult = runner(args, path).buildAndFail()
 
     /**
-     * Runs Gradle with [args] like [run], in an environment whose `PATH` has no directory that
-     * contains an executable named [tool].
+     * Runs Gradle with [args] like [run], in an environment whose `PATH` has no directory that contains an executable
+     * named [tool].
      */
-    fun runWithout(tool: String, vararg args: String): BuildResult =
-        run(*args, path = pathWithout(tool))
+    fun runWithout(tool: String, vararg args: String): BuildResult = run(*args, path = pathWithout(tool))
 
     /** Like [runWithout], but expects the build to fail. */
-    fun runAndFailWithout(tool: String, vararg args: String): BuildResult =
-        runAndFail(*args, path = pathWithout(tool))
+    fun runAndFailWithout(tool: String, vararg args: String): BuildResult = runAndFail(*args, path = pathWithout(tool))
 
     private fun pathWithout(tool: String): String =
         System.getenv("PATH")
@@ -136,13 +132,12 @@ class GradleFixture(private val projectDir: Path) {
         // REUSE-IgnoreEnd
 
         /**
-         * Creates a fixture in [projectDir] with the `courses.root` plugin on the root project, the
-         * repository's own `:platform` project, and a `:lib` project that applies
-         * `courses.kotlin-library` and declares no dependencies of its own.
+         * Creates a fixture in [projectDir] with the `courses.root` plugin on the root project, the repository's own
+         * `:platform` project, and a `:lib` project that applies `courses.kotlin-library` and declares no dependencies
+         * of its own.
          *
-         * The shared Spotless headers, the shared detekt, Prettier, taplo and editor configuration,
-         * `.nvmrc`, and a JDK 25 `.java-version` are copied or written as the real repository has
-         * them.
+         * The shared Spotless headers, the shared detekt, Prettier, taplo and editor configuration, `.nvmrc`, and a JDK
+         * 25 `.java-version` are copied or written as the real repository has them.
          */
         fun standard(projectDir: Path): GradleFixture =
             GradleFixture(projectDir).apply {
@@ -169,16 +164,16 @@ class GradleFixture(private val projectDir: Path) {
             }
 
         /**
-         * The outcomes of a task that passed, whether it ran or its result came from the build
-         * cache, which TestKit shares with the user's Gradle home.
+         * The outcomes of a task that passed, whether it ran or its result came from the build cache, which TestKit
+         * shares with the user's Gradle home.
          */
         val PASSED: Set<TaskOutcome> = setOf(TaskOutcome.SUCCESS, TaskOutcome.FROM_CACHE)
 
         /**
          * Creates a fixture in [projectDir] whose root project applies only `courses.governance`.
          *
-         * Governance checks read plain repository files, so the fixture carries none of them; each
-         * test writes the files its check reads.
+         * Governance checks read plain repository files, so the fixture carries none of them; each test writes the
+         * files its check reads.
          */
         fun governance(projectDir: Path): GradleFixture =
             GradleFixture(projectDir).apply {

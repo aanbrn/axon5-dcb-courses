@@ -14,27 +14,23 @@ import org.gradle.process.ExecOperations
 import org.gradle.work.DisableCachingByDefault
 
 /**
- * Fails the build with a `mise install` hint when a formatter binary pinned in `mise.toml` is not
- * available on `PATH`.
+ * Fails the build with a `mise install` hint when a formatter binary pinned in `mise.toml` is not available on `PATH`.
  *
- * Spotless runs the binary it is pointed at, so a missing tool would otherwise surface as a raw
- * process error in the middle of a Spotless task. Checking in a separate task confines the failure
- * to the formatting tasks of that file type (configuration never fails, so Gradle invocations that
- * do not format keep working) and gives the message a single owner. The task records the binary's
- * path and `--version` output in [output]; the Spotless tasks of that type declare the file as an
- * input, so a cached result can never be reused after the tool changes.
+ * Spotless runs the binary it is pointed at, so a missing tool would otherwise surface as a raw process error in the
+ * middle of a Spotless task. Checking in a separate task confines the failure to the formatting tasks of that file type
+ * (configuration never fails, so Gradle invocations that do not format keep working) and gives the message a single
+ * owner. The task records the binary's path and `--version` output in [output]; the Spotless tasks of that type declare
+ * the file as an input, so a cached result can never be reused after the tool changes.
  */
 @DisableCachingByDefault(because = "reads the environment")
-abstract class VerifyFormatterBinary
-@Inject
-constructor(private val execOperations: ExecOperations) : DefaultTask() {
+abstract class VerifyFormatterBinary @Inject constructor(private val execOperations: ExecOperations) : DefaultTask() {
 
     /** The name of the tool as pinned in `mise.toml`, for example `taplo`. */
     @get:Input abstract val toolName: Property<String>
 
     /**
-     * The absolute path of the binary found on `PATH` when the build was configured, or an empty
-     * string when it was not found.
+     * The absolute path of the binary found on `PATH` when the build was configured, or an empty string when it was not
+     * found.
      */
     @get:Input abstract val executable: Property<String>
 

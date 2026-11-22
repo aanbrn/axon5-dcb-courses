@@ -16,25 +16,20 @@ import org.gradle.api.tasks.TaskAction
 /**
  * Fails the build when the Claude Code ask rules drift from the governed paths.
  *
- * `.claude/settings.json` must carry, in `permissions.ask`, exactly one `Edit(/<path>)` rule for
- * every entry of `governance/governed-paths.txt`, parsed by `GovernedPaths`, and one
- * `Bash(*config-set*)` rule, so the agent has to ask the author before it edits a governance file
- * or changes the GSD configuration. The order of the rules does not matter and further rules are
- * allowed. Ask rules are a convenience for the author, not a security boundary: CI
+ * `.claude/settings.json` must carry, in `permissions.ask`, exactly one `Edit(/<path>)` rule for every entry of
+ * `governance/governed-paths.txt`, parsed by `GovernedPaths`, and one `Bash(*config-set*)` rule, so the agent has to
+ * ask the author before it edits a governance file or changes the GSD configuration. The order of the rules does not
+ * matter and further rules are allowed. Ask rules are a convenience for the author, not a security boundary: CI
  * (`checkGsdConfigPolicy` and the governance workflow) stays the enforcement.
  */
 @CacheableTask
 abstract class AskRulesCheck : DefaultTask() {
 
     /** The Claude Code project settings, `.claude/settings.json`. */
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val claudeSettings: RegularFileProperty
+    @get:InputFile @get:PathSensitive(PathSensitivity.RELATIVE) abstract val claudeSettings: RegularFileProperty
 
     /** The single list of governed path globs, `governance/governed-paths.txt`. */
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val governedPaths: RegularFileProperty
+    @get:InputFile @get:PathSensitive(PathSensitivity.RELATIVE) abstract val governedPaths: RegularFileProperty
 
     /** The file the sorted list of problems is written to; empty when the rules are in sync. */
     @get:OutputFile abstract val report: RegularFileProperty

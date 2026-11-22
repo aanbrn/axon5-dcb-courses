@@ -12,9 +12,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
 /**
- * Proves `checkClaudeAskRules` reads `governance/governed-paths.txt` with the same grammar as
- * `load_globs` in `scripts/governance/check-pr.sh`. Every case has a twin in
- * `scripts/governance/test-check-pr.sh`.
+ * Proves `checkClaudeAskRules` reads `governance/governed-paths.txt` with the same grammar as `load_globs` in
+ * `scripts/governance/check-pr.sh`. Every case has a twin in `scripts/governance/test-check-pr.sh`.
  */
 class GovernedPathsFormatFunctionalTest {
     @TempDir lateinit var projectDir: Path

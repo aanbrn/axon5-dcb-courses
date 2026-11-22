@@ -24,17 +24,14 @@ dependencies {
 
 // `.java-version` is the only place the JDK version lives (INFRA-09).
 val javaLanguageVersion: Provider<JavaLanguageVersion> =
-    providers
-        .fileContents(isolated.rootProject.projectDirectory.file(".java-version"))
-        .asText
-        .map { text ->
-            val major =
-                text.trim().substringBefore('.').toIntOrNull()
-                    ?: throw GradleException(
-                        ".java-version must hold a numeric JDK major version, but it holds '${text.trim()}'",
-                    )
-            JavaLanguageVersion.of(major)
-        }
+    providers.fileContents(isolated.rootProject.projectDirectory.file(".java-version")).asText.map { text ->
+        val major =
+            text.trim().substringBefore('.').toIntOrNull()
+                ?: throw GradleException(
+                    ".java-version must hold a numeric JDK major version, but it holds '${text.trim()}'",
+                )
+        JavaLanguageVersion.of(major)
+    }
 
 kotlin {
     jvmToolchain { languageVersion.set(javaLanguageVersion) }

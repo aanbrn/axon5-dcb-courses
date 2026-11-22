@@ -12,9 +12,7 @@ import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
-/**
- * Proves `checkToolingInventory` keeps `mise.toml` and `docs/tooling.md` listing the same tools.
- */
+/** Proves `checkToolingInventory` keeps `mise.toml` and `docs/tooling.md` listing the same tools. */
 class ToolingTableCheckFunctionalTest {
     @TempDir lateinit var projectDir: Path
 
@@ -26,8 +24,7 @@ class ToolingTableCheckFunctionalTest {
 
     @Test
     fun `matching mise tools and inventory rows pass whatever the column padding`() {
-        val padded =
-            "|   zizmor (`zizmor`)     |  Audits workflows   |    `mise`     | `mise install` |\n"
+        val padded = "|   zizmor (`zizmor`)     |  Audits workflows   |    `mise`     | `mise install` |\n"
 
         val result = fixture(MISE, inventory(padded, REUSE, RENOVATE)).run(TASK)
 
@@ -153,8 +150,7 @@ class ToolingTableCheckFunctionalTest {
         val RENOVATE = row("renovate (`npm:renovate`)", "`mise`")
         val NOT_MISE = row("JDK", "`.java-version`")
 
-        fun row(tool: String, source: String): String =
-            "| $tool | Purpose | $source | `mise install` | local, CI |\n"
+        fun row(tool: String, source: String): String = "| $tool | Purpose | $source | `mise install` | local, CI |\n"
 
         fun inventory(vararg rows: String): String =
             "# Tooling\n\n## Tools\n\n" +

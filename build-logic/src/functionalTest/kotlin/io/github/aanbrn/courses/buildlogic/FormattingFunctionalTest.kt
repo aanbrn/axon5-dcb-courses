@@ -9,8 +9,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
 /**
- * Proves the repository-wide formatting beyond Kotlin: Prettier, the Node.js version guard, taplo,
- * shfmt and the generic text formats.
+ * Proves the repository-wide formatting beyond Kotlin: Prettier, the Node.js version guard, taplo, shfmt and the
+ * generic text formats.
  */
 class FormattingFunctionalTest {
     @TempDir lateinit var projectDir: Path
@@ -72,8 +72,7 @@ class FormattingFunctionalTest {
         fixture.run("spotlessApply")
 
         fixture.read("data/messy.toml") shouldBe "name = \"x\"\nitems = [1, 2]\n"
-        fixture.run("spotlessTomlCheck").task(":spotlessTomlCheck")?.outcome shouldBe
-            TaskOutcome.SUCCESS
+        fixture.run("spotlessTomlCheck").task(":spotlessTomlCheck")?.outcome shouldBe TaskOutcome.SUCCESS
     }
 
     @Test
@@ -110,8 +109,7 @@ class FormattingFunctionalTest {
                 "if true; then\n  echo hi\nfi\n"
         // REUSE-IgnoreEnd
         fixture.read("scripts/run.sh") shouldBe expected
-        fixture.run("spotlessShellCheck").task(":spotlessShellCheck")?.outcome shouldBe
-            TaskOutcome.SUCCESS
+        fixture.run("spotlessShellCheck").task(":spotlessShellCheck")?.outcome shouldBe TaskOutcome.SUCCESS
     }
 
     @Test
@@ -139,8 +137,7 @@ class FormattingFunctionalTest {
         fixture.run("spotlessApply")
 
         fixture.read("data/messy.properties") shouldBe "key=value\nother=1\n"
-        fixture.run("spotlessMiscCheck").task(":spotlessMiscCheck")?.outcome shouldBe
-            TaskOutcome.SUCCESS
+        fixture.run("spotlessMiscCheck").task(":spotlessMiscCheck")?.outcome shouldBe TaskOutcome.SUCCESS
     }
 
     @Test
@@ -153,7 +150,6 @@ class FormattingFunctionalTest {
         fixture.file("profile-out-2/results.properties", "key=value   \nother=1")
 
         // The task is up to date: the excluded files are not even inputs of it.
-        fixture.run("spotlessMiscCheck").task(":spotlessMiscCheck")?.outcome shouldBe
-            TaskOutcome.UP_TO_DATE
+        fixture.run("spotlessMiscCheck").task(":spotlessMiscCheck")?.outcome shouldBe TaskOutcome.UP_TO_DATE
     }
 }

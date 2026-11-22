@@ -14,27 +14,23 @@ import org.gradle.api.tasks.TaskAction
 /**
  * Fails the build when `mise.toml` and the tool inventory `docs/tooling.md` list different tools.
  *
- * Every key of the `[tools]` table in `mise.toml` must have a row in the inventory whose `Version
- * source` cell is `mise` and whose `Tool` cell carries the exact key in backticks, and every such
- * row must have a key. Keys are compared verbatim, including their backend prefix, so `pipx:reuse`
- * and `reuse` are different tools. The order of keys and rows does not matter. Rows with another
- * version source, such as `.nvmrc` or a not yet pinned tool, are not checked.
+ * Every key of the `[tools]` table in `mise.toml` must have a row in the inventory whose `Version source` cell is
+ * `mise` and whose `Tool` cell carries the exact key in backticks, and every such row must have a key. Keys are
+ * compared verbatim, including their backend prefix, so `pipx:reuse` and `reuse` are different tools. The order of keys
+ * and rows does not matter. Rows with another version source, such as `.nvmrc` or a not yet pinned tool, are not
+ * checked.
  *
- * The files are read line by line instead of with a TOML library: only the keys of one table are
- * needed, and an extra parser dependency in `build-logic` is not worth that.
+ * The files are read line by line instead of with a TOML library: only the keys of one table are needed, and an extra
+ * parser dependency in `build-logic` is not worth that.
  */
 @CacheableTask
 abstract class ToolingTableCheck : DefaultTask() {
 
     /** The pinned tools, `mise.toml`. */
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val miseToml: RegularFileProperty
+    @get:InputFile @get:PathSensitive(PathSensitivity.RELATIVE) abstract val miseToml: RegularFileProperty
 
     /** The tool inventory, `docs/tooling.md`. */
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val inventory: RegularFileProperty
+    @get:InputFile @get:PathSensitive(PathSensitivity.RELATIVE) abstract val inventory: RegularFileProperty
 
     /** The file the sorted list of differences is written to; empty when the files agree. */
     @get:OutputFile abstract val report: RegularFileProperty
@@ -48,9 +44,7 @@ abstract class ToolingTableCheck : DefaultTask() {
         val problems =
             (pinned - documented).sorted().map { "missing in $INVENTORY_PATH: $it" } +
                 (documented - pinned).sorted().map { "missing in $MISE_PATH: $it" } +
-                rows
-                    .filter { it.key == null }
-                    .map { "no backticked mise.toml key in row: ${it.tool}" }
+                rows.filter { it.key == null }.map { "no backticked mise.toml key in row: ${it.tool}" }
         report.get().asFile.apply {
             parentFile.mkdirs()
             writeText(
@@ -82,8 +76,7 @@ abstract class ToolingTableCheck : DefaultTask() {
         for (line in lines.map { it.trim() }) {
             when {
                 line.startsWith("[") -> inTools = TOOLS_HEADER.matches(line)
-                inTools ->
-                    KEY.find(line)?.let { keys += it.groupValues.drop(1).first(String::isNotEmpty) }
+                inTools -> KEY.find(line)?.let { keys += it.groupValues.drop(1).first(String::isNotEmpty) }
             }
         }
         return keys
