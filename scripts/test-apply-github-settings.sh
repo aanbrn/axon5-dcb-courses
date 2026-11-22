@@ -114,13 +114,16 @@ make_state() {
 }
 
 # run_apply <fixture dir> args...: runs the script against the fake gh; sets OUT and CODE.
+# GITHUB_ACTIONS is cleared so the output format does not depend on where the tests run; set
+# RUN_IN_ACTIONS=true to run the script as GitHub Actions would.
 run_apply() {
   local dir=$1
   shift
   : >"$LOG"
   : >"$BODIES"
   CODE=0
-  OUT=$(env -u GITHUB_REPOSITORY PATH="$TMP/bin:$PATH" FAKE_GH_FIXTURES="$dir" FAKE_GH_LOG="$LOG" \
+  OUT=$(env -u GITHUB_REPOSITORY -u GITHUB_ACTIONS ${RUN_IN_ACTIONS:+GITHUB_ACTIONS=true} \
+    PATH="$TMP/bin:$PATH" FAKE_GH_FIXTURES="$dir" FAKE_GH_LOG="$LOG" \
     bash "$APPLY" "$@" 2>&1) || CODE=$?
 }
 
@@ -379,6 +382,61 @@ run_apply "$FX" --check --repo owner/repo
 assert_code "a server error on the alerts probe is not read as disabled" 1
 assert_out "a server error on the alerts probe is not read as disabled" "HTTP 500"
 assert_no_out "a server error on the alerts probe is not read as disabled" "no drift|vulnerability_alerts: false"
+
+# --- repository fields the token cannot see ------------------------------------------------------
+
+# GitHub returns the merge settings only to a token that may write contents. The read-only drift
+# token gets the repository document without them (or with nulls); that is a warning, never drift.
+merge_keys='["allow_squash_merge", "allow_merge_commit", "allow_rebase_merge",
+  "squash_merge_commit_title", "squash_merge_commit_message", "delete_branch_on_merge",
+  "allow_auto_merge", "allow_update_branch"]'
+hidden_repo="delpaths($merge_keys | map([.]))"
+null_repo="reduce (${merge_keys}[]) as \$k (.; .[\$k] = null)"
+
+fresh
+make_state "$FX" "$hidden_repo"
+run_apply "$FX" --check --repo owner/repo
+assert_code "omitted merge settings, --check" 0
+assert_out "omitted merge settings, --check" "warning: repository.allow_squash_merge is not visible to this token"
+assert_out "omitted merge settings, --check" "warning: repository.allow_update_branch is not visible to this token"
+assert_out "omitted merge settings, --check" "no drift in the visible settings \(8 field\(s\) not visible to this token\)"
+assert_no_out "omitted merge settings, --check" "repository\.[a-z_]+: null ->"
+assert_writes "omitted merge settings, --check" ""
+
+fresh
+make_state "$FX" "$null_repo"
+run_apply "$FX" --check --repo owner/repo
+assert_code "null merge settings, --check" 0
+assert_out "null merge settings, --check" "8 field\(s\) not visible to this token"
+assert_no_out "null merge settings, --check" "repository\.[a-z_]+: null ->"
+
+fresh
+make_state "$FX" "$hidden_repo"
+RUN_IN_ACTIONS=true run_apply "$FX" --check --repo owner/repo
+assert_code "omitted merge settings in GitHub Actions" 0
+assert_out "omitted merge settings in GitHub Actions" "^::warning::repository.allow_auto_merge is not visible to this token"
+
+fresh
+make_state "$FX" "del(.allow_auto_merge) | .delete_branch_on_merge = false"
+run_apply "$FX" --check --repo owner/repo
+assert_code "a visible false still drifts next to a hidden field" 1
+assert_out "a visible false still drifts next to a hidden field" "repository.delete_branch_on_merge: false -> true"
+assert_out "a visible false still drifts next to a hidden field" "warning: repository.allow_auto_merge is not visible"
+assert_out "a visible false still drifts next to a hidden field" "drift: 1 delta\(s\)"
+
+fresh
+make_state "$FX" "del(.allow_auto_merge) | .allow_rebase_merge = true"
+make_state "$FX/after" "del(.allow_auto_merge)"
+run_apply "$FX" --apply --repo owner/repo
+assert_code "--apply patches only the visible differences" 0
+assert_body "--apply patches only the visible differences" "PATCH $R" \
+  '. == {"allow_rebase_merge": false}'
+
+fresh
+make_state "$FX" "$hidden_repo" absent
+run_apply "$FX" --check --repo owner/repo
+assert_code "hidden merge settings do not mask other drift" 1
+assert_out "hidden merge settings do not mask other drift" "ruleset main: create"
 
 # --- failures never read as an empty state -------------------------------------------------------
 

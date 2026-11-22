@@ -181,6 +181,19 @@ REPO_PATCH='{}'
 SA_PATCH='{}'
 TOGGLES=''
 REPO_JSON=''
+UNREADABLE_COUNT=0
+
+# warn <message>: a finding that is not a delta. In GitHub Actions it becomes a warning annotation.
+warn() {
+  if [[ $QUIET -ne 0 ]]; then
+    return 0
+  fi
+  if [[ ${GITHUB_ACTIONS:-} == true ]]; then
+    echo "::warning::$1" >&2
+  else
+    echo "warning: $1" >&2
+  fi
+}
 
 emit() {
   DELTA_COUNT=$((DELTA_COUNT + 1))
@@ -230,14 +243,27 @@ check_ruleset() {
   fi
 }
 
+# A declared repository field that the live document omits or returns as null is not visible to
+# the token: GitHub returns the merge settings only to a token that may write contents, which the
+# read-only drift-check token may not. Such a field is reported as a warning and left out of the
+# comparison and the patch, so a missing read never passes for drift and never triggers a write.
+# A visible value, false included, is compared as before.
 check_repository() {
-  local desired
+  local desired visible key
   desired=$(jq -c '.repository' "$SETTINGS_FILE")
+  visible=$(jq -c --argjson cur "$REPO_JSON" \
+    'with_entries(select(.key as $k | $cur | has($k) and .[$k] != null))' <<<"$desired")
+  while IFS= read -r key; do
+    if [[ -n $key ]]; then
+      UNREADABLE_COUNT=$((UNREADABLE_COUNT + 1))
+      warn "repository.$key is not visible to this token (GitHub returns merge settings only to a token that may write contents); not compared"
+    fi
+  done <<<"$(jq -r --argjson v "$visible" 'keys_unsorted[] | select(. as $k | $v | has($k) | not)' <<<"$desired")"
   REPO_PATCH=$(jq -c --argjson cur "$REPO_JSON" \
-    'with_entries(select(.value != $cur[.key]))' <<<"$desired")
+    'with_entries(select(.value != $cur[.key]))' <<<"$visible")
   emit_lines "$(jq -r --argjson cur "$REPO_JSON" \
     'to_entries[] | select(.value != $cur[.key])
-      | "repository.\(.key): \($cur[.key]) -> \(.value)"' <<<"$desired")"
+      | "repository.\(.key): \($cur[.key]) -> \(.value)"' <<<"$visible")"
 }
 
 check_security() {
@@ -265,6 +291,7 @@ check_security() {
 
 compute_deltas() {
   DELTA_COUNT=0
+  UNREADABLE_COUNT=0
   RULESET_ACTION=none
   RULESET_ID=''
   REPO_PATCH='{}'
@@ -342,7 +369,11 @@ main() {
       echo "drift: $DELTA_COUNT delta(s) between the declared and the live settings" >&2
       exit 1
     fi
-    echo "no drift"
+    if [[ $UNREADABLE_COUNT -gt 0 ]]; then
+      echo "no drift in the visible settings ($UNREADABLE_COUNT field(s) not visible to this token)"
+    else
+      echo "no drift"
+    fi
     ;;
   apply)
     if [[ $DELTA_COUNT -eq 0 ]]; then

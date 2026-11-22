@@ -4,10 +4,10 @@ current_phase: 2
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: planning
 stopped_at: Phase 01 complete, ready to plan Phase 2
-last_updated: "2026-11-22T02:39:37.261Z"
+last_updated: "2026-11-22T03:27:01.808Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 01 complete, transitioned to Phase 2
-state_head: 93f6684af96bab269ef2a664ce1029d606c11812
+state_head: 945db3e14c816075c8619700edf58484ba4d47fb
 progress:
   total_phases: 13
   completed_phases: 1
@@ -141,6 +141,7 @@ None yet.
 |---|-------------|------|--------|-----------|
 | 261121-wjt | ADR-0004 on GSD configuration and COVERAGE.md | 2026-11-21 | c06f777 | [261121-wjt-adr-0004-on-gsd-configuration-and-covera](./quick/261121-wjt-adr-0004-on-gsd-configuration-and-covera/) |
 | 2 | Fix CI Lint: pin python 3.14.10 and uv 0.13.8 in mise so pipx:reuse installs from its lock (e1a038d) | 2026-11-22 | e1a038d | — |
+| 3 | Settings drift: report repository fields hidden from the read-only token as warnings, not drift (945db3e) | 2026-11-22 | 945db3e | — |
 
 ## Deferred Items
 
