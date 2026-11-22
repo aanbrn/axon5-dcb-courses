@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import io.github.aanbrn.courses.buildlogic.ExecutableOnPath
 import io.github.aanbrn.courses.buildlogic.VerifyFormatterBinary
 import io.github.aanbrn.courses.buildlogic.VerifyNodeVersion
 import org.gradle.jvm.toolchain.JavaLanguageVersion
@@ -44,11 +45,21 @@ fun sources(vararg globs: String): FileTree =
         exclude(excluded)
     }
 
-// Spotless runs Prettier with the `node` on PATH. The environment provides the version named in
-// `.nvmrc` (mise locally, setup-node in CI) and this task fails fast when the active major differs.
+/**
+ * The absolute path of [name] on the build's `PATH`, absent when the executable is not installed.
+ */
+fun executableOnPath(name: String): Provider<String> =
+    providers.of(ExecutableOnPath::class.java) { parameters.executableName.set(name) }
+
+// `node` is resolved once from the build's `PATH` through `ExecutableOnPath`. The same absolute
+// path
+// goes to `verifyNodeVersion` and to Spotless's Prettier step, so the guard checks the binary that
+// formats. The environment provides the version named in `.nvmrc` (mise locally, setup-node in CI).
+val nodePath = executableOnPath("node")
 val verifyNodeVersion =
     tasks.register<VerifyNodeVersion>("verifyNodeVersion") {
         nvmrc.set(layout.projectDirectory.file(".nvmrc"))
+        executable.set(nodePath)
         output.set(layout.buildDirectory.file("verifyNodeVersion/node-major.txt"))
         // The result depends on the environment, not on declared inputs, so it is checked on every
         // build.
@@ -110,7 +121,13 @@ spotless {
             sources("**/*.json", "**/*.json5", "**/*.yml", "**/*.yaml", "**/*.md"),
             claudeSettings,
         )
-        prettier(mapOf("prettier" to libs.versions.prettier.get())).configFile(".prettierrc.yaml")
+        val prettier =
+            prettier(mapOf("prettier" to libs.versions.prettier.get()))
+                .configFile(".prettierrc.yaml")
+        // Only the node is set: Spotless takes npm from the same directory when it is there, and
+        // starts it with that directory first on `PATH`, so npm and Prettier's server run this
+        // node.
+        nodePath.orNull?.let { prettier.nodeExecutable(it) }
     }
     format("toml") {
         target(sources("**/*.toml"))
