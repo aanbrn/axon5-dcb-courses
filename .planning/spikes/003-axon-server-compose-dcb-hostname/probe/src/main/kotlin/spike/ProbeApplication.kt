@@ -22,6 +22,22 @@ data class ProbePinged(@field:EventTag(key = "probe") val probeId: String, val f
 
 @SpringBootApplication
 class ProbeApplication {
+    /** Spike 001 check: a ConfigurationEnhancer bean is picked up by Spring Boot and can decorate the storage engine. */
+    @Bean
+    fun captureEnhancer() = org.axonframework.common.configuration.ConfigurationEnhancer { registry ->
+        registry.registerDecorator(EventStorageEngine::class.java, 0) { _, _, delegate ->
+            object : EventStorageEngine by delegate {
+                override fun appendEvents(
+                    condition: org.axonframework.eventsourcing.eventstore.AppendCondition,
+                    context: org.axonframework.messaging.core.unitofwork.ProcessingContext?,
+                    events: List<org.axonframework.eventsourcing.eventstore.TaggedEventMessage<*>>,
+                ) = delegate.appendEvents(condition, context, events).also {
+                    println("ENHANCER-DECORATOR saw append: criteria=${condition.criteria()} marker=${condition.consistencyMarker()} events=${events.size}")
+                }
+            }
+        }
+    }
+
     @Bean
     fun probe(
         gateway: EventGateway,

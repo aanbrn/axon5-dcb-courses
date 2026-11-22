@@ -8,3 +8,6 @@ dependencyResolutionManagement {
 
 include(":003-probe")
 project(":003-probe").projectDir = file("003-axon-server-compose-dcb-hostname/probe")
+
+include(":001-capture")
+project(":001-capture").projectDir = file("001-decision-record-capture")
