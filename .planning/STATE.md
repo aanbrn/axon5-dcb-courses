@@ -4,10 +4,10 @@ current_phase: 2
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: planning
 stopped_at: Phase 01 complete, ready to plan Phase 2
-last_updated: "2026-11-22T03:40:26.804Z"
+last_updated: "2026-11-22T04:33:37.646Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 01 complete, transitioned to Phase 2
-state_head: 8d3f82842832c380662b291f1b8c847e217604c2
+state_head: 1527882392a997c88ff85cbc449ca12660a021ca
 progress:
   total_phases: 13
   completed_phases: 1
@@ -142,6 +142,7 @@ None yet.
 | 2 | Fix CI Lint: pin python 3.14.10 and uv 0.13.8 in mise so pipx:reuse installs from its lock (e1a038d) | 2026-11-22 | e1a038d | — |
 | 3 | Settings drift: report repository fields hidden from the read-only token as warnings, not drift (945db3e) | 2026-11-22 | 945db3e | — |
 | 4 | Record phase 01 post-merge UAT tests 9-11 as passed (CodeQL/Scorecard/labels, Renovate, REUSE) | 2026-11-22 | 8d3f828 | — |
+| 5 | Guard .mise in .gitignore: track only the sidecar lockfiles under .mise/locks | 2026-11-22 | 1527882 | — |
 
 ## Deferred Items
 
