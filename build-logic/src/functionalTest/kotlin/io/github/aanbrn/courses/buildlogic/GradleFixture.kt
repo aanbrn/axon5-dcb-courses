@@ -63,35 +63,37 @@ class GradleFixture(private val projectDir: Path) {
      * Runs Gradle with [args] and expects success.
      *
      * Every run enables the configuration cache and isolated projects, so a convention that breaks
-     * either fails the test that exercised it.
+     * either fails the test that exercised it. When [path] is not null, the build runs in the test
+     * JVM's environment with `PATH` replaced by it, which must be passed by name.
      */
-    fun run(vararg args: String): BuildResult = runner(*args).build()
+    fun run(vararg args: String, path: String? = null): BuildResult = runner(args, path).build()
 
-    /** Runs Gradle with [args] under the same flags as [run] and expects the build to fail. */
-    fun runAndFail(vararg args: String): BuildResult = runner(*args).buildAndFail()
+    /**
+     * Runs Gradle with [args] under the same flags as [run] and expects the build to fail. The
+     * optional [path] replaces `PATH` as it does for [run].
+     */
+    fun runAndFail(vararg args: String, path: String? = null): BuildResult =
+        runner(args, path).buildAndFail()
 
     /**
      * Runs Gradle with [args] like [run], in an environment whose `PATH` has no directory that
      * contains an executable named [tool].
      */
     fun runWithout(tool: String, vararg args: String): BuildResult =
-        runner(*args).withEnvironment(environmentWithout(tool)).build()
+        run(*args, path = pathWithout(tool))
 
     /** Like [runWithout], but expects the build to fail. */
     fun runAndFailWithout(tool: String, vararg args: String): BuildResult =
-        runner(*args).withEnvironment(environmentWithout(tool)).buildAndFail()
+        runAndFail(*args, path = pathWithout(tool))
 
-    private fun environmentWithout(tool: String): Map<String, String> {
-        val path =
-            System.getenv("PATH")
-                .orEmpty()
-                .split(File.pathSeparator)
-                .filterNot { directory -> File(directory, tool).exists() }
-                .joinToString(File.pathSeparator)
-        return System.getenv() + ("PATH" to path)
-    }
+    private fun pathWithout(tool: String): String =
+        System.getenv("PATH")
+            .orEmpty()
+            .split(File.pathSeparator)
+            .filterNot { directory -> File(directory, tool).exists() }
+            .joinToString(File.pathSeparator)
 
-    private fun runner(vararg args: String): GradleRunner =
+    private fun runner(args: Array<out String>, path: String?): GradleRunner =
         GradleRunner.create()
             .withProjectDir(projectDir.toFile())
             .withArguments(
@@ -101,6 +103,7 @@ class GradleFixture(private val projectDir: Path) {
                 "--stacktrace",
                 "--console=plain",
             )
+            .apply { path?.let { withEnvironment(System.getenv() + ("PATH" to it)) } }
 
     private fun writeSettings() {
         val includes = includedProjects.joinToString(separator = "\n") { "include(\"$it\")" }
