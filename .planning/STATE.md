@@ -4,10 +4,10 @@ current_phase: 2
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: planning
 stopped_at: Phase 01 complete, ready to plan Phase 2
-last_updated: "2026-11-22T05:19:13.931Z"
+last_updated: "2026-11-22T05:54:45.461Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 01 complete, transitioned to Phase 2
-state_head: d1a0fb849ccc78a3c41e95eb3c7c1a5649caa581
+state_head: 7ab7f48b0b9081cfa5ad9d57477cc2747a2ac6af
 progress:
   total_phases: 13
   completed_phases: 1
@@ -144,6 +144,7 @@ None yet.
 | 4 | Record phase 01 post-merge UAT tests 9-11 as passed (CodeQL/Scorecard/labels, Renovate, REUSE) | 2026-11-22 | 8d3f828 | — |
 | 5 | Guard .mise in .gitignore: track only the sidecar lockfiles under .mise/locks | 2026-11-22 | 1527882 | — |
 | 261122-gdy | Raise the maximum line width from 100 to 120 for every formatter (detekt backstop 140) | 2026-11-22 | d1a0fb8 | [261122-gdy-raise-the-maximum-line-width-from-100-to](./quick/261122-gdy-raise-the-maximum-line-width-from-100-to/) |
+| 7 | Renovate governance exemption covers version-only moves of mise sidecar lockfiles | 2026-11-22 | 7ab7f48 | — |
 
 ## Deferred Items
 
