@@ -59,8 +59,7 @@ class QualityGatesFunctionalTest {
 
         fixture.run("spotlessApply")
         fixture.run("spotlessCheck")
-        fixture.read("lib/src/main/kotlin/fixture/Messy.kt") shouldContain
-            "class Messy(val name: String)"
+        fixture.read("lib/src/main/kotlin/fixture/Messy.kt") shouldContain "class Messy(val name: String)"
     }
 
     @Test
@@ -77,7 +76,6 @@ class QualityGatesFunctionalTest {
         failed.output shouldContain "Headerless.kt"
 
         fixture.run("spotlessApply")
-        fixture.read("lib/src/main/kotlin/fixture/Headerless.kt") shouldStartWith
-            GradleFixture.HEADER
+        fixture.read("lib/src/main/kotlin/fixture/Headerless.kt") shouldStartWith GradleFixture.HEADER
     }
 }

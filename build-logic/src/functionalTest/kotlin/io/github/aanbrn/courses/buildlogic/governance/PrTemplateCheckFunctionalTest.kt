@@ -30,8 +30,7 @@ class PrTemplateCheckFunctionalTest {
 
     @Test
     fun `headings after the expected ones are allowed`() {
-        val result =
-            fixture(template(*CORE, *CONFIGURED, "Checklist", "Notes")).run("checkPrTemplate")
+        val result = fixture(template(*CORE, *CONFIGURED, "Checklist", "Notes")).run("checkPrTemplate")
 
         result.task(":checkPrTemplate")?.outcome shouldBeIn GradleFixture.PASSED
     }
@@ -40,8 +39,7 @@ class PrTemplateCheckFunctionalTest {
     fun `a template missing a core heading fails naming it`() {
         val headings = CORE.filterNot { it == "Verification" } + CONFIGURED
 
-        val output =
-            fixture(template(*headings.toTypedArray())).runAndFail("checkPrTemplate").output
+        val output = fixture(template(*headings.toTypedArray())).runAndFail("checkPrTemplate").output
 
         output shouldContain "missing heading: ## Verification"
     }
@@ -118,8 +116,7 @@ class PrTemplateCheckFunctionalTest {
     }
 
     private companion object {
-        val CORE =
-            arrayOf("Summary", "Changes", "Requirements Addressed", "Verification", "Key Decisions")
+        val CORE = arrayOf("Summary", "Changes", "Requirements Addressed", "Verification", "Key Decisions")
         val CONFIGURED = arrayOf("Stories", "Risks", "Metrics", "Review")
 
         fun template(vararg headings: String): String =

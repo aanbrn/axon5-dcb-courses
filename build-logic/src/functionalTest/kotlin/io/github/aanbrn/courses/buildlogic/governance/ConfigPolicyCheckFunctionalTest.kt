@@ -60,8 +60,7 @@ class ConfigPolicyCheckFunctionalTest {
 
     @Test
     fun `a removed key fails and is named`() {
-        val removed =
-            POLICY.replace(", \"phase_branch_template\": \"gsd/phase-{phase}-{slug}\"", "")
+        val removed = POLICY.replace(", \"phase_branch_template\": \"gsd/phase-{phase}-{slug}\"", "")
 
         val output = fixture(removed).runAndFail("checkGsdConfigPolicy").output
 
@@ -71,8 +70,7 @@ class ConfigPolicyCheckFunctionalTest {
     @Test
     fun `a deviation inside a list is reported with its index`() {
         val listPolicy = """{"ship":{"sections":[{"heading":"A"},{"heading":"B"}]}}"""
-        val listConfig =
-            """{"ship":{"sections":[{"heading":"A"},{"heading":"C"},{"heading":"D"}]}}"""
+        val listConfig = """{"ship":{"sections":[{"heading":"A"},{"heading":"C"},{"heading":"D"}]}}"""
 
         val output = fixture(listConfig, listPolicy).runAndFail("checkGsdConfigPolicy").output
 

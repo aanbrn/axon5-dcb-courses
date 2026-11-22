@@ -18,24 +18,19 @@ import org.gradle.api.tasks.TaskAction
 /**
  * Fails the build when `.planning/config.json` is not semantically equal to the committed policy.
  *
- * GSD workflows and agents can rewrite the project settings (model overrides, branching, tagging).
- * The policy file is an exact copy of the accepted configuration, so any added, removed or changed
- * key is a visible, reviewable change and never a silent one. Key order and whitespace do not
- * matter. Only key paths are reported, never values, because a configuration file can hold
- * credentials.
+ * GSD workflows and agents can rewrite the project settings (model overrides, branching, tagging). The policy file is
+ * an exact copy of the accepted configuration, so any added, removed or changed key is a visible, reviewable change and
+ * never a silent one. Key order and whitespace do not matter. Only key paths are reported, never values, because a
+ * configuration file can hold credentials.
  */
 @CacheableTask
 abstract class ConfigPolicyCheck : DefaultTask() {
 
     /** The live GSD configuration, `.planning/config.json`. */
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val config: RegularFileProperty
+    @get:InputFile @get:PathSensitive(PathSensitivity.RELATIVE) abstract val config: RegularFileProperty
 
     /** The committed policy, an exact copy of the accepted configuration. */
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val policy: RegularFileProperty
+    @get:InputFile @get:PathSensitive(PathSensitivity.RELATIVE) abstract val policy: RegularFileProperty
 
     /** The file the sorted list of deviations is written to; empty when there are none. */
     @get:OutputFile abstract val report: RegularFileProperty

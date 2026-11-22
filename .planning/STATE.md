@@ -4,10 +4,10 @@ current_phase: 2
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: planning
 stopped_at: Phase 01 complete, ready to plan Phase 2
-last_updated: "2026-11-22T04:33:37.646Z"
+last_updated: "2026-11-22T05:19:13.931Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 01 complete, transitioned to Phase 2
-state_head: 1527882392a997c88ff85cbc449ca12660a021ca
+state_head: d1a0fb849ccc78a3c41e95eb3c7c1a5649caa581
 progress:
   total_phases: 13
   completed_phases: 1
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-11-22)
 Phase: 2 — Runtime Infrastructure & DCB Spikes
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-22 — Phase 01 complete, transitioned to Phase 2
+Last activity: 2026-11-22 - Completed quick task 261122-gdy: Raise the maximum line width from 100 to 120 for every formatter (detekt backstop 140)
 
 Progress: [█░░░░░░░░░] 8%
 
@@ -143,6 +143,7 @@ None yet.
 | 3 | Settings drift: report repository fields hidden from the read-only token as warnings, not drift (945db3e) | 2026-11-22 | 945db3e | — |
 | 4 | Record phase 01 post-merge UAT tests 9-11 as passed (CodeQL/Scorecard/labels, Renovate, REUSE) | 2026-11-22 | 8d3f828 | — |
 | 5 | Guard .mise in .gitignore: track only the sidecar lockfiles under .mise/locks | 2026-11-22 | 1527882 | — |
+| 261122-gdy | Raise the maximum line width from 100 to 120 for every formatter (detekt backstop 140) | 2026-11-22 | d1a0fb8 | [261122-gdy-raise-the-maximum-line-width-from-100-to](./quick/261122-gdy-raise-the-maximum-line-width-from-100-to/) |
 
 ## Deferred Items
 

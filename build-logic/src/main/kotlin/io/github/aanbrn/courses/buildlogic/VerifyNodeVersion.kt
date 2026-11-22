@@ -20,24 +20,20 @@ import org.gradle.work.DisableCachingByDefault
 /**
  * Fails the build when the Node.js on `PATH` does not have the major version recorded in `.nvmrc`.
  *
- * Spotless runs Prettier with this same binary, because `courses.root` gives the one resolved path
- * to both this task and Spotless's `nodeExecutable`. A silent mismatch with `.nvmrc` would format
- * with a runtime the repository does not pin. The task writes the verified major version to
- * [output]; the Prettier Spotless tasks declare that file as an input, so a cached Spotless result
- * can never be reused after the active Node major changes.
+ * Spotless runs Prettier with this same binary, because `courses.root` gives the one resolved path to both this task
+ * and Spotless's `nodeExecutable`. A silent mismatch with `.nvmrc` would format with a runtime the repository does not
+ * pin. The task writes the verified major version to [output]; the Prettier Spotless tasks declare that file as an
+ * input, so a cached Spotless result can never be reused after the active Node major changes.
  */
 @DisableCachingByDefault(because = "reads the environment")
-abstract class VerifyNodeVersion @Inject constructor(private val execOperations: ExecOperations) :
-    DefaultTask() {
+abstract class VerifyNodeVersion @Inject constructor(private val execOperations: ExecOperations) : DefaultTask() {
 
     /** The `.nvmrc` file that holds the Node.js version the repository pins. */
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val nvmrc: RegularFileProperty
+    @get:InputFile @get:PathSensitive(PathSensitivity.RELATIVE) abstract val nvmrc: RegularFileProperty
 
     /**
-     * The absolute path of the Node.js binary that [ExecutableOnPath] found on the build's `PATH`,
-     * absent when there is none.
+     * The absolute path of the Node.js binary that [ExecutableOnPath] found on the build's `PATH`, absent when there is
+     * none.
      */
     @get:Input @get:Optional abstract val executable: Property<String>
 

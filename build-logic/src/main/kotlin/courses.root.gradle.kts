@@ -36,8 +36,8 @@ val excluded =
 /**
  * Selects the repository files matching [globs] outside the [excluded] directories.
  *
- * A FileTree is used because a string glob starting with `**` makes Spotless touch `Project.layout`
- * on subprojects, which isolated projects forbid.
+ * A FileTree is used because a string glob starting with `**` makes Spotless touch `Project.layout` on subprojects,
+ * which isolated projects forbid.
  */
 fun sources(vararg globs: String): FileTree =
     layout.projectDirectory.asFileTree.matching {
@@ -45,9 +45,7 @@ fun sources(vararg globs: String): FileTree =
         exclude(excluded)
     }
 
-/**
- * The absolute path of [name] on the build's `PATH`, absent when the executable is not installed.
- */
+/** The absolute path of [name] on the build's `PATH`, absent when the executable is not installed. */
 fun executableOnPath(name: String): Provider<String> =
     providers.of(ExecutableOnPath::class.java) { parameters.executableName.set(name) }
 
@@ -89,18 +87,22 @@ val verifyShfmt = registerBinaryCheck("shfmt", shfmtPath)
 
 // The one tracked file under `.claude` that is project-owned; the rest of `.claude` and all of
 // `.planning` belong to GSD and stay outside the formatting contract.
-val claudeSettings: FileTree =
-    layout.projectDirectory.asFileTree.matching { include(".claude/settings.json") }
+val claudeSettings: FileTree = layout.projectDirectory.asFileTree.matching { include(".claude/settings.json") }
+
+// The one line-width limit of every formatter. The same value is `max_line_length` in
+// `.editorconfig`, `printWidth` in `.prettierrc.yaml` and `column_width` in `.taplo.toml`. detekt
+// `MaxLineLength` (140) is only a backstop for lines that no formatter can break.
+val maxLineWidth = 120
 
 spotless {
     kotlin {
         target(sources("**/*.kt"))
-        ktfmt(libs.versions.ktfmt.get()).kotlinlangStyle()
+        ktfmt(libs.versions.ktfmt.get()).kotlinlangStyle().configure { it.setMaxWidth(maxLineWidth) }
         licenseHeaderFile("config/spotless/license-header.txt")
     }
     kotlinGradle {
         target(sources("**/*.kts"))
-        ktfmt(libs.versions.ktfmt.get()).kotlinlangStyle()
+        ktfmt(libs.versions.ktfmt.get()).kotlinlangStyle().configure { it.setMaxWidth(maxLineWidth) }
         // The delimiter matches the first line that is neither a comment nor blank, so the header
         // lands above the first statement.
         licenseHeaderFile("config/spotless/license-header.txt", "[^/\\s]")
@@ -110,9 +112,7 @@ spotless {
             sources("**/*.json", "**/*.json5", "**/*.yml", "**/*.yaml", "**/*.md"),
             claudeSettings,
         )
-        val prettier =
-            prettier(mapOf("prettier" to libs.versions.prettier.get()))
-                .configFile(".prettierrc.yaml")
+        val prettier = prettier(mapOf("prettier" to libs.versions.prettier.get())).configFile(".prettierrc.yaml")
         // Only the node is set: Spotless takes npm from the same directory when it is there, and
         // starts it with that directory first on `PATH`, so npm and Prettier's server run this
         // node.
@@ -173,20 +173,14 @@ tasks
     .matching { it.name.startsWith("spotlessToml") }
     .configureEach {
         inputs.files(verifyTaplo.flatMap { it.output })
-        inputs
-            .file(taploConfig)
-            .withPropertyName("taploConfig")
-            .withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs.file(taploConfig).withPropertyName("taploConfig").withPathSensitivity(PathSensitivity.RELATIVE)
     }
 
 tasks
     .matching { it.name.startsWith("spotlessShell") }
     .configureEach {
         inputs.files(verifyShfmt.flatMap { it.output })
-        inputs
-            .file(editorConfig)
-            .withPropertyName("editorConfig")
-            .withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs.file(editorConfig).withPropertyName("editorConfig").withPathSensitivity(PathSensitivity.RELATIVE)
     }
 
 // The verified Node major is an input of every Prettier task, so a cached result never survives a
@@ -207,8 +201,7 @@ tasks.named<UpdateDaemonJvm>("updateDaemonJvm") {
             val major =
                 text.trim().substringBefore('.').toIntOrNull()
                     ?: throw GradleException(
-                        ".java-version must hold a numeric JDK major version, " +
-                            "but it holds '${text.trim()}'",
+                        ".java-version must hold a numeric JDK major version, but it holds '${text.trim()}'",
                     )
             JavaLanguageVersion.of(major)
         },

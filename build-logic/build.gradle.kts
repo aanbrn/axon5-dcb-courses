@@ -64,10 +64,7 @@ testing {
                         )
                         .withPropertyName("repoFiles")
                         .withPathSensitivity(PathSensitivity.RELATIVE)
-                    inputs
-                        .dir("../config")
-                        .withPropertyName("repoConfig")
-                        .withPathSensitivity(PathSensitivity.RELATIVE)
+                    inputs.dir("../config").withPropertyName("repoConfig").withPathSensitivity(PathSensitivity.RELATIVE)
                     inputs
                         .dir("src/main/kotlin")
                         .withPropertyName("conventionSources")
@@ -79,10 +76,7 @@ testing {
                     )
                     systemProperty(
                         "catalog",
-                        layout.projectDirectory
-                            .file("../gradle/libs.versions.toml")
-                            .asFile
-                            .absolutePath,
+                        layout.projectDirectory.file("../gradle/libs.versions.toml").asFile.absolutePath,
                     )
                 }
             }

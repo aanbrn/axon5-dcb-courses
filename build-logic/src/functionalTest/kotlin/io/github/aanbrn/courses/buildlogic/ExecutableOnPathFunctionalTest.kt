@@ -14,8 +14,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
 /**
- * Proves that the build resolves `node`, `taplo` and `shfmt` from each build's own `PATH`,
- * including in a reused Gradle daemon, and that the formatter runs the binary the guard verified.
+ * Proves that the build resolves `node`, `taplo` and `shfmt` from each build's own `PATH`, including in a reused Gradle
+ * daemon, and that the formatter runs the binary the guard verified.
  */
 class ExecutableOnPathFunctionalTest {
     @TempDir lateinit var projectDir: Path
@@ -88,8 +88,7 @@ class ExecutableOnPathFunctionalTest {
             "#!/bin/sh\necho \"$*\" >> '$log'\nexec '${realExecutable("node")}' \"$@\"\n",
         )
 
-        val result =
-            fixture.run("spotlessPrettierCheck", "--no-build-cache", path = onPath(loggingDir))
+        val result = fixture.run("spotlessPrettierCheck", "--no-build-cache", path = onPath(loggingDir))
 
         result.task(":spotlessPrettier")?.outcome shouldBe TaskOutcome.SUCCESS
         val calls = lines(log)
@@ -118,8 +117,7 @@ class ExecutableOnPathFunctionalTest {
         // same project tree. TestKit starts the daemon's build from the test JVM's working
         // directory, not the fixture root, so the entry is written relative to that directory.
         val relativeBin = executable(projectDir.resolve("relative-bin"), "node", NODE_V1).parent
-        val relativeEntry =
-            Path.of("").toAbsolutePath().relativize(relativeBin.toAbsolutePath()).toString()
+        val relativeEntry = Path.of("").toAbsolutePath().relativize(relativeBin.toAbsolutePath()).toString()
         check(!File(relativeEntry).isAbsolute) { "The relative entry '$relativeEntry' is absolute" }
         fixture.file(
             "build.gradle.kts",
@@ -227,8 +225,8 @@ class ExecutableOnPathFunctionalTest {
     }
 
     /**
-     * The absolute path of the first executable regular file called [name] on the test JVM's
-     * `PATH`, found independently of the production resolver.
+     * The absolute path of the first executable regular file called [name] on the test JVM's `PATH`, found
+     * independently of the production resolver.
      */
     private fun realExecutable(name: String): String =
         System.getenv("PATH")
@@ -241,15 +239,14 @@ class ExecutableOnPathFunctionalTest {
 
     /** The test JVM's `PATH` with [first] put in front of it. */
     private fun onPath(vararg first: Path): String =
-        (first.map { it.toAbsolutePath().toString() } + System.getenv("PATH").orEmpty())
-            .joinToString(File.pathSeparator)
+        (first.map { it.toAbsolutePath().toString() } + System.getenv("PATH").orEmpty()).joinToString(
+            File.pathSeparator,
+        )
 
-    private fun daemonPid(result: BuildResult): String =
-        result.output.lines().single { it.startsWith("daemon-pid=") }
+    private fun daemonPid(result: BuildResult): String = result.output.lines().single { it.startsWith("daemon-pid=") }
 
     /** The lines of [log], or none when nothing has written it. */
-    private fun lines(log: Path): List<String> =
-        if (Files.exists(log)) Files.readAllLines(log) else emptyList()
+    private fun lines(log: Path): List<String> = if (Files.exists(log)) Files.readAllLines(log) else emptyList()
 
     private companion object {
         /** A `node` stand-in that reports Node.js 1 and does nothing else. */

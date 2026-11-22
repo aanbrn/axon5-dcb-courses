@@ -58,5 +58,7 @@ naming:
       ]
 
 style:
+  # A backstop above the 120-column formatter limit: it flags only lines no formatter can break,
+  # such as long string literals and URLs.
   MaxLineLength:
-    maxLineLength: 120
+    maxLineLength: 140

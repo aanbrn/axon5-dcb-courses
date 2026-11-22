@@ -46,8 +46,7 @@ class ConventionsFunctionalTest {
     fun `a module without dependencies gets the platform on testImplementation exactly once`() {
         val fixture = GradleFixture.standard(projectDir)
 
-        val output =
-            fixture.run(":lib:dependencies", "--configuration", "testImplementation").output
+        val output = fixture.run(":lib:dependencies", "--configuration", "testImplementation").output
 
         withClue(output) { PLATFORM.findAll(output).count() shouldBe 1 }
     }

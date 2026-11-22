@@ -16,8 +16,7 @@ val reports = layout.buildDirectory.dir("reports/governance")
 val checkGsdConfigPolicy =
     tasks.register<ConfigPolicyCheck>("checkGsdConfigPolicy") {
         group = "verification"
-        description =
-            "Fails when .planning/config.json deviates from governance/gsd-config-policy.json."
+        description = "Fails when .planning/config.json deviates from governance/gsd-config-policy.json."
         config.set(layout.projectDirectory.file(".planning/config.json"))
         policy.set(layout.projectDirectory.file("governance/gsd-config-policy.json"))
         report.set(reports.map { it.file("gsd-config-policy.txt") })
@@ -26,8 +25,7 @@ val checkGsdConfigPolicy =
 val checkClaudeAskRules =
     tasks.register<AskRulesCheck>("checkClaudeAskRules") {
         group = "verification"
-        description =
-            "Fails when the Claude Code ask rules do not cover every governed path and config-set."
+        description = "Fails when the Claude Code ask rules do not cover every governed path and config-set."
         claudeSettings.set(layout.projectDirectory.file(".claude/settings.json"))
         governedPaths.set(layout.projectDirectory.file("governance/governed-paths.txt"))
         report.set(reports.map { it.file("claude-ask-rules.txt") })
@@ -37,8 +35,7 @@ val checkClaudeAskRules =
 val checkBuildScripts =
     tasks.register<BuildScriptLintCheck>("checkBuildScripts") {
         group = "verification"
-        description =
-            "Fails on version literals and on eager or cross-project APIs in build scripts."
+        description = "Fails on version literals and on eager or cross-project APIs in build scripts."
         sources.from(
             layout.projectDirectory.asFileTree.matching {
                 include(
@@ -66,8 +63,7 @@ val checkBuildScripts =
 val checkDaemonJvm =
     tasks.register<DaemonJvmConsistencyCheck>("checkDaemonJvm") {
         group = "verification"
-        description =
-            "Fails when .java-version and gradle-daemon-jvm.properties name different JDKs."
+        description = "Fails when .java-version and gradle-daemon-jvm.properties name different JDKs."
         javaVersionFile.from(layout.projectDirectory.file(".java-version").asFile)
         daemonJvmProperties.from(
             layout.projectDirectory.file("gradle/gradle-daemon-jvm.properties").asFile,
@@ -78,8 +74,7 @@ val checkDaemonJvm =
 val checkPrTemplate =
     tasks.register<PrTemplateCheck>("checkPrTemplate") {
         group = "verification"
-        description =
-            "Fails when the pull request template drifts from the /gsd-ship body sections."
+        description = "Fails when the pull request template drifts from the /gsd-ship body sections."
         config.set(layout.projectDirectory.file(".planning/config.json"))
         template.set(layout.projectDirectory.file(".github/PULL_REQUEST_TEMPLATE.md"))
         report.set(reports.map { it.file("pr-template.txt") })

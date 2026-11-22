@@ -15,13 +15,13 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
 /**
- * Fails the build when the JDK major version in `.java-version` differs from the `toolchainVersion`
- * in `gradle/gradle-daemon-jvm.properties`.
+ * Fails the build when the JDK major version in `.java-version` differs from the `toolchainVersion` in
+ * `gradle/gradle-daemon-jvm.properties`.
  *
- * `.java-version` is the single source of the JDK version (INFRA-09) and the daemon JVM criteria
- * are generated from it by `updateDaemonJvm`, so the two must always be equal. Both inputs are
- * declared as file collections, which tolerate a missing file, so that a missing or empty file
- * produces a message that names it rather than a generic Gradle input-validation error.
+ * `.java-version` is the single source of the JDK version (INFRA-09) and the daemon JVM criteria are generated from it
+ * by `updateDaemonJvm`, so the two must always be equal. Both inputs are declared as file collections, which tolerate a
+ * missing file, so that a missing or empty file produces a message that names it rather than a generic Gradle
+ * input-validation error.
  */
 @CacheableTask
 abstract class DaemonJvmConsistencyCheck : DefaultTask() {
@@ -67,15 +67,13 @@ abstract class DaemonJvmConsistencyCheck : DefaultTask() {
         }
         return text.substringBefore('.').toIntOrNull()
             ?: fail(
-                "$JAVA_VERSION_PATH must start with a numeric JDK major version such as 25, but " +
-                    "it holds '$text'.",
+                "$JAVA_VERSION_PATH must start with a numeric JDK major version such as 25, but it holds '$text'.",
             )
     }
 
     private fun toolchainVersion(file: File): Int {
         val value = Properties().apply { file.reader().use(::load) }.getProperty(KEY)?.trim()
-        return value?.toIntOrNull()
-            ?: fail("$PROPERTIES_PATH has no toolchainVersion with a number. $REGENERATE")
+        return value?.toIntOrNull() ?: fail("$PROPERTIES_PATH has no toolchainVersion with a number. $REGENERATE")
     }
 
     private fun fail(message: String): Nothing = throw GradleException(message)
@@ -85,7 +83,6 @@ abstract class DaemonJvmConsistencyCheck : DefaultTask() {
         const val PROPERTIES_PATH = "gradle/gradle-daemon-jvm.properties"
         const val KEY = "toolchainVersion"
         const val REGENERATE =
-            "Run `./gradlew updateDaemonJvm` after writing the JDK major version to " +
-                "$JAVA_VERSION_PATH."
+            "Run `./gradlew updateDaemonJvm` after writing the JDK major version to $JAVA_VERSION_PATH."
     }
 }

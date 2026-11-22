@@ -17,24 +17,19 @@ import org.gradle.api.tasks.TaskAction
 /**
  * Fails the build when the pull request template drifts from the `/gsd-ship` pull request body.
  *
- * `/gsd-ship` writes the pull request body with five core sections followed by the sections that
- * are enabled in `ship.pr_body_sections` of `.planning/config.json`. The template must start with
- * exactly those `##` headings, in that order, so that manual and bot pull requests have the same
- * structure as generated ones. Headings after them, such as the checklist, are allowed. Headings
- * inside HTML comments and fenced code blocks are not headings.
+ * `/gsd-ship` writes the pull request body with five core sections followed by the sections that are enabled in
+ * `ship.pr_body_sections` of `.planning/config.json`. The template must start with exactly those `##` headings, in that
+ * order, so that manual and bot pull requests have the same structure as generated ones. Headings after them, such as
+ * the checklist, are allowed. Headings inside HTML comments and fenced code blocks are not headings.
  */
 @CacheableTask
 abstract class PrTemplateCheck : DefaultTask() {
 
     /** The GSD configuration, `.planning/config.json`, that lists the configured body sections. */
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val config: RegularFileProperty
+    @get:InputFile @get:PathSensitive(PathSensitivity.RELATIVE) abstract val config: RegularFileProperty
 
     /** The pull request template, `.github/PULL_REQUEST_TEMPLATE.md`. */
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val template: RegularFileProperty
+    @get:InputFile @get:PathSensitive(PathSensitivity.RELATIVE) abstract val template: RegularFileProperty
 
     /** The file the list of problems is written to; empty when the template matches. */
     @get:OutputFile abstract val report: RegularFileProperty
@@ -107,12 +102,10 @@ abstract class PrTemplateCheck : DefaultTask() {
             when {
                 fence != null -> if (trimmed.startsWith(fence)) fence = null
                 inComment -> inComment = COMMENT_END !in line
-                trimmed.startsWith(COMMENT_START) ->
-                    inComment = COMMENT_END !in trimmed.removePrefix(COMMENT_START)
+                trimmed.startsWith(COMMENT_START) -> inComment = COMMENT_END !in trimmed.removePrefix(COMMENT_START)
                 trimmed.startsWith(BACKTICK_FENCE) -> fence = BACKTICK_FENCE
                 trimmed.startsWith(TILDE_FENCE) -> fence = TILDE_FENCE
-                line.startsWith(HEADING_PREFIX) ->
-                    headings += line.removePrefix(HEADING_PREFIX).trim()
+                line.startsWith(HEADING_PREFIX) -> headings += line.removePrefix(HEADING_PREFIX).trim()
             }
         }
         return headings
@@ -128,7 +121,6 @@ abstract class PrTemplateCheck : DefaultTask() {
         const val TILDE_FENCE = "~~~"
 
         /** The sections `/gsd-ship` always writes, in order. */
-        val CORE_HEADINGS =
-            listOf("Summary", "Changes", "Requirements Addressed", "Verification", "Key Decisions")
+        val CORE_HEADINGS = listOf("Summary", "Changes", "Requirements Addressed", "Verification", "Key Decisions")
     }
 }
