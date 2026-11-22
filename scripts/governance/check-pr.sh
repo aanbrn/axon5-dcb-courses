@@ -3,7 +3,9 @@
 # Pull request governance gate. Two rules, both decided here so CI and the tests run the same code:
 #   1. A PR that touches a governed file needs the maintainer's `governance-approved` label. The
 #      only exemption is a Renovate bump whose every governed diff changes versions, commit SHAs or
-#      digests and nothing else. A list at the files API limit (3000 entries) may hide a governed
+#      digests and nothing else. A mise sidecar lockfile under `.mise/locks/` whose directory name
+#      carries the tool version counts as modified, not renamed, when its old and new paths differ
+#      only in that version. A list at the files API limit (3000 entries) may hide a governed
 #      file, so it needs the label and is never exempt. A list that cannot be read completely fails,
 #      with or without the label.
 #   2. A PR from a branch of this repository must come from a GSD phase branch or a bot branch.
@@ -138,23 +140,38 @@ has_label() {
 
 # Reads a diff on standard input and writes each line as a version-independent token stream: commit
 # SHAs, digests and version numbers collapse to placeholders. With "lock" as the first argument the
-# volatile fields of mise.lock (sizes and GitHub release asset ids) collapse too. This is the only
-# place that decides what "version-only" means.
+# volatile fields of mise.lock and of the sidecar lockfiles under .mise/locks collapse too: sizes,
+# GitHub release asset ids, npm integrity hashes, uv upload times and the two-character PyPI file
+# path segments. The lock rules run first, so the generic rules never split an integrity hash. This
+# is the only place that decides what "version-only" means.
 normalize() {
   local mode=${1:-plain}
-  local -a program=(
+  local -a program=()
+  if [[ $mode == lock ]]; then
+    program+=(
+      -e 's#sha512-[A-Za-z0-9+/]{20,}={0,2}#<INTEGRITY>#g'
+      -e 's/[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z/<TIME>/g'
+      -e 's#(/packages/)[0-9a-f]{2}/[0-9a-f]{2}/#\1<H>/<H>/#g'
+      -e 's/size = [0-9]+/size = <N>/g'
+      -e 's#(releases/assets/)[0-9]+#\1<ID>#g'
+    )
+  fi
+  program+=(
     -e 's/sha256:[0-9a-fA-F]{64}/<DIGEST>/g'
     -e 's/(^|[^0-9a-fA-F])[0-9a-fA-F]{64}($|[^0-9a-fA-F])/\1<DIGEST>\2/g'
     -e 's/(^|[^0-9a-fA-F])[0-9a-fA-F]{40}($|[^0-9a-fA-F])/\1<SHA>\2/g'
     -e 's/v?[0-9]+(\.[0-9]+)+([-+][0-9A-Za-z.]+)?/<VER>/g'
   )
-  if [[ $mode == lock ]]; then
-    program+=(
-      -e 's/size = [0-9]+/size = <N>/g'
-      -e 's#(releases/assets/)[0-9]+#\1<ID>#g'
-    )
-  fi
   sed -E "${program[@]}"
+}
+
+# Succeeds for a file under .mise/locks/ that mise moved to a new versioned directory: both paths lie
+# under .mise/locks/ and are equal once their versions are normalised, for example
+# `.mise/locks/npm-renovate/44.252.7~aa673d8d/aube-lock.yaml` and the same path with 44.252.8.
+is_sidecar_version_move() {
+  local previous=$1 filename=$2
+  [[ $previous == .mise/locks/* && $filename == .mise/locks/* ]] || return 1
+  [[ $(normalize <<<"$previous") == "$(normalize <<<"$filename")" ]]
 }
 
 # Prints the lines of a patch that start with the given sign ("-" or "+"), without the sign. A files
@@ -266,10 +283,11 @@ check_governed_files() {
     [[ $is_touched -eq 1 ]] || continue
 
     is_exempt=0
-    if [[ ${PR_AUTHOR:-} == "$BOT_AUTHOR" && $status == modified && -z $previous &&
-      $has_patch == 1 ]]; then
+    if [[ ${PR_AUTHOR:-} == "$BOT_AUTHOR" && $has_patch == 1 ]] &&
+      { [[ $status == modified && -z $previous ]] ||
+        { [[ $status == renamed ]] && is_sidecar_version_move "$previous" "$filename"; }; }; then
       mode=plain
-      [[ $filename == mise.lock ]] && mode=lock
+      [[ $filename == mise.lock || $filename == .mise/locks/* ]] && mode=lock
       if is_version_only "$patch" "$mode"; then
         is_exempt=1
       fi

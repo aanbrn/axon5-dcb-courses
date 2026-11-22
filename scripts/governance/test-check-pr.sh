@@ -152,6 +152,17 @@ entry() {
   fi
 }
 
+# renamed_entry <filename> <previous filename> [patch file]: a `renamed` element of the files API
+# list, as GitHub reports a file that moved and changed in one pull request.
+renamed_entry() {
+  if [[ $# -ge 3 ]]; then
+    jq -n --arg f "$1" --arg p "$2" --arg d "$(cat "$3")" \
+      '{filename: $f, previous_filename: $p, status: "renamed", patch: $d}'
+  else
+    jq -n --arg f "$1" --arg p "$2" '{filename: $f, previous_filename: $p, status: "renamed"}'
+  fi
+}
+
 # files_of <name> <entry>...: stores the entries as a JSON array and prints its path.
 files_of() {
   local name=$1
@@ -340,6 +351,178 @@ run_case "renovate with the label passes even for a non-version change" 0 \
   "carries 'governance-approved'" \
   PR_FILES_JSON="$new_tool_files" PR_LABELS_JSON="$LABEL_APPROVED" \
   PR_AUTHOR="$BOT" PR_HEAD_REF=renovate/mise
+
+# --- fixtures for mise sidecar lockfiles ---------------------------------------------------------
+
+# mise keeps the dependency lock of an npm or pipx tool under .mise/locks/<tool>/<version>~<hash>/,
+# so every version bump moves the files to a new directory and GitHub reports them as renamed.
+SIDECAR_OLD=.mise/locks/npm-renovate/44.252.7~aa673d8d
+SIDECAR_NEW=.mise/locks/npm-renovate/44.252.8~aa673d8d
+
+# The real diffs of Renovate PR #13 (npm:renovate 44.252.7 to 44.252.8). aube-lock.yaml keeps its
+# first three hunks; every line is public npm metadata.
+sidecar_aube=$(
+  patch_file sidecar-aube <<'EOF'
+@@ -9,8 +9,8 @@ importers:
+~  .:
+~    dependencies:
+~      renovate:
+-        specifier: 44.252.7
+-        version: 44.252.7(supports-color@7.2.0)(typanion@3.14.0)
++        specifier: 44.252.8
++        version: 44.252.8(supports-color@7.2.0)(typanion@3.14.0)
+~
+~packages:
+~
+@@ -446,8 +446,8 @@ packages:
+~      '@opentelemetry/api':
+~        optional: true
+~
+-  '@renovatebot/base-image@13.172.4':
+-    resolution: {integrity: sha512-7lMTTuVNCBqSayRa4vNWfhu+owpy9DsxGTuJOIsNBoeIwHqMiJRSQXG5AILHS3Nloab7ohTSTjamsZQp/qeqIQ==}
++  '@renovatebot/base-image@13.172.5':
++    resolution: {integrity: sha512-Q3Q9W8XIw22xVfhGXJ28FhSfoMOkCfdaNCrBCo2ctENbTF2cljd+7XsJE49LELXdzivbBT56t/D0dIM8IgQbmA==}
+~    engines: {node: '>=24.10.0'}
+~    peerDependencies:
+~      zod: ^4.0.0
+@@ -1919,8 +1919,8 @@ packages:
+~  remark@15.0.1:
+~    resolution: {integrity: sha512-Eht5w30ruCXgFmxVUSlNWQ9iiimq07URKeFS3hNc8cUWy1llX4KDWfyEDZRycMc+znsN9Ux5/tJ/BFdgdOwA3A==}
+~
+-  renovate@44.252.7:
+-    resolution: {integrity: sha512-VpbKHbzmXc6Y1ebftn00X9wmm3WWMrGZBuIZQkaaM8HFkyyP0421gSKLOdn5UfKyK1gL3apf8aZfaNKy+SHeMw==}
++  renovate@44.252.8:
++    resolution: {integrity: sha512-4UdKNLUgtG2xbPZdB1ugnkH7ztPMIshAOMLqepXO2pBIcQp+U8I5/BxypCH4ykubCxhVepZ0UMhDDyc1Cle6cQ==}
+~    engines: {node: ^24.11.0 || ^26.13.0, pnpm: ^11.0.0}
+~    hasBin: true
+~
+EOF
+)
+sidecar_package=$(
+  patch_file sidecar-package <<'EOF'
+@@ -2,6 +2,6 @@
+~  "name": "mise-npm-install",
+~  "private": true,
+~  "dependencies": {
+-    "renovate": "44.252.7"
++    "renovate": "44.252.8"
+~  }
+~}
+EOF
+)
+sidecar_lock=$(
+  patch_file sidecar-lock <<'EOF'
+@@ -305,10 +305,10 @@
+~url = "https://nodejs.org/dist/v26.13.1/node-v26.13.1-darwin-x64.tar.gz"
+~
+~[[tools."npm:renovate"]]
+-version = "44.252.7"
+-aube = { path = ".mise/locks/npm-renovate/44.252.7~aa673d8d", digest = "sha256:8f2f65fcb2cc08c993bb95b23ec952f2602b3fe131e0dcc5890f710890d3ecc0" }
++version = "44.252.8"
++aube = { path = ".mise/locks/npm-renovate/44.252.8~aa673d8d", digest = "sha256:adefe5520c0a0dca6acb6c9b0d000c5e693a32a4832fbfad15ab22e1637cdd35" }
+~backend = "npm:renovate"
+-specifiers = ["44.252.7"]
++specifiers = ["44.252.8"]
+~
+EOF
+)
+sidecar_toml=$(
+  patch_file sidecar-toml <<'EOF'
+@@ -34,6 +34,6 @@ uv = "0.13.8"
+~# (3.2.0 had it), which trips trustPolicy=no-downgrade. Remove once renovate no longer pulls it.
+-"npm:renovate" = { version = "44.252.7", trust_policy_excludes = ["@yarnpkg/libzip@3.2.2"] }
++"npm:renovate" = { version = "44.252.8", trust_policy_excludes = ["@yarnpkg/libzip@3.2.2"] }
+~jq = "1.8.2"
+EOF
+)
+pr13_files=$(files_of pr13 \
+  "$(renamed_entry "$SIDECAR_NEW/aube-lock.yaml" "$SIDECAR_OLD/aube-lock.yaml" "$sidecar_aube")" \
+  "$(renamed_entry "$SIDECAR_NEW/package.json" "$SIDECAR_OLD/package.json" "$sidecar_package")" \
+  "$(entry mise.lock modified "$sidecar_lock")" "$(entry mise.toml modified "$sidecar_toml")")
+
+# A version bump that also pulls in a dependency the lock did not have before.
+sidecar_new_dep=$(
+  patch_file sidecar-new-dep <<'EOF'
+@@ -1919,8 +1919,11 @@ packages:
+-  renovate@44.252.7:
+-    resolution: {integrity: sha512-VpbKHbzmXc6Y1ebftn00X9wmm3WWMrGZBuIZQkaaM8HFkyyP0421gSKLOdn5UfKyK1gL3apf8aZfaNKy+SHeMw==}
++  renovate@44.252.8:
++    resolution: {integrity: sha512-4UdKNLUgtG2xbPZdB1ugnkH7ztPMIshAOMLqepXO2pBIcQp+U8I5/BxypCH4ykubCxhVepZ0UMhDDyc1Cle6cQ==}
++
++  evil-postinstall@1.0.0:
++    resolution: {integrity: sha512-Eht5w30ruCXgFmxVUSlNWQ9iiimq07URKeFS3hNc8cUWy1llX4KDWfyEDZRycMc+znsN9Ux5/tJ/BFdgdOwA3A==}
+EOF
+)
+new_dep_files=$(files_of sidecar-new-dep \
+  "$(renamed_entry "$SIDECAR_NEW/aube-lock.yaml" "$SIDECAR_OLD/aube-lock.yaml" "$sidecar_new_dep")")
+
+# A pipx tool lock written by uv: versions, sha256 hashes, upload times and the PyPI path segments
+# change with the release; nothing else does.
+uv_lock=$(
+  patch_file uv-lock <<'EOF'
+@@ -40,10 +40,10 @@
+~[[package]]
+~name = "reuse"
+-version = "6.3.0"
+-source = { registry = "https://pypi.org/simple" }
+-sdist = { url = "https://files.pythonhosted.org/packages/4b/1a/0c2e6d1f5a9e8b7c3d2f1e0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c/reuse-6.3.0.tar.gz", hash = "sha256:0c2e6d1f5a9e8b7c3d2f1e0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c", size = 389514, upload-time = "2026-10-01T09:12:44.512Z" }
++version = "6.3.1"
++source = { registry = "https://pypi.org/simple" }
++sdist = { url = "https://files.pythonhosted.org/packages/9e/77/5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c/reuse-6.3.1.tar.gz", hash = "sha256:5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c", size = 390022, upload-time = "2026-11-12T17:03:07Z" }
+~
+EOF
+)
+UV_OLD=.mise/locks/pipx-reuse/6.3.0~068c1fb0
+UV_NEW=.mise/locks/pipx-reuse/6.3.1~068c1fb0
+uv_files=$(files_of uv-lock "$(renamed_entry "$UV_NEW/uv.lock" "$UV_OLD/uv.lock" "$uv_lock")")
+
+other_tool_files=$(files_of sidecar-other-tool \
+  "$(renamed_entry .mise/locks/npm-evil/44.252.8~aa673d8d/package.json "$SIDECAR_OLD/package.json" "$sidecar_package")")
+other_hash_files=$(files_of sidecar-other-hash \
+  "$(renamed_entry .mise/locks/npm-renovate/44.252.8~bb000000/package.json "$SIDECAR_OLD/package.json" "$sidecar_package")")
+out_of_locks_files=$(files_of sidecar-out-of-locks \
+  "$(renamed_entry mise/locks/npm-renovate/44.252.8~aa673d8d/package.json "$SIDECAR_OLD/package.json" "$sidecar_package")")
+renamed_no_patch_files=$(files_of sidecar-no-patch \
+  "$(renamed_entry "$SIDECAR_NEW/package.json" "$SIDECAR_OLD/package.json")")
+renamed_governed_files=$(files_of renamed-governed \
+  "$(renamed_entry mise.toml mise.toml.old "$mise_bump")")
+
+# --- Renovate exemption for mise sidecar lockfiles ------------------------------------------------
+
+run_case "renovate PR #13 moving the npm sidecar lock to its new version passes without the label" 0 \
+  "version-only.*$SIDECAR_NEW/aube-lock\.yaml" \
+  PR_FILES_JSON="$pr13_files" PR_LABELS_JSON="$LABEL_NONE" \
+  PR_AUTHOR="$BOT" PR_HEAD_REF=renovate/dev-tools
+run_case "renovate PR #13 is exempt as a whole, sidecar files and mise.lock alike" 0 \
+  "every governed change is a version-only" \
+  PR_FILES_JSON="$pr13_files" PR_LABELS_JSON="$LABEL_NONE" \
+  PR_AUTHOR="$BOT" PR_HEAD_REF=renovate/dev-tools
+run_case "renovate moving a uv sidecar lock to its new version passes without the label" 0 \
+  "version-only.*$UV_NEW/uv\.lock" \
+  PR_FILES_JSON="$uv_files" PR_LABELS_JSON="$LABEL_NONE" \
+  PR_AUTHOR="$BOT" PR_HEAD_REF=renovate/dev-tools
+run_case "a sidecar bump that adds a new dependency fails without the label" 1 \
+  "$SIDECAR_NEW/aube-lock\.yaml" \
+  PR_FILES_JSON="$new_dep_files" PR_LABELS_JSON="$LABEL_NONE" \
+  PR_AUTHOR="$BOT" PR_HEAD_REF=renovate/dev-tools
+run_case "a sidecar moved to another tool's directory is not exempt" 1 "npm-evil" \
+  PR_FILES_JSON="$other_tool_files" PR_LABELS_JSON="$LABEL_NONE" \
+  PR_AUTHOR="$BOT" PR_HEAD_REF=renovate/dev-tools
+run_case "a sidecar moved to a directory with another hash is not exempt" 1 "bb000000" \
+  PR_FILES_JSON="$other_hash_files" PR_LABELS_JSON="$LABEL_NONE" \
+  PR_AUTHOR="$BOT" PR_HEAD_REF=renovate/dev-tools
+run_case "a sidecar moved out of .mise/locks is not exempt" 1 "$SIDECAR_OLD/package\.json" \
+  PR_FILES_JSON="$out_of_locks_files" PR_LABELS_JSON="$LABEL_NONE" \
+  PR_AUTHOR="$BOT" PR_HEAD_REF=renovate/dev-tools
+run_case "a renamed sidecar without a patch is not exempt" 1 "$SIDECAR_NEW/package\.json" \
+  PR_FILES_JSON="$renamed_no_patch_files" PR_LABELS_JSON="$LABEL_NONE" \
+  PR_AUTHOR="$BOT" PR_HEAD_REF=renovate/dev-tools
+run_case "a rename of a governed file outside .mise/locks is still never exempt" 1 "mise\.toml" \
+  PR_FILES_JSON="$renamed_governed_files" PR_LABELS_JSON="$LABEL_NONE" \
+  PR_AUTHOR="$BOT" PR_HEAD_REF=renovate/mise
+run_case "a human author moving a sidecar lock still needs the label" 1 \
+  "$SIDECAR_NEW/package\.json" \
+  PR_FILES_JSON="$pr13_files" PR_LABELS_JSON="$LABEL_NONE" PR_AUTHOR=maintainer
 
 # --- files API limit ----------------------------------------------------------------------------
 
