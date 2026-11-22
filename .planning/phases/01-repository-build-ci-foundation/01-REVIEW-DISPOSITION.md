@@ -9,7 +9,7 @@ findings:
     title: "The approval label is sticky and is not bound to a commit"
   - id: WR-08
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "ADR-0003 relies on Claude Code ask rules as a control over the agent, which the project itself says is not a security boundary"
   - id: WR-09
     severity: warning
@@ -83,7 +83,7 @@ findings:
     severity: warning
     disposition: fixed
     title: "The governed boundary omits files that carry the same authority as governed ones"
-open: 12
+open: 11
 total: 20
 recorded: 2026-11-22T01:15:30.620Z
 ---
@@ -93,7 +93,7 @@ recorded: 2026-11-22T01:15:30.620Z
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
 | WR-02 | warning | deferred | 01-REVIEW.md — deferred by the author at gap planning (2026-11-21): binding the approval label to a commit or dismissing it on push needs a separate design decision (workflow permissions or a new verification mechanism); not part of the gap-closure scope |
-| WR-08 | warning | open | - |
+| WR-08 | warning | fixed | 01-REVIEW.md — fixed by the orchestrator in 5980b3d (ADR-0003 wording). The gap round 3 review re-listed it as "carried, unchanged" and quoted the pre-5980b3d text; ADR-0003 lines 51-55 already say the rules are a guard rail, not a security boundary, and do not match shell commands, so the decision recorded before (fixed) is restored by hand |
 | WR-09 | warning | open | - |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
