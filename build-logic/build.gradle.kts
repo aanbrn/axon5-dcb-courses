@@ -37,7 +37,10 @@ dokka {
 tasks.named("check") { dependsOn(tasks.named("dokkaGeneratePublicationHtml")) }
 
 // TestKit suite proving the conventions in isolation (INFRA-12). Fixtures include this same
-// build-logic directory, so they must not run concurrently with one another.
+// build-logic directory, so they must not run concurrently with one another. Gradle still marks the
+// JVM Test Suite API @Incubating; it is the documented way to declare test levels (TEST-11), and a
+// Gradle upgrade that changes it fails this build in its Renovate pull request.
+@Suppress("UnstableApiUsage")
 testing {
     suites {
         register<JvmTestSuite>("functionalTest") {
