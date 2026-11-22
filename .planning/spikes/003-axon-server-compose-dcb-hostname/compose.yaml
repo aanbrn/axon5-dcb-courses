@@ -1,0 +1,44 @@
+# Spike 003: Axon Server with a DCB context created at boot, reachable from compose and from the host.
+name: spike003
+services:
+  axonserver:
+    image: docker.axoniq.io/axoniq/axonserver:2026.1.8-nonroot
+    hostname: axonserver
+    environment:
+      AXONIQ_AXONSERVER_STANDALONE_DCB: "true"
+      AXONIQ_AXONSERVER_DEVMODE_ENABLED: "true"
+    # Optional AxonIQ Platform token (AXONIQ_PLATFORM_AUTHENTICATION=<id>:<token>) lifts the 12-hour
+    # unregistered limit. The variable must be absent, not empty: an empty value crashes the server.
+    env_file:
+      - path: ./platform.env
+        required: false
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8024/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    ports:
+      - "8024:8024"
+      - "8124:8124"
+    volumes:
+      - as-data:/axonserver/data
+      - as-events:/axonserver/events
+      - as-log:/axonserver/log
+  probe:
+    image: eclipse-temurin:25-jre
+    profiles: [probe]
+    depends_on:
+      axonserver: {condition: service_healthy}
+    environment:
+      AXON_SERVERS: axonserver:8124
+      PROBE_FROM: compose
+      PROBE_HOLD_SECONDS: "${PROBE_HOLD_SECONDS:-0}"
+      SPRING_APPLICATION_NAME: "${PROBE_NAME:-probe}"
+    volumes:
+      - ./probe/build/libs/003-probe.jar:/app/probe.jar:ro
+    command: ["java", "-jar", "/app/probe.jar"]
+volumes:
+  as-data: {}
+  as-events: {}
+  as-log: {}
