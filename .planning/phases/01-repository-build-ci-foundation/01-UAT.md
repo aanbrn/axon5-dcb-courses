@@ -3,7 +3,7 @@ status: complete
 phase: 01-repository-build-ci-foundation
 source: [01-VERIFICATION.md, 01-01-SUMMARY.md, 01-02-SUMMARY.md, 01-03-SUMMARY.md, 01-04-SUMMARY.md, 01-05-SUMMARY.md, 01-06-SUMMARY.md, 01-07-SUMMARY.md, 01-08-SUMMARY.md, 01-09-SUMMARY.md, 01-10-SUMMARY.md, 01-11-SUMMARY.md, 01-12-SUMMARY.md, 01-13-SUMMARY.md, 01-14-SUMMARY.md, 01-15-SUMMARY.md, 01-16-SUMMARY.md, 01-17-SUMMARY.md, 01-18-SUMMARY.md, 01-19-SUMMARY.md, 01-20-SUMMARY.md]
 started: 2026-11-21T16:46:16Z
-updated: 2026-11-22T02:38:19.070Z
+updated: 2026-11-22T03:45:00.000Z
 ---
 
 ## Current Test
@@ -65,20 +65,20 @@ evidence: "Dry-run listed 'ruleset main: create' (1 delta); --apply --only rules
 ### 9. Post-merge CodeQL, Scorecard and first label sync
 expected: Code scanning shows the CodeQL (actions) and Scorecard analyses from main; the first label sync creates, updates and deletes labels so the repository equals `.github/labels.yml`, and a re-run on an unchanged file changes nothing
 covers: [VERIFICATION human item 3, 01-10 D3, 01-12 D8 (hosted run)]
-result: skipped
-reason: "Deferred follow-up: post-merge check; CodeQL, Scorecard and the label sync run only from main after PR #2 is merged (author decision 2026-11-22)"
+result: pass
+evidence: "After the PR #2 merge (2717e34): CodeQL, Scorecard and Labels runs on main succeeded; code scanning on refs/heads/main lists CodeQL (2) and Scorecard (6) analyses; the label sync left 42 repository labels equal to the 42 in .github/labels.yml, and a manual re-run on the unchanged file (run 44981600655) skipped all 42 labels with no create, update or delete. Recorded 2026-11-22 after the deferral."
 
 ### 10. Close Renovate onboarding PR #1 and check the first grouped PRs
 expected: No onboarding PR; the Mend app opens update PRs grouped per `renovate.json5` with the configured labels, none before the 7-day cooldown (except the documented vulnerability exception and the JDK timestamp-optional waiver), automerge only for the three allowed rules; `npm:renovate`/`pipx:reuse` bumps that rewrite a `.mise/locks/**` sidecar need `governance-approved`
 covers: [VERIFICATION human item 4, 01-11 D7, 01-14 D5 (Renovate app)]
-result: skipped
-reason: "Deferred follow-up: post-merge check; Renovate reads renovate.json5 only from main, so grouped PRs appear after PR #2 is merged (author decision 2026-11-22)"
+result: pass
+evidence: "Onboarding PR #1 'Configure Renovate' was autoclosed by Renovate. First grouped PRs: #3 dev tools (deps, deps:mise, deps:npm), #4 junit (deps, deps:gradle), #7 spring-boot group with the Jackson BOM (deps, deps:gradle), #8 node.js (deps, deps:node). #4, #7 and #8 pass governance-success through the version-only exemption; #3 rewrites a .mise/locks sidecar and fails governance-success until governance-approved is added, as designed. Recorded 2026-11-22 after the deferral."
 
 ### 11. Register the repository at api.reuse.software
 expected: The README REUSE badge resolves and shows `compliant`
 covers: [VERIFICATION human item 6, 01-06 D5, 01-14 D5 (REUSE registration)]
-result: skipped
-reason: "Deferred follow-up: post-merge check; REUSE registration lints the default branch, so it needs PR #2 merged (author decision 2026-11-22)"
+result: pass
+evidence: "The author registered the repository; api.reuse.software/status reports status compliant (lint_code 0) and the README badge renders compliant. Its last lint ran on 1c02e96 before the merge; reuse lint on current main is compliant too. Recorded 2026-11-22 after the deferral."
 
 ### 12. [01-01 D1] ./gradlew build compiles and tests the sample module through build-logic, :platform and the catalog; second run reuses the configuration cache with isolated projects on
 expected: ./gradlew build compiles and tests the sample module through build-logic, :platform and the catalog; second run reuses the configuration cache with isolated projects on
@@ -575,10 +575,10 @@ coverage_id: D3
 ## Summary
 
 total: 93
-passed: 89
+passed: 92
 issues: 1
 pending: 0
-skipped: 3
+skipped: 0
 blocked: 0
 
 ## Gaps
@@ -616,9 +616,12 @@ blocked: 0
 - test: 9
   idea: "Post-merge: confirm CodeQL (actions) and Scorecard analyses from main, and that the first label sync makes the repository equal .github/labels.yml with an idempotent re-run"
   deferred_at: 2026-11-22
+  resolved_at: 2026-11-22
 - test: 10
   idea: "Post-merge: close Renovate onboarding PR #1 and check the first grouped PRs (labels, 7-day cooldown, three automerge rules, governance-approved for .mise/locks sidecar bumps)"
   deferred_at: 2026-11-22
+  resolved_at: 2026-11-22
 - test: 11
   idea: "Post-merge: register the repository at api.reuse.software and confirm the README REUSE badge shows compliant"
   deferred_at: 2026-11-22
+  resolved_at: 2026-11-22

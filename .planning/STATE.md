@@ -4,10 +4,10 @@ current_phase: 2
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: planning
 stopped_at: Phase 01 complete, ready to plan Phase 2
-last_updated: "2026-11-22T03:27:01.808Z"
+last_updated: "2026-11-22T03:40:26.804Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 01 complete, transitioned to Phase 2
-state_head: 945db3e14c816075c8619700edf58484ba4d47fb
+state_head: 8d3f82842832c380662b291f1b8c847e217604c2
 progress:
   total_phases: 13
   completed_phases: 1
@@ -132,7 +132,6 @@ None yet.
 - [Phase 2/3]: Decision-record capture relies on an `@Internal` Axon SPI; fallback is explicit per-slice stamping plus an architecture rule
 - [Phase 8/10]: `EventCriteria` expressiveness for schedule overlap and the waiting-list head is unverified; fallback is passing candidates in the command and re-validating in the decision
 - [Phases 2, 13]: Third-party skills/MCP servers and upstream issue publication need explicit author approval at execution time (Phase 1 repository settings and the `main` ruleset are applied)
-- [Phase 1, post-merge]: UAT tests 9-11 run after PR #2 merges: CodeQL, Scorecard and label sync from `main`, Renovate onboarding PR #1 and first grouped PRs, REUSE registration (deferred follow-ups in `01-UAT.md`)
 - [Tooling]: GSD hooks fail in Claude Code sessions started inside a git worktree (hooks resolve under `$CLAUDE_PROJECT_DIR`, the worktree has no `.claude/hooks/`); deferred follow-up from UAT test 3
 
 ### Quick Tasks Completed
@@ -142,6 +141,7 @@ None yet.
 | 261121-wjt | ADR-0004 on GSD configuration and COVERAGE.md | 2026-11-21 | c06f777 | [261121-wjt-adr-0004-on-gsd-configuration-and-covera](./quick/261121-wjt-adr-0004-on-gsd-configuration-and-covera/) |
 | 2 | Fix CI Lint: pin python 3.14.10 and uv 0.13.8 in mise so pipx:reuse installs from its lock (e1a038d) | 2026-11-22 | e1a038d | — |
 | 3 | Settings drift: report repository fields hidden from the read-only token as warnings, not drift (945db3e) | 2026-11-22 | 945db3e | — |
+| 4 | Record phase 01 post-merge UAT tests 9-11 as passed (CodeQL/Scorecard/labels, Renovate, REUSE) | 2026-11-22 | 8d3f828 | — |
 
 ## Deferred Items
 
