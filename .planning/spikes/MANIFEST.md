@@ -12,6 +12,7 @@ behaviour (D-14, D-25, D-26), and Paketo images for the static frontend and a Bo
 
 - Spikes run in the order 003 → 001 → 002 → 004 → 005 (author's choice); numbering reflects risk.
 - Decision-record capture uses the `EventStorageEngine` decorator (variant A), accepting the `@Internal` API with the D-13 safeguards; conflict retries run handling-side.
+- Local Docker (colima) runs with explicit `network.dns` and the classic image store (`containerd-snapshotter: false`); author-approved during spike 005.
 - Spike code lives in `.planning/spikes/`, built by a standalone Gradle build whose versions come from the main catalog.
 
 ## Spikes
@@ -22,3 +23,4 @@ behaviour (D-14, D-25, D-26), and Paketo images for the static frontend and a Bo
 | 002 | phase2-runtime-dcb-foundations | kotlin-tags-jackson-typeid | standard | Given TypeID value-class ids, registry tags and @Event names, when round-tripped through Jackson 3 and Axon Server, then payloads, tags, names and sealed results survive | PARTIAL (needs KotlinTagResolver, UUID entity id type, axon-kotlin) | kotlin, jackson3, typeid, tags |
 | 003 | phase2-runtime-dcb-foundations | axon-server-compose-dcb-hostname | standard | Given Axon Server 2026.1.8 in compose, when the DCB context is created at boot, then compose and host clients both connect unchanged | VALIDATED | axon-server, compose, dcb, hostname |
 | 004 | phase2-runtime-dcb-foundations | axon-server-licence-restart-token | standard | Given unregistered Axon Server, when restarted with/without volumes, then the 12-hour limit behaviour and token delivery are known | VALIDATED | axon-server, licence, platform-token |
+| 005 | phase2-runtime-dcb-foundations | paketo-web-and-boot-images | comparison | Given a prebuilt dist/ and a minimal Boot service, when Paketo builds both on colima, then nginx serves the SPA with an SSE-safe /api proxy and the Boot image runs with working BP_/BPE_ defaults | VALIDATED (custom nginx.conf via BootBuildImage; colima DNS + classic image store) | paketo, nginx, sse, colima |

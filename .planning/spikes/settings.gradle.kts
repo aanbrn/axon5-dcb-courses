@@ -14,3 +14,9 @@ project(":001-capture").projectDir = file("001-decision-record-capture")
 
 include(":002-serialization")
 project(":002-serialization").projectDir = file("002-kotlin-tags-jackson-typeid")
+
+include(":005-api")
+project(":005-api").projectDir = file("005-paketo-web-and-boot-images/api")
+
+include(":005-web")
+project(":005-web").projectDir = file("005-paketo-web-and-boot-images/web-build")
