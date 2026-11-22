@@ -11,3 +11,6 @@ project(":003-probe").projectDir = file("003-axon-server-compose-dcb-hostname/pr
 
 include(":001-capture")
 project(":001-capture").projectDir = file("001-decision-record-capture")
+
+include(":002-serialization")
+project(":002-serialization").projectDir = file("002-kotlin-tags-jackson-typeid")
