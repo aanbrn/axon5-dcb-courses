@@ -207,10 +207,10 @@ class DependencyLicenceCheckFunctionalTest {
     private fun policy(aliases: String = "{}", exceptions: String = ""): String =
         """
         {
-          "allowed": ["Apache-2.0", "MIT", "EPL-2.0"],
-          "forbidden": ["GPL-*", "AGPL-*"],
-          "aliases": $aliases,
-          "exceptions": [$exceptions]
+            "allowed": ["Apache-2.0", "MIT", "EPL-2.0"],
+            "forbidden": ["GPL-*", "AGPL-*"],
+            "aliases": $aliases,
+            "exceptions": [$exceptions]
         }
         """
             .trimIndent()

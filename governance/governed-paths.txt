@@ -46,7 +46,12 @@
 #     setup-node read them and mise's java and node are disabled (MISE_DISABLE_TOOLS). mise reads
 #     idiomatic version files only for the tools the governed mise.toml enables;
 #   - a `renovate` section in a package.json below the repository root: Renovate reads repository
-#     config from the root only.
+#     config from the root only;
+#   - the files the checks read as data rather than as configuration: NOTICE (checkNotice),
+#     docs/adr/** (checkAdrs), docs/upstream/** (checkUpstreamRecords), compose.yaml and compose/**
+#     (checkComposeVersions, checkImageReferences and the compose-smoke job). An edit to them is
+#     what those checks evaluate, so it cannot switch a check off or make one pass without
+#     evaluating.
 #
 # Accepted residual. Build code can always subvert in-build checks by other means, for example
 # through reflection or daemon-wide hooks. The list makes the direct routes visible changes, and
@@ -141,6 +146,12 @@ build-logic/src/main/kotlin/courses.settings.settings.gradle.kts
 
 # The detekt rule set: an edit to it alone can switch rules off, so detekt passes without evaluating them.
 config/detekt/**
+
+# The Qodana gate, which the required `qodana` job of ci-success runs: its configuration (the digest-pinned image, the
+# inspection profile, the exclusions and the fail threshold) and the launcher that CI and developers run it with. An
+# edit to either alone can switch inspections off or make the job pass without analysing.
+qodana.yaml
+scripts/qodana.sh
 
 # The launcher CI runs the checks with. A no-op gradlew alone would make the build step green.
 gradlew

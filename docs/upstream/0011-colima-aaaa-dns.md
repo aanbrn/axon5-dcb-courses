@@ -112,15 +112,15 @@ fast, and so is the same Go program once the profile is started with `--dns <res
 package main
 
 import (
-	"fmt"
-	"net"
-	"time"
+    "fmt"
+    "net"
+    "time"
 )
 
 func main() {
-	start := time.Now()
-	_, err := net.LookupHost("github.com")
-	fmt.Println(time.Since(start), err)
+    start := time.Now()
+    _, err := net.LookupHost("github.com")
+    fmt.Println(time.Since(start), err)
 }
 ```
 
