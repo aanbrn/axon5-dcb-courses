@@ -11,13 +11,12 @@ import io.github.aanbrn.courses.buildlogic.governance.NoticeCheck
 import io.github.aanbrn.courses.buildlogic.governance.PrTemplateCheck
 import io.github.aanbrn.courses.buildlogic.governance.ToolingTableCheck
 import io.github.aanbrn.courses.buildlogic.governance.UpstreamRecordCheck
+import org.gradle.api.artifacts.VersionCatalogsExtension
 
 // Repository governance checks (D-13): cacheable build-logic tasks wired into `check`, so a local
 // build and CI enforce the same rules. The plugin is applied to the root project only.
 
 plugins { base }
-
-val libs = the<org.gradle.accessors.dm.LibrariesForLibs>()
 
 val reports = layout.buildDirectory.dir("reports/governance")
 
@@ -101,17 +100,16 @@ val checkToolingInventory =
         report.set(reports.map { it.file("tooling-inventory.txt") })
     }
 
-// The images of `compose/versions.env` are the same two catalog entries `generateComposeVersions` renders
-// (courses.root).
+// The expected text is the rendering of every compose image of the catalog through `ComposeVersions.images`, the same
+// function `generateComposeVersions` (courses.root) uses. The catalog is read at configuration time as a plain value:
+// its
+// contents are settings-level constants and a changed catalog already invalidates the configuration cache.
+val composeImages = ComposeVersions.images(the<VersionCatalogsExtension>().named("libs"))
 val checkComposeVersions =
     tasks.register<GeneratedFileCheck>("checkComposeVersions") {
         group = "verification"
         description = "Fails when compose/versions.env differs from the image references in the version catalog."
-        expected.set(
-            libs.versions.image.axonserver.zip(libs.versions.image.postgres) { axonserver, postgres ->
-                ComposeVersions.render(mapOf("axonserver" to axonserver, "postgres" to postgres))
-            },
-        )
+        expected.set(ComposeVersions.render(composeImages))
         actual.set(layout.projectDirectory.file("compose/versions.env"))
         fixCommand.set("./gradlew generateComposeVersions")
         report.set(reports.map { it.file("compose-versions.txt") })
