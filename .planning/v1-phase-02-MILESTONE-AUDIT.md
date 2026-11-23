@@ -41,6 +41,9 @@ tech_debt:
       - "INT-W3: CommandServiceConfigurationEnhancer and DecisionRecorder have no production registration yet (Phase 3 handoff contract)"
       - "INT-W4 (unverified): lefthook '*.sh' glob may not match nested scripts; CI lint covers them"
       - "INT-W5: SPDX headers absent from YAML and template files (REUSE passes via REUSE.toml aggregate)"
+  - phase: cross-phase (found after the audit, 2026-11-23)
+    items:
+      - "INT-W6: the required qodana gate (added on main in PR #18 after Phase 2 code was written) was never run on the Phase 2 branch; a local run found 45 problems (threshold 0), so ci-success would fail on the Phase 2 PR. Neither 02-VERIFICATION nor this audit caught it. Being fixed by quick task 261123-p1u"
   - phase: bookkeeping
     items:
       - "REQUIREMENTS.md: 19 Phase 2 IDs still Pending/unchecked although verified SATISFIED"
