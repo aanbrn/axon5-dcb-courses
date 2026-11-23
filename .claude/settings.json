@@ -58,5 +58,25 @@
       "Edit(/gradle/gradle-daemon-jvm.properties)",
       "Bash(*config-set*)"
     ]
+  },
+  "extraKnownMarketplaces": {
+    "axoniq": {
+      "source": {
+        "source": "github",
+        "repo": "AxonIQ/agent-skills",
+        "ref": "59e7beb6bb487894aeb1294918463af1432bdece"
+      }
+    },
+    "gradle-skills": {
+      "source": {
+        "source": "github",
+        "repo": "gradle/gradle-skills",
+        "ref": "00b7790139dff32063976f98334b2a2301b50a9d"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "axoniq-app-development@axoniq": true,
+    "gradle-skills@gradle-skills": true
   }
 }
