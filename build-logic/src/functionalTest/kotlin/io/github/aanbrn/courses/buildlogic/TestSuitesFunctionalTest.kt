@@ -7,11 +7,14 @@ import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import java.nio.file.Files
 import java.nio.file.Path
+import javax.xml.parsers.DocumentBuilderFactory
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.w3c.dom.Element
 
 /** Proves that `courses.test-suites` gives a module three suites that `check` runs, under the configuration cache. */
 class TestSuitesFunctionalTest {
@@ -169,6 +172,98 @@ class TestSuitesFunctionalTest {
         result.output shouldContain "UndocumentedPublicFunction"
     }
 
+    @Test
+    fun `the Kover XML report is written under the configuration cache and isolated projects`() {
+        val fixture = coverageFixture()
+
+        val result = fixture.run(":lib:koverXmlReport")
+
+        outcome(result, ":lib:koverXmlReport") shouldBeIn PASSED
+        Files.exists(projectDir.resolve(KOVER_REPORT)) shouldBe true
+    }
+
+    @Test
+    fun `code reached by each suite is reported covered and code reached by none is reported uncovered`() {
+        val fixture = coverageFixture()
+        fixture.run(":lib:koverXmlReport")
+
+        val coveredLines = coveredLinesByMethod(fixture.read(KOVER_REPORT))
+
+        withClue(coveredLines.toString()) {
+            coveredLines.getValue("coveredByUnit") shouldBeGreaterThan 0
+            coveredLines.getValue("coveredByComponent") shouldBeGreaterThan 0
+            coveredLines.getValue("coveredByIntegration") shouldBeGreaterThan 0
+            coveredLines.getValue("neverCalled") shouldBe 0
+        }
+    }
+
+    @Test
+    fun `a second report run with unchanged sources does not run the integration suite again`() {
+        val fixture = coverageFixture()
+        fixture.run(":lib:koverXmlReport")
+
+        val second = fixture.run(":lib:koverXmlReport")
+
+        outcome(second, ":lib:integrationTest") shouldBeIn setOf(TaskOutcome.UP_TO_DATE, TaskOutcome.FROM_CACHE)
+    }
+
+    private fun coverageFixture(): GradleFixture =
+        GradleFixture.testSuites(projectDir).apply {
+            file(
+                "lib/src/main/kotlin/fixture/Coverage.kt",
+                listOf(
+                        GradleFixture.HEADER,
+                        "package fixture",
+                        "",
+                        "/** Functions that exactly one suite reaches, and one that no test reaches. */",
+                        "class Coverage {",
+                        "    /** Called by the unit suite. */",
+                        "    fun coveredByUnit(input: String): String = input.trim()",
+                        "",
+                        "    /** Called by the component suite. */",
+                        "    fun coveredByComponent(input: String): String = input.trim()",
+                        "",
+                        "    /** Called by the integration suite. */",
+                        "    fun coveredByIntegration(input: String): String = input.trim()",
+                        "",
+                        "    /** Called by no test. */",
+                        "    fun neverCalled(input: String): String = input.trim()",
+                        "}",
+                    )
+                    .joinToString("\n", postfix = "\n"),
+            )
+            mapOf(
+                    "test" to "coveredByUnit",
+                    "componentTest" to "coveredByComponent",
+                    "integrationTest" to "coveredByIntegration",
+                )
+                .forEach { (suite, method) ->
+                    addTest(
+                        suite,
+                        "${suite.replaceFirstChar(Char::uppercase)}CoverageTest",
+                        "the suite calls $method",
+                        "check(fixture.Coverage().$method(\" x \") == \"x\")",
+                    )
+                }
+        }
+
+    /** Maps each method name in a Kover XML report to the number of its covered lines. */
+    private fun coveredLinesByMethod(report: String): Map<String, Int> {
+        val factory = DocumentBuilderFactory.newInstance()
+        // The report names a DTD that is not shipped with it; reading must not try to fetch it.
+        factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+        val methods = factory.newDocumentBuilder().parse(report.byteInputStream()).getElementsByTagName("method")
+        return (0 until methods.length)
+            .map { methods.item(it) as Element }
+            .associate { method ->
+                val lineCounters =
+                    (0 until method.childNodes.length).map(method.childNodes::item).filterIsInstance<Element>().filter {
+                        it.tagName == "counter" && it.getAttribute("type") == "LINE"
+                    }
+                method.getAttribute("name") to lineCounters.sumOf { it.getAttribute("covered").toInt() }
+            }
+    }
+
     private infix fun TaskOutcome?.shouldBeIn(outcomes: Set<TaskOutcome>) {
         outcomes shouldContain this
     }
@@ -185,5 +280,6 @@ class TestSuitesFunctionalTest {
         val SUITES = listOf("test", "componentTest", "integrationTest")
         val SUITE_TASKS = SUITES.map { ":lib:$it" }
         val LIBRARIES = listOf("kotest-property", "kotest-assertions-core", "junit-jupiter")
+        const val KOVER_REPORT = "lib/build/reports/kover/report.xml"
     }
 }
