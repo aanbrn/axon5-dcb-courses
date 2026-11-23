@@ -164,7 +164,16 @@ class TestSuitesFunctionalTest {
         val fixture = GradleFixture.testSuites(projectDir)
         fixture.file(
             "lib/src/testFixtures/kotlin/fixture/fixtures/Undocumented.kt",
-            "${GradleFixture.HEADER}\npackage fixture.fixtures\n\n/** A documented holder. */\nobject Undocumented {\n    fun hidden(): Int = 1\n}\n",
+            listOf(
+                    GradleFixture.HEADER,
+                    "package fixture.fixtures",
+                    "",
+                    "/** A documented holder. */",
+                    "object Undocumented {",
+                    "    fun hidden(): Int = 1",
+                    "}",
+                )
+                .joinToString("\n", postfix = "\n"),
         )
 
         val result = fixture.runAndFail(":lib:detekt")

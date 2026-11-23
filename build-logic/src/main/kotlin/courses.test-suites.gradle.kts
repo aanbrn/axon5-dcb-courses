@@ -2,6 +2,7 @@
 plugins {
     id("courses.kotlin-library")
     `java-test-fixtures`
+    id("org.jetbrains.kotlinx.kover")
 }
 
 // The three JVM test levels of a module (D-15), as Gradle JVM Test Suites:
@@ -13,6 +14,11 @@ plugins {
 // (D-21); the two infrastructure suites run on a single fork (D-22) and after the preceding suite. The order uses
 // `mustRunAfter`: `shouldRunAfter` is only a hint, and Gradle ran `integrationTest` before `test` in a `check` build
 // (TestSuitesFunctionalTest). `mustRunAfter` adds no dependency, so running one suite alone still runs only that suite.
+
+// Coverage (TEST-11): Kover instruments every `Test` task of the module, so `test`, `componentTest` and
+// `integrationTest` all feed the module's report (`koverXmlReport`, `koverHtmlReport`). No test task is excluded and no
+// class filter is set here. Kover is a Gradle plugin, not a test library: it adds nothing to any suite's dependencies.
+// The cross-module aggregation, the thresholds, the exclusions and the CI reporting are TEST-08 (Phase 3).
 
 val libs = the<org.gradle.accessors.dm.LibrariesForLibs>()
 

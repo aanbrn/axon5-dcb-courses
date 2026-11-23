@@ -49,6 +49,25 @@ comments:
   EndOfSentenceFormat:
     active: true
 
+complexity:
+  # A test class holds one function per behavior, so its size follows the number of behaviors it proves.
+  TooManyFunctions:
+    excludes:
+      [
+        "**/test/**",
+        "**/androidTest/**",
+        "**/commonTest/**",
+        "**/jvmTest/**",
+        "**/androidUnitTest/**",
+        "**/androidInstrumentedTest/**",
+        "**/jsTest/**",
+        "**/iosTest/**",
+        "**/*FunctionalTest.kt",
+        "**/componentTest/**",
+        "**/integrationTest/**",
+        "**/architectureTest/**",
+      ]
+
 naming:
   FunctionNaming:
     excludes:

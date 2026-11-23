@@ -11,6 +11,7 @@ dependencies {
     implementation(libs.spotless.gradle.plugin)
     implementation(libs.detekt.gradle.plugin)
     implementation(libs.dokka.gradle.plugin)
+    implementation(libs.kover.gradle.plugin)
     // Required for the typed `libs` accessor inside precompiled script plugins (still needed on
     // Gradle 9.9.2).
     implementation(files(libs.javaClass.superclass.protectionDomain.codeSource.location))

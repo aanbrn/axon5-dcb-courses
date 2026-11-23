@@ -7,6 +7,7 @@ ktfmt = "0.65"
 prettier = "3.10.1"
 detekt = "2.0.0-alpha.6"
 dokka = "2.3.0"
+kover = "0.9.11"
 foojay = "1.0.0"
 junit = "6.1.3"
 kotest = "6.2.7"
@@ -25,6 +26,7 @@ kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", v
 spotless-gradle-plugin = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }
 detekt-gradle-plugin = { module = "dev.detekt:detekt-gradle-plugin", version.ref = "detekt" }
 dokka-gradle-plugin = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version.ref = "dokka" }
+kover-gradle-plugin = { module = "org.jetbrains.kotlinx:kover-gradle-plugin", version.ref = "kover" }
 foojay-resolver-plugin = { module = "org.gradle.toolchains:foojay-resolver", version.ref = "foojay" }
 kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
