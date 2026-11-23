@@ -86,7 +86,7 @@ class ImageReferenceCheckFunctionalTest {
         fixture.file(
             CATALOG,
             catalog("image-axonserver = \"$AXONSERVER\"", "imagemagick = \"7.1\"") +
-                "\n[libraries]\nimage-lib = \"not:an@image\"\n",
+                "\n[libraries]\nimage-lib = \"org.example:lib:1.0\"\n",
         )
 
         val result = fixture.run(TASK)
