@@ -104,7 +104,6 @@ Plans:
 **Plans:** 23 plans
 
 Plans:
-
 **Wave 1**
 - [ ] 02-01-PLAN.md — Tracer: `:contracts-kernel` (TypeID codec, `CourseId`/`StudentId` with the parse API) through the new `courses.test-suites` convention
 - [ ] 02-02-PLAN.md — MCP servers Context7 and Playwright pinned through mise after the legitimacy and AIDEV-04 approval checkpoint
@@ -149,6 +148,9 @@ Plans:
 
 **Wave 11** *(blocked on Wave 10 completion)*
 - [ ] 02-23-PLAN.md — ADR-0005..ADR-0014 (spike outcomes and implementation decisions), quick-start link, IDEM-04 wording
+
+**Cross-cutting constraints:** <!-- gsd:generated -->
+- Every record that targets an upstream project contains an issue draft with a minimal reproduction and no private data; existing upstream issues are linked instead of drafted (UPS-03)
 
 **Research**: Yes. Topics: licence behaviour of the pinned Axon Server (12-hour vs 14-day limit, restart, licence delivery via AxonIQ Platform), DCB container setup, protobuf and Gradle alignment, the Kotlin tag and Jackson round-trip, the decision-record decorator spike, TypeID library maturity (Kotlin and TypeScript), Paketo pnpm support.
 **Approval gates**: Third-party skills and MCP servers (AIDEV-01, AIDEV-04) and upstream issue publication (UPS-03) require explicit author approval.

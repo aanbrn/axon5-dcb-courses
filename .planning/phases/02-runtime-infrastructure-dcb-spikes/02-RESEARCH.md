@@ -544,7 +544,7 @@ Body sections (template): Symptom, Minimal reproduction, Root cause, Workaround 
 
 **Marker:** `UPSTREAM: UP-NNNN` in a comment next to the workaround. Consistency rules (two directions): every marker names an existing record; records with `workaround: true` and status in {`open`, `reported`, `fixed-upstream`} have at least one marker; records with status `workaround-removed` or `workaround: false` have none. **`wont-fix` with `workaround: true` keeps its markers** (the workaround becomes permanent); UPS-02 says "closed records have none", so confirm this reading with the author (Open Question 4). Scanner scope: tracked sources excluding `docs/upstream/**`, `docs/templates/**`, `.planning/**`, `.claude/**` and the check's own functional-test fixtures (they contain marker text); anchor the regex to a comment context to avoid prose false positives.
 
-**Check implementation:** `@CacheableTask` in the governance package (governed path), wired into `courses.governance.gradle.kts`, with a shared `FrontMatter` object used by the ADR check (D-33/D-38). Build-logic carries no YAML library (the `ToolingTableCheck` precedent avoids a TOML parser), so the front-matter parser is a documented subset parser: `key: scalar` and `key: [a, b]`, quoted or bare strings, `null`; any other construct fails the check with the line. The index for the docs site is generated later (Phase 13); Phase 2 can emit `build/reports/governance/upstream-index.md` from the same parse.
+**Check implementation:** `@CacheableTask` in the governance package (governed path), wired into `courses.governance.gradle.kts`, with a shared `FrontMatter` object used by the ADR check (D-33/D-38). Build-logic carries no YAML library (the `ToolingTableCheck` precedent avoids a TOML parser), so the front-matter parser is a documented subset parser: `key: scalar` and `key: [a, b]`, quoted or bare strings, `null`; any other construct fails the check with the line. Phase 2 emits the site-ready index `build/reports/governance/upstream-index.md` from the same parse; the documentation site includes it once the site exists, from its skeleton in Phase 5 (ROADMAP Phase 5 success criterion 3), which is the target plan 02-15 records. (Revised during planning: an earlier draft of this note named Phase 13.)
 
 **UPS-04 PR job (D-32):** a `pull_request` job in `ci.yml` (so under the required `ci-success`, `permissions: contents: read`) runs `scripts/upstream/changed-dependencies.sh <base-sha>`: `git diff` of `gradle/libs.versions.toml`, `mise.toml`, `gradle/wrapper/gradle-wrapper.properties`, `.nvmrc`, `.java-version`, `package.json`/`pnpm-lock.yaml` (later), extracts the changed **keys** (catalog `[versions]` aliases and mise tool keys), matches them against the `product` field of open records, and for each hit prints id, status and removal criteria to `$GITHUB_STEP_SUMMARY` and as `::warning title=Upstream record UP-NNNN::...`. It never fails and never comments (read-only token). Sanitise record text before emitting workflow commands (record content is repository-controlled, so strip `%`, CR and LF). Products without a pinned key (colima, GSD) simply never match: say so in the template. Tests: shell tests auto-discovered by the existing CI step (`scripts/test-*.sh`, `scripts/*/test-*.sh`).
 
@@ -850,23 +850,35 @@ mise x -- context7-mcp --help      # resolves node_modules/.bin/context7-mcp fro
 | A15 | `kotest-property` with Kotest 6.2.7 needs no extra runtime beyond transitive coroutines under JUnit | Standard stack | Low: prototype ran |
 | A16 | Reuse of the Axon Server container across Gradle module JVMs (reuse flag) behaves as the shared holder's comments describe | Pattern 2 | Low: reuse is local and optional |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+Every question below is resolved; each carries its resolution in a **RESOLVED** line.
 
 1. **Where do the Axon wiring and the permanent Axon Server tests live in Phase 2?**
+   - **RESOLVED → D-43:** `backend/command-service` is created in Phase 2 as a plain Kotlin library that holds the wiring and the permanent Axon Server tests; Phase 3 turns it into the Spring Boot command service (plans 02-07 and 02-09).
    - Known: D-12 moves the INFRA-04 conflict test, the INFRA-06 round trip and the decision-capture test into real modules; DEMO-01 itself is Phase 3; no service module exists yet; spike code is `KotlinTagResolver`, capture decorator, retry enhancer, ID entity registration.
    - Unclear: a module for them. Contracts must stay Axon-free at runtime (D-04).
    - Recommendation: create `:command-service` (`backend/command-service`) as a plain Kotlin library in Phase 2 holding `KotlinTagResolver`, the capture decorator with an in-memory recorder interface, the retry `ConfigurationEnhancer`, and the integration tests; Phase 3 turns it into the Spring Boot application and persists records. INFRA-04 test body should use only the public append/source API. Confirm with the author because it is the first service-module code.
 2. **Where does the shared Jackson module live and how do sealed results get type info?**
    - Known: spike 002 used a mix-in inside one module referencing all contract types; D-02's graph says the query service must not depend on commands and the BFF must not depend on events.
    - Recommendation: `:serialization-jackson` (`backend/serialization`) depending on the kernel only (id serializers, `jackson-databind`, `jackson-module-kotlin`), with `@JsonTypeInfo` placed directly on sealed result types as a `compileOnly` `jackson-annotations` metadata annotation in `:contracts-commands` (extends D-04's metadata rule to Jackson annotations). The spike's mix-in design (no Jackson in contracts) is the alternative but forces one module to depend on every contract kind. Needs the author's choice.
+   - **RESOLVED → D-44:** `@JsonTypeInfo` sits directly on the sealed result types, with `jackson-annotations` as a `compileOnly` metadata dependency of the contracts; `:serialization-jackson` depends on the kernel only; the mix-in design is the rejected alternative (plan 02-06, ADR-0007 in plan 02-23).
 3. **Konsist 1.0.0-beta.1 or 0.18.1?** Recommendation: beta.1, with `strict = true` rules and the scope sanity test; revert to 0.18.1 if the API surface used here is missing.
+   - **RESOLVED → plan 02-11:** Konsist 1.0.0-beta.1 with `strict = true` rules and the scope sanity test; 0.18.1 is the recorded fallback if an API the rules need is missing.
 4. **UPS-02 semantics for `wont-fix`.** A workaround that must stay forever keeps its markers; UPS-02 reads "closed records have none". Recommendation: only `workaround-removed` forbids markers; confirm.
+   - **RESOLVED → D-45:** only records whose workaround has been removed forbid markers; a `wont-fix` record keeps its markers (plan 02-15).
 5. **How deep must the D-26 smoke go?** Recommendation: host scenario functional (the INFRA-04 test against `localhost:8124`) plus network reachability from a sibling container; real in-network gRPC clients arrive with Phase 3/6 services. Escalate only if the author wants a probe container with the spike's JRE image.
+   - **RESOLVED → D-46:** the host scenario is verified functionally and the compose scenario at network level; in-network gRPC clients arrive with the Phase 3 and Phase 6 services (plans 02-10 and 02-12).
 6. **`.env.example` wording.** D-25 says "an empty value"; verified behaviour requires a commented line. Recommendation: commented line plus explanation; update the D-25 wording in ADR-0005.
+   - **RESOLVED → D-47:** `.env.example` carries the token line commented out with an explanation, compose passes it as a bare entry, and `doctor` fails on an empty definition (plans 02-12 and 02-14, ADR-0005 in plan 02-23).
 7. **IDEM-04 text.** Replace "Kotlin and TypeScript generators come from vetted libraries" with "Kotlin uses an own codec verified against the official vectors (no mature JVM library); TypeScript uses the official `typeid-js`" and record it in ADR-0007.
+   - **RESOLVED → plan 02-23, Task 3:** the IDEM-04 wording in `.planning/REQUIREMENTS.md` is corrected and ADR-0007 records the own codec.
 8. **Claude Code upgrade** to ≥ 2.1.324 before the SHA-pinned marketplace settings merge (author action).
+   - **RESOLVED → plan 02-05 checkpoint:** the author upgrades Claude Code before approving the SHA-pinned marketplaces; `doctor` checks the minimum version (plan 02-14).
 9. **Spring Tools plugin** deferred; revisit after it offers a pinnable source.
+   - **RESOLVED → plan 02-05:** the survey records a "deferred" verdict for the Spring Tools plugin until it offers a pinnable source.
 10. **Renovate for the SHA-pinned marketplace refs:** a regex manager on `.claude/settings.json` (git-refs datasource) is plausible but untested; recommendation: manual deliberate updates, listed in the inventory.
+    - **RESOLVED → plan 02-05:** marketplace refs are updated manually through deliberate pull requests that change the SHA, as listed in the tooling inventory; no Renovate regex manager.
 
 ## Environment Availability
 
