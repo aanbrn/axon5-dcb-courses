@@ -66,8 +66,11 @@ jobs:
       # Compile, unit and component tests (Testcontainers needs only the runner's Docker), TestKit tests,
       # Spotless, detekt, Dokka and the governance checks. The integration tests run in the parallel
       # `integration-test` job (D-20). Build Scans are never published from CI.
+      # `checkDependencyLicences` is named although `check` already runs it in every module: Gradle fails
+      # with "Task 'checkDependencyLicences' not found" when no module registers it, so a build that lost
+      # the licence gate fails instead of skipping it. The check does not run a second time.
       - name: Build
-        run: ./gradlew build -x integrationTest --console=plain
+        run: ./gradlew build checkDependencyLicences -x integrationTest --console=plain
 
       - name: Upload build reports
         if: failure()
