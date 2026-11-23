@@ -61,8 +61,8 @@ lenient. The jk1 report plugin stays the documented fallback and was not needed.
   and a written reason: `io.axoniq:axonserver-connector-java`, `io.axoniq.framework:axon-server-connector`,
   `io.axoniq.framework:axoniq-distributed-messaging`, `io.axoniq.framework:axoniq-framework-bom` and
   `io.axoniq.framework:axoniq-testcontainer` (test scope). An exception matches one artifact, never a pattern. The policy
-  refuses to be weakened: a wildcard exception, a blank text or reason, and an alias that resolves to a forbidden licence
-  make it invalid.
+  refuses to be weakened: a wildcard exception, a blank text or reason, an alias that resolves to a forbidden licence,
+  and an allowed identifier that matches a forbidden family make it invalid.
 - **`NOTICE` mirrors the exceptions.** It carries the third-party attributions and the Axoniq terms, and `checkNotice` fails
   when an exception artifact or the terms URL is missing, so a new exception cannot land without its attribution.
 - **Governed gate.** `courses.licences.gradle.kts` is a governed path with an ask rule, so changing it needs the

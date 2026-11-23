@@ -90,19 +90,21 @@ internal class LicencePolicy(
          * Reads the policy at [file].
          *
          * @throws GradleException when the file is not valid JSON or breaks a rule of the policy format: an exception
-         *   without a reason, an exception for a pattern instead of one artifact, or an alias that resolves to a
-         *   forbidden licence.
+         *   without a reason, an exception for a pattern instead of one artifact, an alias that resolves to a forbidden
+         *   licence, or an allowed identifier that matches a forbidden family. The gate is membership of `allowed`, so
+         *   a policy must not list an identifier that its own `forbidden` patterns refuse.
          */
         fun read(file: File): LicencePolicy {
             val root = parse(file) as? Map<*, *> ?: throw GradleException("${file.name} must hold a JSON object")
+            val allowed = strings(root, "allowed")
             val forbidden = strings(root, "forbidden").map(::globToRegex)
             val aliases = (root["aliases"] as? Map<*, *>).orEmpty().entries.associate { "${it.key}" to "${it.value}" }
             val exceptions = (root["exceptions"] as? List<*>).orEmpty().map(::exceptionOf)
-            val problems = formatProblems(forbidden, aliases, exceptions)
+            val problems = formatProblems(allowed, forbidden, aliases, exceptions)
             if (problems.isNotEmpty()) {
                 throw GradleException("${file.name} is invalid:\n" + problems.joinToString("\n") { "  $it" })
             }
-            return LicencePolicy(strings(root, "allowed").toSet(), forbidden, aliases, exceptions)
+            return LicencePolicy(allowed.toSet(), forbidden, aliases, exceptions)
         }
 
         private fun parse(file: File): Any? =
@@ -125,6 +127,7 @@ internal class LicencePolicy(
         }
 
         private fun formatProblems(
+            allowed: List<String>,
             forbidden: List<Regex>,
             aliases: Map<String, String>,
             exceptions: List<LicenceException>,
@@ -132,6 +135,9 @@ internal class LicencePolicy(
             aliases
                 .filterValues { target -> forbidden.any { it.matches(target) } }
                 .forEach { (name, target) -> add("alias '$name' resolves to the forbidden licence '$target'") }
+            allowed
+                .filter { id -> forbidden.any { it.matches(id) } }
+                .forEach { id -> add("'$id' is allowed, but matches a forbidden family") }
             exceptions.forEach { addAll(exceptionProblems(it)) }
         }
 

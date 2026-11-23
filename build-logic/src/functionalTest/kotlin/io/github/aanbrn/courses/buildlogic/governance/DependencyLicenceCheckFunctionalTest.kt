@@ -174,6 +174,16 @@ class DependencyLicenceCheckFunctionalTest {
     }
 
     @Test
+    fun `an allowed identifier that matches a forbidden family is rejected`() {
+        val policy = """{ "allowed": ["Apache-2.0", "GPL-3.0-only"], "forbidden": ["GPL-*", "AGPL-*"] }"""
+
+        val output = fixture(bom(component("lib", id("MIT"))), policy).runAndFail(TASK).output
+
+        output shouldContain "policy.json is invalid"
+        output shouldContain "'GPL-3.0-only' is allowed, but matches a forbidden family"
+    }
+
+    @Test
     fun `a module with the library convention writes its own SBOM and passes under the isolated projects flags`() {
         val fixture = GradleFixture.standard(projectDir)
 
