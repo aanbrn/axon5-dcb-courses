@@ -268,6 +268,15 @@ class AdrCheckFunctionalTest {
     }
 
     @Test
+    fun `a tilde line inside a backtick fence does not close it`() {
+        val fixture = fixture()
+        val fenced = adr(sections = SECTIONS - "Considered Options") + "\n```text\n~~~\n## Considered Options\n```\n"
+        fixture.adr("0001-a.md", fenced)
+
+        fixture.fails() shouldContain "missing the section `## Considered Options`"
+    }
+
+    @Test
     fun `a malformed front matter fails with the file and the line`() {
         val fixture = fixture()
         fixture.adr("0001-a.md", adr("consulted" to "[]\n  nested: value"))

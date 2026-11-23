@@ -121,6 +121,16 @@ class UpstreamRecordCheckFunctionalTest {
     }
 
     @Test
+    fun `a tilde line inside a backtick fence does not close it`() {
+        val fixture = fixture()
+        val fenced = record(sections = SECTIONS - "Root cause") + "\n```text\n~~~\n## Root cause\n```\n"
+        fixture.upstream("0001-a.md", fenced)
+        fixture.file("src/A.kt", "// UPSTREAM: UP-0001 workaround\n")
+
+        fixture.fails() shouldContain "missing the section `## Root cause`"
+    }
+
+    @Test
     fun `an id must match UP-NNNN exactly and the file name NNNN-slug`() {
         val fixture = fixture()
         fixture.upstream("0001-lower.md", record("id" to "\"up-0001\""))
