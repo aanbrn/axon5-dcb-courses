@@ -19,7 +19,11 @@
 #
 # Outside the boundary, on purpose:
 #   - module convention plugins: under isolated projects they cannot reach the root project's
-#     tasks, and checkBuildScripts rejects allprojects, subprojects and afterEvaluate;
+#     tasks, and checkBuildScripts rejects allprojects, subprojects and afterEvaluate. The one
+#     exception is courses.licences, which registers a per-module governance check
+#     (checkDependencyLicences) and is governed below. The line in courses.kotlin-library that
+#     applies it stays outside, like every module convention plugin, and CI names the task
+#     explicitly, so dropping that line fails CI instead of switching the gate off silently;
 #   - functional tests: a deleted test cannot make a check pass;
 #   - the version catalog (gradle/libs.versions.toml): dependency integrity is CICD-05 in
 #     Phase 6, and the catalog carries the D-12 automerge updates;
@@ -111,7 +115,9 @@ scripts/apply-github-settings.sh
 scripts/governance/**
 
 # The Gradle governance checks and their wiring: dropping a check from `check` switches it off.
+# courses.licences registers the per-module licence check and wires it into `check`.
 build-logic/src/main/kotlin/courses.governance.gradle.kts
+build-logic/src/main/kotlin/courses.licences.gradle.kts
 build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/governance/**
 
 # Root build configuration. It applies the checks, selects the build that provides them and
@@ -132,6 +138,9 @@ build-logic/settings.gradle.kts
 build-logic/settings.gradle
 build-logic/src/main/kotlin/courses.root.gradle.kts
 build-logic/src/main/kotlin/courses.settings.settings.gradle.kts
+
+# The detekt rule set: an edit to it alone can switch rules off, so detekt passes without evaluating them.
+config/detekt/**
 
 # The launcher CI runs the checks with. A no-op gradlew alone would make the build step green.
 gradlew
