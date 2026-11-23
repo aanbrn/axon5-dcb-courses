@@ -7,7 +7,9 @@ import io.github.aanbrn.courses.contracts.kernel.Tags
 import io.github.aanbrn.courses.contracts.kernel.fixtures.TestIds
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldNotContain
+import org.axonframework.eventsourcing.eventstore.AnnotationBasedTagResolver
 import org.axonframework.messaging.core.MessageType
 import org.axonframework.messaging.eventhandling.GenericEventMessage
 import org.axonframework.messaging.eventstreaming.Tag
@@ -31,6 +33,16 @@ class KotlinTagResolverTest {
 
         tags.forEach { it.value() shouldNotContain course.uuid.toString() }
         tags.forEach { it.value() shouldNotContain student.uuid.toString() }
+    }
+
+    @Test
+    fun `Axon's own resolver tags the raw UUID, which is why the custom resolver exists`() {
+        val axonTags = AnnotationBasedTagResolver().resolve(event(StudentSubscribed(course, student)))
+        val ourTags = resolver.resolve(event(StudentSubscribed(course, student)))
+
+        axonTags shouldBe
+            setOf(Tag.of(Tags.COURSE, course.uuid.toString()), Tag.of(Tags.STUDENT, student.uuid.toString()))
+        ourTags shouldNotBe axonTags
     }
 
     @Test

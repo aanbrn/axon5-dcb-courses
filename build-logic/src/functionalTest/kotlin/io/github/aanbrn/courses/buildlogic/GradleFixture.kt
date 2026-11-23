@@ -52,6 +52,11 @@ class GradleFixture(private val projectDir: Path) {
         return Files.copy(repoRoot.resolve(relativePath), target)
     }
 
+    /** Placeholder until the implementation commit: leaves the catalog as it is. */
+    fun changeCatalog(transform: (String) -> String) {
+        transform("")
+    }
+
     /** Adds the project with the given Gradle [projectPath], for example `:lib`, to the build. */
     fun include(projectPath: String) {
         includedProjects += projectPath
