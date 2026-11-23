@@ -4,6 +4,7 @@ plugins {
     id("org.jetbrains.kotlin.jvm")
     id("dev.detekt")
     id("org.jetbrains.dokka")
+    id("courses.licences")
 }
 
 // Every `implementation` and `*Implementation` configuration (main, test, and the test suites and
