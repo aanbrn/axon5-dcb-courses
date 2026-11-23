@@ -1,6 +1,6 @@
 ---
 status: "accepted"
-date: "2026-11-21"
+date: "2026-11-23"
 decision-makers: ["repository author (decision D-14 and the planner web-search setting)"]
 ---
 
@@ -89,6 +89,38 @@ Mitigations:
   repository.
 - Only the planner has the tool.
 - The maintainer reviews the diff of every pull request ([ADR-0003](0003-governance-gate-trust-boundary.md)).
+
+### Decision: GSD agents load skills through `agent_skills`
+
+`agent_skills` maps a GSD agent to the skills GSD injects into that agent's context at every spawn. The author
+approved the mapping below on 2026-11-23, after the skills survey of plan 02-05 (decision D-41). A project skill is
+referenced by its directory path. A plugin skill is referenced as `global:<plugin>:<skill>`, and GSD emits it on
+the Claude runtime only.
+
+| Agent                  | Skills                                                                    | Reason                                                                              |
+| ---------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `gsd-planner`          | spike findings, `axoniq-app-dev` (Axon), `gradle-best-practices` (Gradle) | Plans must reflect the proven Axon, DCB and build facts and conventions.            |
+| `gsd-executor`         | spike findings, `axoniq-app-dev`, `gradle-best-practices`                 | It writes the Kotlin and Axon code and the Gradle changes.                          |
+| `gsd-phase-researcher` | spike findings, `axoniq-app-dev`                                          | Research starts from verified facts and Axon 5 guidance.                            |
+| `gsd-pattern-mapper`   | spike findings                                                            | It maps new work to the patterns the spikes proved.                                 |
+| `gsd-code-reviewer`    | spike findings, `gradle-best-practices`                                   | It reviews code and build files against the proven constraints and build practices. |
+| `gsd-verifier`         | spike findings                                                            | It checks the result against verified requirements and constraints.                 |
+
+The spike findings skill is the project's own `spike-findings-axon5-dcb-courses`. The two plugin skills come from
+the plugins approved in plan 02-05: `axoniq-app-dev` from `AxonIQ/agent-skills` at commit `59e7beb` and
+`gradle-best-practices` from `gradle/gradle-skills` at commit `00b7790`. The `gradle-wrapper-upgrade` skill of
+the Gradle plugin is deliberately not mapped: no agent needs it, because wrapper upgrades are not agent work.
+
+Caveats:
+
+- Plugin skills are machine-specific. They resolve only where the plan 02-05 plugins are installed. On the author's
+  machine they are not installed yet, because the `/plugin` step is a pending human check, so the `global:`
+  entries have no effect until then: GSD still tells the agent to load them, and the load finds no such skill.
+  The project skill is tracked in the repository and always resolves.
+- `axoniq-app-dev` targets Axon 5.2.x while the project pins 5.4.2. Where the plugin guidance and the project
+  disagree, the spike findings skill and the ADRs win.
+- The mapped skills enter every agent spawn, so the mapping is a trust boundary. It is limited to the project skill
+  and the approved plugins, and the whole-file policy pin makes any change a reviewed diff.
 
 ### Consequences
 
