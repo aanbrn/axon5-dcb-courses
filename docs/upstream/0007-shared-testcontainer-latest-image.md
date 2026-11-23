@@ -2,10 +2,10 @@
 id: "UP-0007"
 product: "axon"
 product-version: "5.4.2"
-status: "open"
+status: "reported"
 workaround: true
-upstream: []
-reported: null
+upstream: ["https://github.com/AxonIQ/axoniq-framework/issues/812"]
+reported: "2026-11-23"
 updated: "2026-11-23"
 ---
 
@@ -68,8 +68,7 @@ run, `docker ps --format '{{.Image}}'` shows the tag and digest of the catalog i
 
 ## Upstream issue draft
 
-Target: `AxonIQ/axoniq-framework`, as an enhancement request. Not published; publication needs the approval of the
-author (plan 02-22).
+Target: `AxonIQ/axoniq-framework`, as an enhancement request. Published as https://github.com/AxonIQ/axoniq-framework/issues/812 on 2026-11-23.
 
 ### Let SharedAxonServerContainer use a pinned Axon Server image
 

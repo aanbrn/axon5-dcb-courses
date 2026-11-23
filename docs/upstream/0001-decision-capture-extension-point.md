@@ -2,10 +2,10 @@
 id: "UP-0001"
 product: "axon"
 product-version: "5.4.2"
-status: "open"
+status: "reported"
 workaround: true
-upstream: []
-reported: null
+upstream: ["https://github.com/AxonIQ/AxonFramework/issues/5326"]
+reported: "2026-11-23"
 updated: "2026-11-23"
 ---
 
@@ -84,8 +84,7 @@ unchanged, and `grep -rn "eventstore.EventStorageEngine" backend/command-service
 
 ## Upstream issue draft
 
-Target: `AxonIQ/AxonFramework`, as a feature request. Not published; publication needs the approval of the author
-(plan 02-22).
+Target: `AxonIQ/AxonFramework`, as a feature request. Published as https://github.com/AxonIQ/AxonFramework/issues/5326 on 2026-11-23.
 
 ### Public extension point to observe the conditional append of a decision
 

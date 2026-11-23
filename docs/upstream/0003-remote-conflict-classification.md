@@ -2,10 +2,10 @@
 id: "UP-0003"
 product: "axon"
 product-version: "5.4.2"
-status: "open"
+status: "reported"
 workaround: true
-upstream: []
-reported: null
+upstream: ["https://github.com/AxonIQ/axoniq-framework/issues/811"]
+reported: "2026-11-23"
 updated: "2026-11-23"
 ---
 
@@ -78,8 +78,7 @@ the same command.
 
 ## Upstream issue draft
 
-Target: `AxonIQ/axoniq-framework`, where the connector converts the remote error, as an enhancement request. Not
-published; publication needs the approval of the author (plan 02-22).
+Target: `AxonIQ/axoniq-framework`, where the connector converts the remote error, as an enhancement request. Published as https://github.com/AxonIQ/axoniq-framework/issues/811 on 2026-11-23.
 
 ### A dispatch-side retry cannot recognise a DCB conflict that arrives from Axon Server
 

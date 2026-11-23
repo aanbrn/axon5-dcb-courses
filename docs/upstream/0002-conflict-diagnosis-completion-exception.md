@@ -2,10 +2,10 @@
 id: "UP-0002"
 product: "axon"
 product-version: "5.4.2"
-status: "open"
+status: "reported"
 workaround: true
-upstream: []
-reported: null
+upstream: ["https://github.com/AxonIQ/AxonFramework/issues/5327"]
+reported: "2026-11-23"
 updated: "2026-11-23"
 ---
 
@@ -101,8 +101,7 @@ record still names the conflicting event.
 
 ## Upstream issue draft
 
-Target: `AxonIQ/AxonFramework`, as a bug report. Not published; publication needs the approval of the author
-(plan 02-22).
+Target: `AxonIQ/AxonFramework`, as a bug report. Published as https://github.com/AxonIQ/AxonFramework/issues/5327 on 2026-11-23.
 
 ### ConflictDiagnosingEventStorageEngine never diagnoses a rejection that arrives as a CompletionException
 

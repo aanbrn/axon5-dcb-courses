@@ -2,10 +2,10 @@
 id: "UP-0004"
 product: "axon"
 product-version: "5.4.2"
-status: "open"
+status: "reported"
 workaround: true
-upstream: []
-reported: null
+upstream: ["https://github.com/AxonIQ/AxonFramework/issues/5328"]
+reported: "2026-11-23"
 updated: "2026-11-23"
 ---
 
@@ -83,8 +83,7 @@ still see their events through criteria built from the TypeIDs.
 
 ## Upstream issue draft
 
-Target: `AxonIQ/AxonFramework` (the Kotlin extension lives in the same ecosystem), as a bug report. Not published;
-publication needs the approval of the author (plan 02-22).
+Target: `AxonIQ/AxonFramework` (the Kotlin extension lives in the same ecosystem), as a bug report. Published as https://github.com/AxonIQ/AxonFramework/issues/5328 on 2026-11-23.
 
 ### AnnotationBasedTagResolver tags the unboxed value of a Kotlin value-class property
 
