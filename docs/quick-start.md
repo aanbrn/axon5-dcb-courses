@@ -11,6 +11,18 @@ in containers. The domain services arrive in later phases and join the same comp
 
 No `.env` file and no Gradle run are needed in a fresh clone.
 
+## Check your environment
+
+Run the diagnosis once before the first start, and again whenever something fails for no obvious reason:
+
+```shell
+scripts/doctor.sh
+```
+
+It prints every check as `ok`, `warn`, `fail` or `skip`, and a `fix:` line with the exact command under each problem. It
+never changes anything. Its last step runs `./gradlew doctor`, so it needs the JDK that mise provides; if you only want
+the runtime, you can skip it. What it checks is described in [Tooling](tooling.md#environment-check-doctor).
+
 ## Start
 
 From the repository root:
