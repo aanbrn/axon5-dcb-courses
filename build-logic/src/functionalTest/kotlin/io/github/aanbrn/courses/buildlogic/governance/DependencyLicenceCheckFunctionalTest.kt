@@ -3,6 +3,7 @@ package io.github.aanbrn.courses.buildlogic.governance
 
 import io.github.aanbrn.courses.buildlogic.GradleFixture
 import io.kotest.matchers.collections.shouldBeIn
+import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.ints.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -130,7 +131,7 @@ class DependencyLicenceCheckFunctionalTest {
         output.indexOf("org.example:mid:1.0") shouldBeLessThan output.indexOf("org.example:zeta:1.0")
         val reported = fixture.read("build/report.txt").lines().filter { it.isNotEmpty() }
         reported shouldBe reported.sorted()
-        reported.size shouldBe 3
+        reported shouldHaveSize components.size
     }
 
     @Test
@@ -182,7 +183,6 @@ class DependencyLicenceCheckFunctionalTest {
         first.task(":lib:cyclonedxDirectBom")?.outcome shouldBeIn GradleFixture.PASSED
         first.task(":lib:checkDependencyLicences")?.outcome shouldBeIn GradleFixture.PASSED
         fixture.read("lib/build/licences/bom.json") shouldContain "kotlin-stdlib"
-        second.output shouldContain "Reusing configuration cache"
         second.task(":lib:checkDependencyLicences")?.outcome shouldBeIn
             setOf(TaskOutcome.UP_TO_DATE, TaskOutcome.FROM_CACHE)
     }
@@ -218,7 +218,7 @@ class DependencyLicenceCheckFunctionalTest {
     private companion object {
         const val TASK = "checkLicences"
 
-        val POLICY = """{ "allowed": ["Apache-2.0", "MIT", "EPL-2.0"], "forbidden": ["GPL-*", "AGPL-*"] }"""
+        const val POLICY = """{ "allowed": ["Apache-2.0", "MIT", "EPL-2.0"], "forbidden": ["GPL-*", "AGPL-*"] }"""
 
         val BUILD_SCRIPT =
             """

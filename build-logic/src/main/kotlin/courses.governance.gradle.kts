@@ -6,6 +6,7 @@ import io.github.aanbrn.courses.buildlogic.governance.ConfigPolicyCheck
 import io.github.aanbrn.courses.buildlogic.governance.DaemonJvmConsistencyCheck
 import io.github.aanbrn.courses.buildlogic.governance.GeneratedFileCheck
 import io.github.aanbrn.courses.buildlogic.governance.ImageReferenceCheck
+import io.github.aanbrn.courses.buildlogic.governance.NoticeCheck
 import io.github.aanbrn.courses.buildlogic.governance.PrTemplateCheck
 import io.github.aanbrn.courses.buildlogic.governance.ToolingTableCheck
 
@@ -123,6 +124,17 @@ val checkImageReferences =
         report.set(reports.map { it.file("image-references.txt") })
     }
 
+// Every exception of the licence policy and the Axoniq terms URL must appear in NOTICE (CICD-09, D-31). The per-module
+// check `checkDependencyLicences` (courses.licences) reads the same policy.
+val checkNotice =
+    tasks.register<NoticeCheck>("checkNotice") {
+        group = "verification"
+        description = "Fails when NOTICE does not name every exception of governance/dependency-licences.json."
+        policy.set(layout.projectDirectory.file("governance/dependency-licences.json"))
+        notice.set(layout.projectDirectory.file("NOTICE"))
+        report.set(reports.map { it.file("notice.txt") })
+    }
+
 tasks.named("check") {
     dependsOn(
         checkGsdConfigPolicy,
@@ -133,5 +145,6 @@ tasks.named("check") {
         checkToolingInventory,
         checkComposeVersions,
         checkImageReferences,
+        checkNotice,
     )
 }
