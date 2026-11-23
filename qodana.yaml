@@ -29,7 +29,7 @@ exclude:
       - build
       - build-logic/build
       - platform/build
-      - tooling/convention-sample/build
+      - backend/contracts/kernel/build
       - .gradle
       - build-logic/.gradle
       - .kotlin

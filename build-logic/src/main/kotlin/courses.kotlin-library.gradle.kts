@@ -6,8 +6,6 @@ plugins {
     id("org.jetbrains.dokka")
 }
 
-val libs = the<org.gradle.accessors.dm.LibrariesForLibs>()
-
 // Every `implementation` and `*Implementation` configuration (main, test, and the test suites and
 // fixtures later phases add) is aligned through the `:platform` module (INFRA-11).
 val platformProject = dependencies.project(":platform")
@@ -15,12 +13,6 @@ val platformProject = dependencies.project(":platform")
 configurations
     .matching { it.name == "implementation" || it.name.endsWith("Implementation") }
     .configureEach { this.dependencies.add(project.dependencies.platform(platformProject)) }
-
-dependencies {
-    testImplementation(libs.junit.jupiter)
-    testRuntimeOnly(libs.junit.platform.launcher)
-    testImplementation(libs.kotest.assertions.core)
-}
 
 // The root directory through the isolated-projects view, the only safe way to read root files under isolated
 // projects. Gradle still marks `Project.isolated` @Incubating; a Gradle upgrade that changes it fails this build

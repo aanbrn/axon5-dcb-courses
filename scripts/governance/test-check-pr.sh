@@ -858,7 +858,7 @@ boundary_case \
 boundary_case gradle/libs.versions.toml ungoverned
 boundary_case gradlew.bat ungoverned
 boundary_case scripts/test-apply-github-settings.sh ungoverned
-boundary_case tooling/convention-sample/build.gradle.kts ungoverned
+boundary_case backend/contracts/kernel/build.gradle.kts ungoverned
 
 # Alternate Renovate config names and mise files (WR-07).
 boundary_case renovate.json governed
@@ -891,7 +891,7 @@ boundary_case .config/miserc.toml governed
 # lockfile of an alternate mise config, a mise config below the root and a nested package.json.
 boundary_case mise.ci.toml ungoverned
 boundary_case mise.local.lock ungoverned
-boundary_case tooling/convention-sample/mise.toml ungoverned
+boundary_case backend/contracts/kernel/mise.toml ungoverned
 boundary_case frontend/package.json ungoverned
 
 # A root renovate.json beats the governed renovate.json5, and the file does not exist yet: adding it

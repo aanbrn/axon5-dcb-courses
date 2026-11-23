@@ -22,12 +22,12 @@ into `profile-out/`, or into `profile-out-2/` and so on when that directory alre
 delete it first. Both directories are ignored by git and excluded from every formatter, so they
 never need cleaning up for the build to pass. Remove them when you are done.
 
-| Scenario           | Tasks      | What it measures                                                            |
-| ------------------ | ---------- | --------------------------------------------------------------------------- |
-| `clean_build`      | `build`    | The root project cleaned, the build cache bypassed, then built and checked  |
-| `noop_build`       | `build`    | A build with nothing changed, which may do up-to-date checks only           |
-| `abi_change`       | `assemble` | An API change to `Greeting.kt`, so incremental compilation and its fan-out  |
-| `config_cache_hit` | `help`     | Configuration only: the configuration cache entry reused for a trivial task |
+| Scenario           | Tasks      | What it measures                                                                  |
+| ------------------ | ---------- | --------------------------------------------------------------------------------- |
+| `clean_build`      | `build`    | The root project cleaned, the build cache bypassed, then built and checked        |
+| `noop_build`       | `build`    | A build with nothing changed, which may do up-to-date checks only                 |
+| `abi_change`       | `assemble` | An API change to the kernel's `TypeId.kt`, so incremental compilation and fan-out |
+| `config_cache_hit` | `help`     | Configuration only: the configuration cache entry reused for a trivial task       |
 
 ## Speed-ups in place
 
@@ -72,7 +72,7 @@ The value is the median of the measured builds in milliseconds; warm-ups are not
 | ---------------- | ----------- | -------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | clean_build      | 4812        | 1        | 3               | The first warm-up took 115 s because it also ran every TestKit functional test of the included `build-logic` build. A clean root build then reuses those results. |
 | noop_build       | 328         | 2        | 5               | Up-to-date checks only. The first warm-up took 6.8 s, which is configuration and the cold daemon.                                                                 |
-| abi_change       | 278         | 2        | 5               | Recompiles `convention-sample`, rebuilds its jar and runs nothing else. The builds got faster as the daemon warmed up (313 ms down to 253 ms).                    |
+| abi_change       | 448         | 2        | 5               | Re-measured on 2026-11-23 on `contracts-kernel`, which replaced the retired sample module. Recompiles it, rebuilds its jar and runs nothing else (401 to 558 ms). |
 | config_cache_hit | 70          | 2        | 8               | The configuration cache entry is reused. The first warm-up took 5.8 s, because it computed the task graph and stored the entry.                                   |
 
 How to read it: `noop_build` is the number to protect, because it is what every contributor pays

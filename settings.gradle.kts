@@ -15,7 +15,6 @@ rootProject.name = "axon5-dcb-courses"
 include(
     ":platform",
     ":contracts-kernel",
-    ":tooling:convention-sample",
 )
 
 project(":contracts-kernel").projectDir = file("backend/contracts/kernel")
