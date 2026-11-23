@@ -15,6 +15,18 @@ rootProject.name = "axon5-dcb-courses"
 include(
     ":platform",
     ":contracts-kernel",
+    ":contracts-events",
+    ":contracts-commands",
+    ":contracts-queries",
+    ":serialization-jackson",
 )
 
 project(":contracts-kernel").projectDir = file("backend/contracts/kernel")
+
+project(":contracts-events").projectDir = file("backend/contracts/events")
+
+project(":contracts-commands").projectDir = file("backend/contracts/commands")
+
+project(":contracts-queries").projectDir = file("backend/contracts/queries")
+
+project(":serialization-jackson").projectDir = file("backend/serialization-jackson")

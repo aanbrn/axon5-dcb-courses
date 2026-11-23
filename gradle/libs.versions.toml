@@ -41,6 +41,12 @@ junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 kotest-assertions-core = { module = "io.kotest:kotest-assertions-core" }
 kotest-property = { module = "io.kotest:kotest-property" }
+axon-messaging = { module = "org.axonframework:axon-messaging" }
+axon-eventsourcing = { module = "org.axonframework:axon-eventsourcing" }
+# Still the 2.x annotations package under Jackson 3; the Jackson BOM manages its version.
+jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations" }
+jackson-databind = { module = "tools.jackson.core:jackson-databind" }
+jackson-module-kotlin = { module = "tools.jackson.module:jackson-module-kotlin" }
 jackson-dataformat-yaml = { module = "tools.jackson.dataformat:jackson-dataformat-yaml" }
 java-uuid-generator = { module = "com.fasterxml.uuid:java-uuid-generator", version.ref = "java-uuid-generator" }
 
