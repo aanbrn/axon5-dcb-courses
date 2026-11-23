@@ -8,6 +8,7 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import org.junit.jupiter.api.Test
 
+/** Smoke test of the Axon Server singleton: the configured external server, or a container that reports healthy. */
 class AxonServerEnvironmentIntegrationTest {
     @Test
     fun `the Axon Server singleton is the configured server or a healthy container`() {

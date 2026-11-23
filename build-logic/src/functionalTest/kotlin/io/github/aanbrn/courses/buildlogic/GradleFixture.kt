@@ -15,13 +15,22 @@ import org.gradle.testkit.runner.TaskOutcome
  * injecting a plugin classpath, because the typed `libs` accessor used by the precompiled script plugins fails to
  * resolve with an injected classpath.
  *
- * @param projectDir the empty directory the fixture build is written to, normally a JUnit temporary directory.
+ * @property projectDir the empty directory the fixture build is written to, normally a JUnit temporary directory.
  */
-class GradleFixture(private val projectDir: Path) {
+class GradleFixture(val projectDir: Path) {
     private val buildLogic = requiredProperty("buildLogic")
     private val repoRoot = Path.of(requiredProperty("repoRoot"))
-    private val catalog = requiredProperty("catalog")
     private val includedProjects = mutableListOf<String>()
+
+    /**
+     * The absolute path of the version catalog the fixture build reads as `libs`: the repository's own until a test
+     * replaces it, for example through [changeCatalog]. Assigning a path rewrites the fixture settings.
+     */
+    var catalog: String = requiredProperty("catalog")
+        set(value) {
+            field = value
+            writeSettings()
+        }
 
     init {
         writeSettings()
@@ -50,11 +59,6 @@ class GradleFixture(private val projectDir: Path) {
         val target = projectDir.resolve(relativePath)
         Files.createDirectories(target.parent)
         return Files.copy(repoRoot.resolve(relativePath), target)
-    }
-
-    /** Placeholder until the implementation commit: leaves the catalog as it is. */
-    fun changeCatalog(transform: (String) -> String) {
-        transform("")
     }
 
     /** Adds the project with the given Gradle [projectPath], for example `:lib`, to the build. */
@@ -280,4 +284,26 @@ fun GradleFixture.addTest(
                 "}",
             )
     return file("lib/src/$suite/kotlin/fixture/$className.kt", lines.joinToString("\n", postfix = "\n"))
+}
+
+/** Where [changeCatalog] writes the fixture's own copy of the version catalog, relative to the fixture root. */
+private const val CATALOG_COPY = "fixture-libs.versions.toml"
+
+/**
+ * Makes the fixture use its own copy of the version catalog, rewritten by [transform], from the next run on.
+ *
+ * The first call copies the repository's catalog into the fixture; every call applies [transform] to the current text
+ * of the copy and points the fixture settings at it. The copy is how a test changes a catalog entry, such as a
+ * container image, between two runs of the same fixture without touching the real catalog.
+ *
+ * @param transform maps the current catalog text to the new one; it must change the text, which this function checks so
+ *   that a transformation that matches nothing cannot pass a test for the wrong reason.
+ */
+fun GradleFixture.changeCatalog(transform: (String) -> String) {
+    val current = Files.readString(Path.of(catalog))
+    val changed = transform(current)
+    check(changed != current) { "The catalog transformation changed nothing" }
+    val copy = projectDir.resolve(CATALOG_COPY)
+    Files.writeString(copy, changed)
+    catalog = copy.toAbsolutePath().toString()
 }

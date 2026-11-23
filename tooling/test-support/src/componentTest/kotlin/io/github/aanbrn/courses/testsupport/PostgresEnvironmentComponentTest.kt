@@ -5,6 +5,7 @@ import io.kotest.matchers.shouldBe
 import java.sql.DriverManager
 import org.junit.jupiter.api.Test
 
+/** Smoke test of the PostgreSQL singleton: the container starts from the catalog image and accepts JDBC queries. */
 class PostgresEnvironmentComponentTest {
     @Test
     fun `the PostgreSQL singleton answers a query over JDBC`() {
