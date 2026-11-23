@@ -108,12 +108,12 @@ class DependencyLicenceCheckFunctionalTest {
 
     @Test
     fun `an exception covers exactly its artifact and its licence text`() {
-        val terms = named("Vendor Terms")
-        val policy = policy(exceptions = exception("org.example:vendor", "Vendor Terms"))
+        val terms = named(VENDOR_TERMS)
+        val policy = policy(exceptions = exception("org.example:vendor"))
 
         val covered = fixture(bom(component("vendor", terms)), policy).run(TASK)
         val otherArtifact = fixture(bom(component("other", terms)), policy).runAndFail(TASK)
-        val otherText = fixture(bom(component("vendor", named("Vendor Terms 2"))), policy).runAndFail(TASK)
+        val otherText = fixture(bom(component("vendor", named("$VENDOR_TERMS 2"))), policy).runAndFail(TASK)
 
         covered.task(":$TASK")?.outcome shouldBeIn GradleFixture.PASSED
         otherArtifact.output shouldContain "org.example:other:1.0"
@@ -148,18 +148,18 @@ class DependencyLicenceCheckFunctionalTest {
 
     @Test
     fun `an exception for a pattern is rejected`() {
-        val policy = policy(exceptions = exception("org.example:*", "Vendor Terms"))
+        val policy = policy(exceptions = exception("org.example:*"))
 
-        val output = fixture(bom(component("vendor", named("Vendor Terms"))), policy).runAndFail(TASK).output
+        val output = fixture(bom(component("vendor", named(VENDOR_TERMS))), policy).runAndFail(TASK).output
 
         output shouldContain "exception 'org.example:*' must name exactly one artifact as group:name"
     }
 
     @Test
     fun `an exception without a written reason is rejected`() {
-        val policy = policy(exceptions = exception("org.example:vendor", "Vendor Terms", reason = " "))
+        val policy = policy(exceptions = exception("org.example:vendor", reason = " "))
 
-        val output = fixture(bom(component("vendor", named("Vendor Terms"))), policy).runAndFail(TASK).output
+        val output = fixture(bom(component("vendor", named(VENDOR_TERMS))), policy).runAndFail(TASK).output
 
         output shouldContain "exception 'org.example:vendor' needs a written reason"
     }
@@ -201,8 +201,8 @@ class DependencyLicenceCheckFunctionalTest {
 
     private fun expression(text: String): String = """{ "expression": "$text" }"""
 
-    private fun exception(artifact: String, license: String, reason: String = "Justified in the test."): String =
-        """{ "artifact": "$artifact", "license": "$license", "reason": "$reason" }"""
+    private fun exception(artifact: String, reason: String = "Justified in the test."): String =
+        """{ "artifact": "$artifact", "license": "$VENDOR_TERMS", "reason": "$reason" }"""
 
     private fun policy(aliases: String = "{}", exceptions: String = ""): String =
         """
@@ -217,6 +217,8 @@ class DependencyLicenceCheckFunctionalTest {
 
     private companion object {
         const val TASK = "checkLicences"
+
+        const val VENDOR_TERMS = "Vendor Terms"
 
         const val POLICY = """{ "allowed": ["Apache-2.0", "MIT", "EPL-2.0"], "forbidden": ["GPL-*", "AGPL-*"] }"""
 

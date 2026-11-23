@@ -28,8 +28,8 @@ class ImageReferenceCheckFunctionalTest {
         fixture.file(
             INFRA,
             services(
-                "    image: \${AXONSERVER_IMAGE:?run ./gradlew generateComposeVersions}",
-                "    image: \"\${POSTGRES_IMAGE}\" # a trailing comment",
+                $$"    image: ${AXONSERVER_IMAGE:?run ./gradlew generateComposeVersions}",
+                $$"    image: \"${POSTGRES_IMAGE}\" # a trailing comment",
                 "    # image: postgres:18",
             ),
         )
@@ -41,17 +41,17 @@ class ImageReferenceCheckFunctionalTest {
 
     @Test
     fun `a literal image fails naming the file and the line`() {
-        fixture.file(INFRA, services("    image: \${AXONSERVER_IMAGE}", "    image: postgres:18"))
+        fixture.file(INFRA, services($$"    image: ${AXONSERVER_IMAGE}", "    image: postgres:18"))
 
         val output = fixture.runAndFail(TASK).output
 
-        output shouldContain "compose/infra.yaml:4: image 'postgres:18' must be a \${VARIABLE} interpolation"
+        output shouldContain $$"compose/infra.yaml:4: image 'postgres:18' must be a ${VARIABLE} interpolation"
         output shouldNotContain "compose/infra.yaml:3"
     }
 
     @Test
     fun `a literal image in a nested compose directory fails`() {
-        fixture.file(INFRA, services("    image: \${AXONSERVER_IMAGE}"))
+        fixture.file(INFRA, services($$"    image: ${AXONSERVER_IMAGE}"))
         fixture.file("compose/observability/lgtm.yaml", services("    image: grafana/otel-lgtm:latest"))
 
         val output = fixture.runAndFail(TASK).output
@@ -61,7 +61,7 @@ class ImageReferenceCheckFunctionalTest {
 
     @Test
     fun `a catalog image without a digest fails naming the key`() {
-        fixture.file(INFRA, services("    image: \${AXONSERVER_IMAGE}"))
+        fixture.file(INFRA, services($$"    image: ${AXONSERVER_IMAGE}"))
         fixture.file(CATALOG, catalog("image-axonserver = \"$AXONSERVER\"", "image-x = \"postgres:18.7\""))
 
         val output = fixture.runAndFail(TASK).output
@@ -72,7 +72,7 @@ class ImageReferenceCheckFunctionalTest {
 
     @Test
     fun `a catalog image without a tag fails naming the key`() {
-        fixture.file(INFRA, services("    image: \${AXONSERVER_IMAGE}"))
+        fixture.file(INFRA, services($$"    image: ${AXONSERVER_IMAGE}"))
         fixture.file(CATALOG, catalog("image-axonserver = \"$AXONSERVER\"", "image-x = \"postgres@sha256:$DIGEST\""))
 
         val output = fixture.runAndFail(TASK).output
@@ -82,7 +82,7 @@ class ImageReferenceCheckFunctionalTest {
 
     @Test
     fun `keys that do not start with image- and entries of other tables are not image references`() {
-        fixture.file(INFRA, services("    image: \${AXONSERVER_IMAGE}"))
+        fixture.file(INFRA, services($$"    image: ${AXONSERVER_IMAGE}"))
         fixture.file(
             CATALOG,
             catalog("image-axonserver = \"$AXONSERVER\"", "imagemagick = \"7.1\"") +
@@ -96,13 +96,13 @@ class ImageReferenceCheckFunctionalTest {
 
     @Test
     fun `a second run with unchanged inputs is up to date and a later literal is still reported`() {
-        fixture.file(INFRA, services("    image: \${AXONSERVER_IMAGE}"))
+        fixture.file(INFRA, services($$"    image: ${AXONSERVER_IMAGE}"))
         fixture.run(TASK)
 
         val second = fixture.run(TASK).task(":$TASK")?.outcome
 
         withClue("second run outcome") { listOf(TaskOutcome.UP_TO_DATE, TaskOutcome.FROM_CACHE) shouldContain second }
-        fixture.file(INFRA, services("    image: \${AXONSERVER_IMAGE}", "    image: redis:8"))
+        fixture.file(INFRA, services($$"    image: ${AXONSERVER_IMAGE}", "    image: redis:8"))
         fixture.runAndFail(TASK).output shouldContain "compose/infra.yaml:4: image 'redis:8'"
     }
 

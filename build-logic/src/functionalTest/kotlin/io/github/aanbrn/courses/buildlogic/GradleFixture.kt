@@ -190,12 +190,12 @@ class GradleFixture(val projectDir: Path) {
             standard(projectDir).apply {
                 file(
                     "lib/build.gradle.kts",
-                    """
-                    $HEADER
+                    $$"""
+                    $$HEADER
                     plugins { id("courses.test-suites") }
 
                     tasks.withType<Test>().configureEach {
-                        doFirst { println("FORKS ${'$'}name=${'$'}maxParallelForks") }
+                        doFirst { println("FORKS $name=$maxParallelForks") }
                     }
                     """
                         .trimIndent() + "\n",
@@ -275,19 +275,20 @@ fun GradleFixture.addTest(
     imports: List<String> = emptyList(),
 ): Path {
     val importLines = (listOf("org.junit.jupiter.api.Test") + imports).map { "import $it" }
-    val lines =
-        listOf(GradleFixture.HEADER, "package fixture", "") +
-            importLines +
-            listOf(
-                "",
-                "/** A test in the $suite suite. */",
-                "class $className {",
-                "    @Test",
-                "    fun `$testName`() {",
-                "        $body",
-                "    }",
-                "}",
-            )
+    val lines = buildList {
+        add(GradleFixture.HEADER)
+        add("package fixture")
+        add("")
+        addAll(importLines)
+        add("")
+        add("/** A test in the $suite suite. */")
+        add("class $className {")
+        add("    @Test")
+        add("    fun `$testName`() {")
+        add("        $body")
+        add("    }")
+        add("}")
+    }
     return file("lib/src/$suite/kotlin/fixture/$className.kt", lines.joinToString("\n", postfix = "\n"))
 }
 

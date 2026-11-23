@@ -70,12 +70,13 @@ abstract class UpstreamRecordCheck : DefaultTask() {
         val validated = recordFiles().map { UpstreamRecords.validate(it) }
         val markers = scanMarkers()
         val unrecorded = unrecordedMarkers.get()
-        val problems =
-            (validated.flatMap { it.problems } +
-                    UpstreamRecords.duplicateIds(validated) +
-                    markers.problems +
-                    UpstreamRecords.consistency(validated, markers.found, unrecorded))
-                .sortedWith(compareBy({ it.path }, { it.line }, { it.message }))
+        val problems = buildList {
+            validated.flatMapTo(this) { it.problems }
+            addAll(UpstreamRecords.duplicateIds(validated))
+            addAll(markers.problems)
+            addAll(UpstreamRecords.consistency(validated, markers.found, unrecorded))
+        }
+            .sortedWith(compareBy({ it.path }, { it.line }, { it.message }))
         writeText(index.get().asFile, UpstreamRecords.renderIndex(validated.mapNotNull { it.row }))
         writeText(report.get().asFile, problems.joinToString(separator = "") { it.render() + "\n" })
         warnAboutTolerated(markers.found, unrecorded)
@@ -346,7 +347,7 @@ private object UpstreamRecords {
 
         protected fun line(key: String): Int = front.entries[key]?.line ?: 0
 
-        private fun entry(key: String): FrontMatter.Entry? =
+        protected fun entry(key: String): FrontMatter.Entry? =
             front.entries[key].also { if (it == null) problem(0, "missing front matter key `$key`") }
 
         protected fun text(key: String): String? {
@@ -359,30 +360,13 @@ private object UpstreamRecords {
             }
         }
 
-        protected fun flag(key: String): Boolean? {
-            val entry = entry(key) ?: return null
-            val value = (entry.value as? FrontMatter.Value.Flag)?.value
-            if (value == null) problem(entry.line, "`$key` must be true or false")
-            return value
-        }
-
-        protected fun list(key: String): List<String>? {
-            val entry = entry(key) ?: return null
-            val values = (entry.value as? FrontMatter.Value.Items)?.values
-            when {
-                values == null -> problem(entry.line, "`$key` must be a list such as [] or [\"https://example.org\"]")
-                values.any { it.isBlank() } -> problem(entry.line, "`$key` has an empty item")
-            }
-            return values
-        }
-
         /** The date of [key], or null for `null`, a missing key or an invalid value (the last two are reported). */
         protected fun date(key: String): String? {
             val entry = entry(key) ?: return null
             val value = entry.value
-            return when {
-                value == FrontMatter.Value.Null -> null
-                value is FrontMatter.Value.Text && isDate(value.value) -> value.value
+            return when (value) {
+                FrontMatter.Value.Null -> null
+                is FrontMatter.Value.Text if isDate(value.value) -> value.value
                 else -> null.also { problem(entry.line, "`$key` must be a YYYY-MM-DD date or null") }
             }
         }
@@ -416,8 +400,8 @@ private object UpstreamRecords {
             product = text("product")
             text("product-version")
             status = statusValue()
-            workaround = flag("workaround")
-            upstream = list("upstream")
+            workaround = workaroundValue()
+            upstream = upstreamValue()
             date("reported")
             updated = date("updated")
             lifecycle()
@@ -450,6 +434,24 @@ private object UpstreamRecords {
                     problem(line("id"), "`id` $value does not match the file number $fileNumber")
             }
             return valid
+        }
+
+        private fun workaroundValue(): Boolean? {
+            val entry = entry("workaround") ?: return null
+            val value = (entry.value as? FrontMatter.Value.Flag)?.value
+            if (value == null) problem(entry.line, "`workaround` must be true or false")
+            return value
+        }
+
+        private fun upstreamValue(): List<String>? {
+            val entry = entry("upstream") ?: return null
+            val values = (entry.value as? FrontMatter.Value.Items)?.values
+            when {
+                values == null ->
+                    problem(entry.line, "`upstream` must be a list such as [] or [\"https://example.org\"]")
+                values.any { it.isBlank() } -> problem(entry.line, "`upstream` has an empty item")
+            }
+            return values
         }
 
         private fun statusValue(): String? {

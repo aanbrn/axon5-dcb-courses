@@ -188,6 +188,18 @@ class UpstreamRecordCheckFunctionalTest {
     }
 
     @Test
+    fun `workaround must be true or false and upstream must be a list`() {
+        val fixture = fixture()
+        fixture.upstream("0001-a.md", record("workaround" to "\"yes\"", "upstream" to "https://x.example/1"))
+
+        val output = fixture.fails()
+
+        output shouldContain "docs/upstream/0001-a.md:6: `workaround` must be true or false"
+        output shouldContain
+            "docs/upstream/0001-a.md:7: `upstream` must be a list such as [] or [\"https://example.org\"]"
+    }
+
+    @Test
     fun `a reported record needs an upstream link and a reported date`() {
         val fixture = fixture()
         val link = "[\"https://github.com/o/r/issues/1\"]"
@@ -254,6 +266,11 @@ class UpstreamRecordCheckFunctionalTest {
                     "0001-a.md:1: unsupported front matter: the file must start with",
                 ),
                 Triple("block scalar", "---\nid: |\n---\n", "0001-a.md:2: unsupported front matter: `|` starts"),
+                Triple(
+                    "unterminated quoted string",
+                    "---\nid: \"x\n---\n",
+                    "0001-a.md:2: unsupported front matter: unterminated quoted string",
+                ),
                 Triple(
                     "unterminated list",
                     "---\nupstream: [a,\n---\n",

@@ -114,13 +114,13 @@ internal object FrontMatter {
             val value = StringBuilder()
             while (position < text.length) {
                 val char = text[position++]
-                when {
-                    char == '"' -> return value.toString()
-                    char == '\\' -> value.append(escaped())
+                when (char) {
+                    '"' -> return value.toString()
+                    '\\' -> value.append(escaped())
                     else -> value.append(char)
                 }
             }
-            return fail(file, line, "unterminated quoted string")
+            fail(file, line, "unterminated quoted string")
         }
 
         /** The items of the list at the cursor, which must be the whole value. */

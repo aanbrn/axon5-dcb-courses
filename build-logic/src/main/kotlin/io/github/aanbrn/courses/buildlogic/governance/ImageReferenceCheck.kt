@@ -73,7 +73,7 @@ abstract class ImageReferenceCheck @Inject constructor(private val layout: Proje
             if (value == null || INTERPOLATION.matches(value)) {
                 null
             } else {
-                "$path:${index + 1}: image '$value' must be a \${VARIABLE} interpolation of a generated value"
+                $$"$$path:$${index + 1}: image '$$value' must be a ${VARIABLE} interpolation of a generated value"
             }
         }
 
@@ -110,7 +110,7 @@ abstract class ImageReferenceCheck @Inject constructor(private val layout: Proje
         problems.forEach { appendLine("  $it") }
         appendLine()
         append(
-            "Compose files reference images only as \${VARIABLE}, which ./gradlew generateComposeVersions writes " +
+            $$"Compose files reference images only as ${VARIABLE}, which ./gradlew generateComposeVersions writes " +
                 "from the image-* entries of gradle/libs.versions.toml, and each entry is pinned by tag and " +
                 "digest (INFRA-09).",
         )

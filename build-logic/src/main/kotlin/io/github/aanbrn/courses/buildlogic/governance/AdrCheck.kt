@@ -110,7 +110,11 @@ private object AdrRules {
 
     fun validate(files: List<AdrFile>): List<AdrProblem> {
         val known = files.mapNotNull { it.number }.toSet()
-        return files.flatMap { validate(it, known) } + duplicates(files) + gaps(known)
+        return buildList {
+            files.flatMapTo(this) { validate(it, known) }
+            addAll(duplicates(files))
+            addAll(gaps(known))
+        }
     }
 
     private fun validate(file: AdrFile, known: Set<String>): List<AdrProblem> {
@@ -245,16 +249,15 @@ private object AdrRules {
             val value = (entry.value as FrontMatter.Value.Text).value
             if (value in STATUSES) return
             val target = SUPERSEDED.matchEntire(value)?.groupValues?.get(1)
-            when {
-                target == null ->
+            when (target) {
+                null ->
                     problem(
                         entry.line,
                         "`status` must be one of ${STATUSES.joinToString()}, or `${STATUS_SUPERSEDED_PREFIX}NNNN`, " +
                             "found `$value`",
                     )
-                target == file.number -> problem(entry.line, "`status` makes ADR-$target supersede itself")
-                target !in known ->
-                    problem(entry.line, "`status` names ADR-$target, but no docs/adr/$target-<slug>.md exists")
+                file.number -> problem(entry.line, "`status` makes ADR-$target supersede itself")
+                !in known -> problem(entry.line, "`status` names ADR-$target, but no docs/adr/$target-<slug>.md exists")
             }
         }
 
