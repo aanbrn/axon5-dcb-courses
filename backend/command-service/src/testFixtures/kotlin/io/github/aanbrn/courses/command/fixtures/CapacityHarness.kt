@@ -74,12 +74,13 @@ class CapacityHarness(
      *
      * @param courseId the course to create
      * @param capacity the number of seats
+     * @param name the display name of the course
      */
-    fun seedCourse(courseId: CourseId, capacity: Int) {
+    fun seedCourse(courseId: CourseId, capacity: Int, name: String = DEFAULT_COURSE_NAME) {
         unitOfWorkFactory
             .create()
             .executeWithResult { context ->
-                EventAppender.forContext(context).append(CourseCreated(courseId, "Course $courseId", capacity))
+                EventAppender.forContext(context).append(CourseCreated(courseId, name, capacity))
                 CompletableFuture.completedFuture(Unit)
             }
             .get(SEED_TIMEOUT_SECONDS, TimeUnit.SECONDS)
@@ -114,6 +115,9 @@ class CapacityHarness(
 
         /** Every seat of the course is taken. */
         const val COURSE_FULL = "course-full"
+
+        /** The display name [seedCourse] gives a course unless the test names it. */
+        const val DEFAULT_COURSE_NAME = "Event Modeling"
 
         private const val SEED_TIMEOUT_SECONDS = 60L
         private val COURSE_CREATED_NAME = QualifiedName(MessageNamespace.COURSES, "CourseCreated")

@@ -42,6 +42,9 @@ private constructor(
     /** Creates the units of work in which tests source and append events. */
     val unitOfWorkFactory: UnitOfWorkFactory = configuration.getComponent(UnitOfWorkFactory::class.java)
 
+    /** Converts message payloads the way the service does, so a test can read a stored event back into its type. */
+    val messageConverter: MessageConverter = configuration.getComponent(MessageConverter::class.java)
+
     /** Dispatches commands to the handlers of the application, over Axon Server or in memory. */
     val commandGateway: CommandGateway = configuration.getComponent(CommandGateway::class.java)
 
