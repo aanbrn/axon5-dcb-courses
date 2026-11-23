@@ -113,8 +113,7 @@ internal object FrontMatter {
             position++
             val value = StringBuilder()
             while (position < text.length) {
-                val char = text[position++]
-                when (char) {
+                when (val char = text[position++]) {
                     '"' -> return value.toString()
                     '\\' -> value.append(escaped())
                     else -> value.append(char)

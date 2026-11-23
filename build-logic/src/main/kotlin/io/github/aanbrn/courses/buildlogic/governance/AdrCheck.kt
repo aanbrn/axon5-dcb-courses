@@ -225,8 +225,7 @@ private object AdrRules {
             val entry = text("status") ?: return
             val value = (entry.value as FrontMatter.Value.Text).value
             if (value in STATUSES) return
-            val target = SUPERSEDED.matchEntire(value)?.groupValues?.get(1)
-            when (target) {
+            when (val target = SUPERSEDED.matchEntire(value)?.groupValues?.get(1)) {
                 null ->
                     problem(
                         entry.line,

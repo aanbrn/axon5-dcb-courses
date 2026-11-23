@@ -363,8 +363,7 @@ private object UpstreamRecords {
         /** The date of [key], or null for `null`, a missing key or an invalid value (the last two are reported). */
         protected fun date(key: String): String? {
             val entry = entry(key) ?: return null
-            val value = entry.value
-            return when (value) {
+            return when (val value = entry.value) {
                 FrontMatter.Value.Null -> null
                 is FrontMatter.Value.Text if isDate(value.value) -> value.value
                 else -> null.also { problem(entry.line, "`$key` must be a YYYY-MM-DD date or null") }
