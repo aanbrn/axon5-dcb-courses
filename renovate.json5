@@ -208,6 +208,19 @@
       automerge: true,
     },
 
+    // Later rules win: this one must stay after every automerge rule above. Every Playwright MCP
+    // release is a 0.0.N patch bump, so the patch automerge rule for mise tools would otherwise
+    // merge an agent-facing server (and its alpha Playwright dependency) unreviewed.
+    {
+      description: "Agent tooling (MCP servers): never automerge",
+      matchManagers: ["mise"],
+      matchPackageNames: ["@upstash/context7-mcp", "@playwright/mcp"],
+      automerge: false,
+      prBodyNotes: [
+        "MCP server update: read the changelog, then re-run `claude mcp list` and confirm both project servers still connect before merging by hand.",
+      ],
+    },
+
     // JDK: LTS majors only, written as a bare major in .java-version.
     {
       description: "JDK updates: LTS majors only, with the daemon JVM reminder",

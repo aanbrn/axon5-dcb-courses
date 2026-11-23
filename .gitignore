@@ -17,6 +17,9 @@
 /.mise/*
 !/.mise/locks/
 
+# MCP tool output (Playwright MCP writes snapshots and logs here, relative to its working directory)
+.playwright-mcp/
+
 # Gradle and Kotlin state
 .gradle/
 build/
