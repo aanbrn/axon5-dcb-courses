@@ -37,3 +37,8 @@ uv = "0.13.8"
 "npm:renovate" = { version = "44.252.8", trust_policy_excludes = ["@yarnpkg/libzip@3.2.2"] }
 jq = "1.8.2"
 gh = "2.104.0"
+# Shared MCP servers for Claude Code (AIDEV-04), started by `.mcp.json` through `mise x --`.
+# Approved by the author with these exact versions (newest releases at least seven days old at
+# planning time); Renovate proposes updates without automerge.
+"npm:@upstash/context7-mcp" = "4.7.0"
+"npm:@playwright/mcp" = "0.0.85"

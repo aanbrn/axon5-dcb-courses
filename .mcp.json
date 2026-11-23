@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "context7": {
+      "type": "stdio",
+      "command": "mise",
+      "args": ["x", "--", "context7-mcp"]
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "mise",
+      "args": ["x", "--", "playwright-mcp", "--isolated", "--output-dir", ".playwright-mcp"]
+    }
+  }
+}
