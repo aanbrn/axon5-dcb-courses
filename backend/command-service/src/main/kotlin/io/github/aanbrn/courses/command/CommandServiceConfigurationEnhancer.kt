@@ -54,6 +54,8 @@ class CommandServiceConfigurationEnhancer : ConfigurationEnhancer {
             DelegatingGeneralConverter(JacksonConverter(coursesJsonMapper()))
         }
         registry.registerComponent(TagResolver::class.java) { KotlinTagResolver() }
+        // UPSTREAM: UP-0001 Axon has no public extension point to observe the conditional append, so the capture
+        // decorates the @Internal EventStorageEngine.
         registry.registerDecorator(EventStorageEngine::class.java, CAPTURE_DECORATION_ORDER) { config, _, engine ->
             DecisionCaptureEngine(engine, config.getComponent(DecisionRecorder::class.java))
         }
@@ -77,6 +79,8 @@ class CommandServiceConfigurationEnhancer : ConfigurationEnhancer {
                 // The executor is the last thing to stop, so that a command handled during shutdown can still retry.
                 .onShutdown(Phase.EXTERNAL_CONNECTIONS) { executor: ConflictRetryExecutor -> executor.close() },
         )
+        // UPSTREAM: UP-0003 A dispatch-side retry cannot classify a DCB conflict that arrives from Axon Server, so the
+        // retry decorates the handling side.
         registry.registerDecorator(CommandBus::class.java, CONFLICT_RETRY_DECORATION_ORDER) { config, _, bus ->
             RetryingCommandBus(
                 bus,

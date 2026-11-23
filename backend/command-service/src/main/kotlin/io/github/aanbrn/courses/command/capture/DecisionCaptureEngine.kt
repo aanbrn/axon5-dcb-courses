@@ -52,7 +52,6 @@ import org.axonframework.messaging.eventhandling.EventMessage
  */
 // UPSTREAM: UP-0001 Axon offers no public extension point for decision capture; replace the `@Internal` decoration
 // when it does.
-// UPSTREAM: UP-0002 ConflictDiagnosingEventStorageEngine does not unwrap CompletionException on the Axon Server path.
 class DecisionCaptureEngine(
     private val delegate: EventStorageEngine,
     private val recorder: DecisionRecorder,
@@ -133,6 +132,8 @@ class DecisionCaptureEngine(
      * marker and notes it as the conflicting event. Always completes with the original [failure], never with a
      * different outcome.
      */
+    // UPSTREAM: UP-0002 Axon's ConflictDiagnosingEventStorageEngine does not unwrap CompletionException on the Axon
+    // Server path, so this function searches the whole cause chain itself.
     private fun <T> diagnose(
         failure: Throwable,
         draft: DecisionDraft,

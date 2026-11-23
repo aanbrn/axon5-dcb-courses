@@ -21,6 +21,7 @@ import org.axonframework.messaging.core.retry.RetryScheduler
  * Register the retrying bus as a decorator at this order, and never register a [RetryScheduler] component, because that
  * adds Axon's own dispatch-side retry on top.
  */
+// UPSTREAM: UP-0003 A remote DCB conflict reaches the dispatcher without its type; retry on the handling side instead.
 const val CONFLICT_RETRY_DECORATION_ORDER = Int.MIN_VALUE + 10
 
 /** The default bound on the retries of a conflicting command, see [conflictRetryScheduler]. */
