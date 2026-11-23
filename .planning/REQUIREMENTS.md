@@ -375,7 +375,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CICD-06 | Phase 1 | Complete |
 | CICD-07 | Phase 12 | Pending |
 | CICD-08 | Phase 1 | Complete |
-| CICD-09 | Phase 2 | Pending |
+| CICD-09 | Phase 2 (JVM), Phase 5 (npm) | Pending |
 | OBS-01 | Phase 12 | Pending |
 | OBS-02 | Phase 12 | Pending |
 | OBS-03 | Phase 12 | Pending |
@@ -405,7 +405,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GH-06 | Phase 1 | Complete |
 | GH-07 | Phase 1 | Complete |
 | UPS-01 | Phase 2 | Pending |
-| UPS-02 | Phase 2 | Pending |
+| UPS-02 | Phase 2 (markers, check, index), Phase 5 (index on the documentation site) | Pending |
 | UPS-03 | Phase 2 | Pending |
 | UPS-04 | Phase 2 | Pending |
 | TOOL-01 | Phase 1 | Complete |

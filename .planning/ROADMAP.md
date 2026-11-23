@@ -101,7 +101,52 @@ Plans:
   3. The contracts modules (commands, events, queries, a shared kernel with the tag registry and sealed result types) contain no Spring or framework logic. Kotlin events with TypeID value-class IDs and tags round-trip through serialization unchanged, and malformed or wrong-prefix TypeIDs are rejected.
   4. MADR ADRs, created from in-repository templates, record the spike outcomes: Axoniq licence behaviour (also reflected in the quick-start notes), the decision-record capture approach, Kotlin serialization and TypeID conventions, and buildpack constraints (pnpm support, image environment defaults). CI checks dependency licences against an allowlist, and NOTICE justifies the Axoniq modules.
   5. Every upstream defect found so far has a `docs/upstream/` record, a CI check keeps workaround markers and records consistent, and dependency update PRs prompt a check of the removal criteria. Vetted Claude Code skills and MCP servers (Context7, Playwright) are installed from pinned sources only after approval and are listed in the tooling inventory. Only `.claude/settings.json` and `.claude/CLAUDE.md` are tracked.
-**Plans**: TBD
+**Plans:** 22 plans
+
+Plans:
+
+**Wave 1**
+- [ ] 02-01-PLAN.md — Tracer: `:contracts-kernel` (TypeID codec, `CourseId`/`StudentId` with the parse API) through the new `courses.test-suites` convention
+- [ ] 02-02-PLAN.md — MCP servers Context7 and Playwright pinned through mise after the legitimacy and AIDEV-04 approval checkpoint
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 02-03-PLAN.md — Kernel tag registry, message namespace and rejection contract; Phase 1 sample module retired
+- [ ] 02-04-PLAN.md — Kernel `testFixtures` (fixed IDs, Arbs, clocked UUIDv7), property test, TestKit proof of the suite convention and its detekt reach, Kover coverage over all three suites (TEST-11)
+- [ ] 02-05-PLAN.md — Skills survey for every stack area; approved plugins pinned by commit SHA (approval checkpoint)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 02-06-PLAN.md — `:contracts-events`, `:contracts-commands` (sealed result with `@JsonTypeInfo`), the source-less `:contracts-queries` and `:serialization-jackson` with the JSON round trip
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 02-07-PLAN.md — Tracer for Axon Server: catalog images, test-support singleton, command-service wiring, INFRA-04 conflict test
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 02-08-PLAN.md — PostgreSQL singleton, singleton smoke tests, tag-resolver test, image-input TestKit proof, `integration-test` CI job
+- [ ] 02-09-PLAN.md — Decision-capture decorator and handling-side conflict retry with permanent Axon Server tests (capture, serialization)
+- [ ] 02-10-PLAN.md — Compose runtime (Axon Server DCB, PostgreSQL) from catalog-generated `compose/versions.env`, with freshness and image checks
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 02-11-PLAN.md — Konsist architecture rules: contracts, message naming and tags, test suffixes, image literals
+- [ ] 02-12-PLAN.md — `.env.example` token path, in-network probe, quick start with licence behaviour, compose CI jobs, Renovate image manager
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 02-13-PLAN.md — Dependency licence allowlist check over per-module CycloneDX SBOMs (JVM; npm project dependencies join in Phase 5 per D-30; mise-pinned npm developer tools out of scope), NOTICE with the Axoniq terms, the gate's convention plugin governed
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 02-14-PLAN.md — `doctor` (shell bootstrap, GSD manifest, token, colima; `./gradlew doctor` delegating to the existing Node, formatter and daemon-JVM checks plus the Testcontainers probe) and its CI job
+- [ ] 02-15-PLAN.md — Upstream-record check with the shared front-matter parser, the site-ready status index, and the record and issue templates
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 02-16-PLAN.md — Axon code-path upstream records UP-0001..UP-0005, UP-0007, UP-0013 with markers and issue drafts
+- [ ] 02-17-PLAN.md — Configuration, tooling and host upstream records UP-0006, UP-0008..UP-0012 with markers and issue drafts
+- [ ] 02-18-PLAN.md — UPS-04 advisory CI job for dependency updates
+- [ ] 02-19-PLAN.md — ADR template and check, ADR-0001..0004 normalised, documentation and Event Modeling templates
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 02-20-PLAN.md — ADR-0005..ADR-0014 (spike outcomes and implementation decisions), quick-start link, IDEM-04 wording
+- [ ] 02-21-PLAN.md — GSD `agent_skills` mapping (approval checkpoint), policy and ADR-0004
+- [ ] 02-22-PLAN.md — Upstream issue publication gate (approval checkpoint) and record status updates
+
 **Research**: Yes. Topics: licence behaviour of the pinned Axon Server (12-hour vs 14-day limit, restart, licence delivery via AxonIQ Platform), DCB container setup, protobuf and Gradle alignment, the Kotlin tag and Jackson round-trip, the decision-record decorator spike, TypeID library maturity (Kotlin and TypeScript), Paketo pnpm support.
 **Approval gates**: Third-party skills and MCP servers (AIDEV-01, AIDEV-04) and upstream issue publication (UPS-03) require explicit author approval.
 
@@ -270,7 +315,8 @@ Some requirements are delivered and verified in one phase but set a standing rul
 | INFRA-16, TEST-09, TEST-10, TEST-13 | Phase 1 | Every new file carries an SPDX header and is auto-formatted. Public contracts and decision logic have KDoc. Biome lints TypeScript from the moment the frontend exists (Phase 5). |
 | CICD-01, CICD-08 | Phase 1 | Every new test level, analysis and report joins the CI workflow; coverage reporting joins in Phase 3 with Kover (TEST-08). Every new workflow, script and compose file is linted locally and in CI; `docker compose config` validation joins with the first compose file in Phase 2 (CICD-08). |
 | DOC-03, UPS-01..04 | Phase 2 | Every significant decision gets an ADR in the phase that makes it. Every upstream defect gets a record, and every workaround gets a marker. |
-| TEST-11, TEST-12, TEST-14 | Phase 2 | New tests go into the right suite, shared helpers live in `testFixtures`, and the standard toolchain applies (frontend: Vitest, Testing Library, MSW). A JVM test class name ends with the suffix of its suite: `*Test` (`test`), `*ComponentTest` (`componentTest`), `*IntegrationTest` (`integrationTest`), `*ArchitectureTest` (architecture rules), `*FunctionalTest` (`functionalTest`, Gradle TestKit); a Konsist rule enforces it per source set. Other runners keep their own convention: Playwright `*.spec.ts` in `e2e/`, Vitest `*.test.ts(x)` next to the code, Gatling `*Simulation`. |
+| TEST-11, TEST-12, TEST-14 | Phase 2 | New tests go into the right suite, shared helpers live in `testFixtures`, and the standard toolchain applies (frontend: Vitest, Testing Library, MSW). A JVM test class name ends with the suffix of its suite: `*Test` (`test`), `*ComponentTest` (`componentTest`), `*IntegrationTest` (`integrationTest`), `*ArchitectureTest` (architecture rules), `*FunctionalTest` (`functionalTest`, Gradle TestKit); a Konsist rule enforces it per source set. Other runners keep their own convention: Playwright `*.spec.ts` in `e2e/`, Vitest `*.test.ts(x)` next to the code, Gatling `*Simulation`. Every module that applies `courses.test-suites` gets Kover coverage of all three JVM suites automatically. |
+| CICD-09 (npm half), UPS-02 (index on the site) | Phase 5 | Phase 2 delivers the JVM half of the licence check and the generated upstream index. With `package.json` and `pnpm-lock.yaml` (Phase 5), npm dependencies join the same licence policy (D-30); the documentation-site skeleton publishes the generated upstream index with statuses. |
 | IDEM-04 | Phase 2 | TypeID everywhere. Read models store native `uuid`, and the API boundary rejects malformed or wrong-type IDs (Phase 5 onward). |
 | IDEM-01, IDEM-02, DEMO-01 | Phase 3 | Every new state-changing command accepts an idempotency key, uses client-generated IDs and stamps its decision record. |
 | TEST-01, TEST-02, TEST-06, TEST-08, TEST-15 | Phase 3 | Every new decision gets given-when-then tests with tag assertions, prose names and rule tags. Architecture rules grow with new modules and slices. Every `@Suppress` carries a comment with its reason, checked by a Konsist rule. Coverage thresholds hold, and automation logic gets the high threshold in Phase 10. |
