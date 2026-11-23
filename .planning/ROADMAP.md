@@ -101,7 +101,7 @@ Plans:
   3. The contracts modules (commands, events, queries, a shared kernel with the tag registry and sealed result types) contain no Spring or framework logic. Kotlin events with TypeID value-class IDs and tags round-trip through serialization unchanged, and malformed or wrong-prefix TypeIDs are rejected.
   4. MADR ADRs, created from in-repository templates, record the spike outcomes: Axoniq licence behaviour (also reflected in the quick-start notes), the decision-record capture approach, Kotlin serialization and TypeID conventions, and buildpack constraints (pnpm support, image environment defaults). CI checks dependency licences against an allowlist, and NOTICE justifies the Axoniq modules.
   5. Every upstream defect found so far has a `docs/upstream/` record, a CI check keeps workaround markers and records consistent, and dependency update PRs prompt a check of the removal criteria. Vetted Claude Code skills and MCP servers (Context7, Playwright) are installed from pinned sources only after approval and are listed in the tooling inventory. Only `.claude/settings.json` and `.claude/CLAUDE.md` are tracked.
-**Plans:** 19/23 plans executed
+**Plans:** 22/23 plans executed
 
 Plans:
 **Wave 1**
@@ -142,9 +142,9 @@ Plans:
 - [x] 02-19-PLAN.md — ADR template and check, ADR-0001..0004 normalised, documentation and Event Modeling templates
 
 **Wave 10** *(blocked on Wave 9 completion)*
-- [ ] 02-20-PLAN.md — Licence gate under governance: `courses.licences` governed path and ask rule, CI `build` naming `checkDependencyLicences`, tooling-inventory row and scope note (npm developer tools outside the check)
-- [ ] 02-21-PLAN.md — GSD `agent_skills` mapping (approval checkpoint), policy and ADR-0004
-- [ ] 02-22-PLAN.md — Upstream issue publication gate (approval checkpoint) and record status updates
+- [x] 02-20-PLAN.md — Licence gate under governance: `courses.licences` governed path and ask rule, CI `build` naming `checkDependencyLicences`, tooling-inventory row and scope note (npm developer tools outside the check)
+- [x] 02-21-PLAN.md — GSD `agent_skills` mapping (approval checkpoint), policy and ADR-0004
+- [x] 02-22-PLAN.md — Upstream issue publication gate (approval checkpoint) and record status updates
 
 **Wave 11** *(blocked on Wave 10 completion)*
 - [ ] 02-23-PLAN.md — ADR-0005..ADR-0014 (spike outcomes and implementation decisions), quick-start link, IDEM-04 wording
@@ -345,7 +345,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Repository, Build & CI Foundation | 21/21 | Complete    | 2026-11-22 |
-| 2. Runtime Infrastructure & DCB Spikes | 19/23 | In Progress | - |
+| 2. Runtime Infrastructure & DCB Spikes | 22/23 | In Progress | - |
 | 3. Command Walking Skeleton | 0/TBD | Not started | - |
 | 4. Read Side & Live Queries | 0/TBD | Not started | - |
 | 5. BFF & First Live UI | 0/TBD | Not started | - |
