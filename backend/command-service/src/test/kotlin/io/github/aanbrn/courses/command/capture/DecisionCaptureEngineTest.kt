@@ -65,7 +65,7 @@ class DecisionCaptureEngineTest {
     @Test
     fun `a source without a processing context returns the stored events and records nothing`() {
         delegate
-            .appendEvents(AppendCondition.none(), null, listOf<TaggedEventMessage<*>>(courseCreated()))
+            .appendEvents(AppendCondition.none(), null, listOf(courseCreated()))
             .thenCompose { it.commit() }
             .get(TIMEOUT_SECONDS, TimeUnit.SECONDS)
         val condition = SourcingCondition.conditionFor(EventCriteria.havingTags(Tag.of(Tags.COURSE, course.toString())))

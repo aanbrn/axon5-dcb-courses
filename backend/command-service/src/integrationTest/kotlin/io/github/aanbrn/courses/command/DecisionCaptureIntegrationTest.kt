@@ -48,9 +48,6 @@ class DecisionCaptureIntegrationTest {
     private lateinit var application: CommandServiceTestApplication
     private lateinit var pool: ExecutorService
 
-    // The literal 12 states the concurrency of this test at its pool, the one place that makes it concurrent: it is the
-    // number of threads that dispatch and equals STUDENTS, one thread per student.
-    @Suppress("MagicNumber")
     @BeforeAll
     fun startApplication() {
         application =
@@ -60,7 +57,7 @@ class DecisionCaptureIntegrationTest {
                 withCapacityHarness = true,
                 beforeAppend = { barrier.get().arrive() },
             )
-        pool = Executors.newFixedThreadPool(12)
+        pool = Executors.newFixedThreadPool(STUDENTS)
     }
 
     @AfterAll

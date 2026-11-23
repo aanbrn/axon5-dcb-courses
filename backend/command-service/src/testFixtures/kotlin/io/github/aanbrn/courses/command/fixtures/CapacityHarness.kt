@@ -158,10 +158,11 @@ class CapacityHarness(
 /**
  * Completes once [parties] callers have arrived, without blocking any of them, and stays complete.
  *
- * It is the [CapacityHarness] `beforeAppend` hook of a concurrency test. A blocking latch would hold a handler thread,
- * and with more attempts than handler threads the threads that wait could be the ones that must complete the sourcing
- * of the attempts that have not arrived yet. Callers after the first [parties] pass at once, so the retries that follow
- * the first round run unhindered.
+ * It is the [CapacityHarness] `beforeAppend` hook of a concurrency test, and the barrier of
+ * [CommandServiceTestApplication.submitDecision]. A blocking latch would hold a handler thread, and with more attempts
+ * than handler threads the threads that wait could be the ones that must complete the sourcing of the attempts that
+ * have not arrived yet. Callers after the first [parties] pass at once, so the retries that follow the first round run
+ * unhindered.
  *
  * @param parties the number of attempts to hold back, normally the number of concurrent commands
  */
