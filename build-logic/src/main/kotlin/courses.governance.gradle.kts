@@ -180,10 +180,6 @@ val checkUpstreamRecords =
                 exclude("docs/upstream/**", "docs/templates/**")
             },
         )
-        // TEMPORARY bridge, remove with the records: these markers landed in the command service before their
-        // records did. `checkUpstreamRecords` fails as soon as a listed ID gets a record or loses its last marker,
-        // so adding docs/upstream/0001-*.md, 0002-*.md and 0004-*.md forces this line to be deleted.
-        unrecordedMarkers.set(setOf("UP-0001", "UP-0002", "UP-0004"))
         index.set(reports.map { it.file("upstream-index.md") })
         report.set(reports.map { it.file("upstream-records.txt") })
     }

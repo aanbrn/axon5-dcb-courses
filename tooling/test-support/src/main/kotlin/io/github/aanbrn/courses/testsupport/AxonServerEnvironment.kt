@@ -10,8 +10,10 @@ import org.testcontainers.utility.DockerImageName
  * When `-Pcourses.axonserver.external=localhost:8124` is set, the tests use that already running server and no
  * container starts (D-46, the host scenario against the compose stack). Otherwise one container is started from the
  * catalog image, with a DCB context and development mode, and stays up until the JVM ends, when Testcontainers' Ryuk
- * reaper removes it. The shared holder that `axoniq-testcontainer` ships is deliberately not used: it hard-codes the
- * floating `:latest` image, which would bypass the digest pin of the catalog (INFRA-09).
+ * reaper removes it.
+ *
+ * UPSTREAM: UP-0007 The shared container holder of `axoniq-testcontainer` hard-codes the floating `:latest` image,
+ * which would bypass the digest pin of the catalog (INFRA-09), so this object keeps its own singleton.
  *
  * Reuse across JVMs is opt-in and local only: with `testcontainers.reuse.enable=true` in `~/.testcontainers.properties`
  * the container survives the JVM and the next test run, even in another module, attaches to it. CI never enables it, so
