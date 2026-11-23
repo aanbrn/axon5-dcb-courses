@@ -287,6 +287,28 @@ jobs:
       - name: Diagnose the environment
         run: scripts/doctor.sh --ci
 
+  # Advisory only (UPS-04, D-32): when a change moves a pinned version, lists the upstream records of that product
+  # (docs/upstream) with their removal criteria in the job summary and as warnings, so a reviewer can see which
+  # workarounds might now be removable. It never fails on a match, posts no comment and has no write permission or
+  # secret. The base commit reaches the script through the environment, never through the script text; an empty or
+  # all-zero base (workflow_dispatch, a new branch) makes the script skip.
+  upstream-records:
+    name: Upstream records advisory
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: List the upstream records the change touches
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: scripts/upstream/changed-dependencies.sh "${BASE_SHA}" HEAD
+
   secrets:
     name: Secret scan
     runs-on: ubuntu-latest
@@ -362,7 +384,7 @@ jobs:
 
   ci-success:
     name: ci-success
-    needs: [build, lint, secrets, qodana, integration-test, compose-smoke, doctor]
+    needs: [build, lint, secrets, qodana, integration-test, compose-smoke, doctor, upstream-records]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
