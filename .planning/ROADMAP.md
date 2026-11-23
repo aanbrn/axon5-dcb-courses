@@ -101,7 +101,7 @@ Plans:
   3. The contracts modules (commands, events, queries, a shared kernel with the tag registry and sealed result types) contain no Spring or framework logic. Kotlin events with TypeID value-class IDs and tags round-trip through serialization unchanged, and malformed or wrong-prefix TypeIDs are rejected.
   4. MADR ADRs, created from in-repository templates, record the spike outcomes: Axoniq licence behaviour (also reflected in the quick-start notes), the decision-record capture approach, Kotlin serialization and TypeID conventions, and buildpack constraints (pnpm support, image environment defaults). CI checks dependency licences against an allowlist, and NOTICE justifies the Axoniq modules.
   5. Every upstream defect found so far has a `docs/upstream/` record, a CI check keeps workaround markers and records consistent, and dependency update PRs prompt a check of the removal criteria. Vetted Claude Code skills and MCP servers (Context7, Playwright) are installed from pinned sources only after approval and are listed in the tooling inventory. Only `.claude/settings.json` and `.claude/CLAUDE.md` are tracked.
-**Plans:** 2/23 plans executed
+**Plans:** 5/23 plans executed
 
 Plans:
 **Wave 1**
@@ -109,9 +109,9 @@ Plans:
 - [x] 02-02-PLAN.md — MCP servers Context7 and Playwright pinned through mise after the legitimacy and AIDEV-04 approval checkpoint
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 02-03-PLAN.md — Kernel tag registry, message namespace and rejection contract; Phase 1 sample module retired
-- [ ] 02-04-PLAN.md — Kernel `testFixtures` (fixed IDs, Arbs, clocked UUIDv7), property test, TestKit proof of the suite convention and its detekt reach, Kover coverage over all three suites (TEST-11)
-- [ ] 02-05-PLAN.md — Skills survey for every stack area; approved plugins pinned by commit SHA (approval checkpoint)
+- [x] 02-03-PLAN.md — Kernel tag registry, message namespace and rejection contract; Phase 1 sample module retired
+- [x] 02-04-PLAN.md — Kernel `testFixtures` (fixed IDs, Arbs, clocked UUIDv7), property test, TestKit proof of the suite convention and its detekt reach, Kover coverage over all three suites (TEST-11)
+- [x] 02-05-PLAN.md — Skills survey for every stack area; approved plugins pinned by commit SHA (approval checkpoint)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 02-06-PLAN.md — `:contracts-events`, `:contracts-commands` (sealed result with `@JsonTypeInfo`), the source-less `:contracts-queries` and `:serialization-jackson` with the JSON round trip
@@ -345,7 +345,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Repository, Build & CI Foundation | 21/21 | Complete    | 2026-11-22 |
-| 2. Runtime Infrastructure & DCB Spikes | 2/23 | In Progress | - |
+| 2. Runtime Infrastructure & DCB Spikes | 5/23 | In Progress | - |
 | 3. Command Walking Skeleton | 0/TBD | Not started | - |
 | 4. Read Side & Live Queries | 0/TBD | Not started | - |
 | 5. BFF & First Live UI | 0/TBD | Not started | - |

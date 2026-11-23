@@ -208,9 +208,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### AI Development Tooling
 
-- [ ] **AIDEV-01**: Claude Code skills for the project's stack are surveyed (Axon, Kotlin, Gradle, Spring Boot, Playwright, React/shadcn, FSD, GitHub Actions, Paketo), and each candidate is reviewed before installation; third-party skills are installed as plugins from their marketplaces (nothing copied into `.claude/`), with pinned source/version, only with the author's approval, and documented in the tooling inventory
+- [x] **AIDEV-01**: Claude Code skills for the project's stack are surveyed (Axon, Kotlin, Gradle, Spring Boot, Playwright, React/shadcn, FSD, GitHub Actions, Paketo), and each candidate is reviewed before installation; third-party skills are installed as plugins from their marketplaces (nothing copied into `.claude/`), with pinned source/version, only with the author's approval, and documented in the tooling inventory
 - [ ] **AIDEV-02**: Project-specific skills encode the project's conventions (e.g. add a DCB command slice, add a projection, write an ADR, draft an upstream issue) and live in a repository-local Claude Code plugin outside `.claude/` (e.g. `tooling/claude-plugin/` with its own marketplace file), so they never mix with GSD-managed files
-- [ ] **AIDEV-03**: `.claude/` is tracked selectively: only `.claude/settings.json` (marketplace and plugin registration) and `.claude/CLAUDE.md` are committed; the GSD installation and `settings.local.json` are ignored, and the GSD version and install command are recorded in the tooling inventory and checked by `doctor`
+- [x] **AIDEV-03**: `.claude/` is tracked selectively: only `.claude/settings.json` (marketplace and plugin registration) and `.claude/CLAUDE.md` are committed; the GSD installation and `settings.local.json` are ignored, and the GSD version and install command are recorded in the tooling inventory and checked by `doctor`
 - [x] **AIDEV-04**: Shared MCP servers (Context7 for up-to-date library documentation, Playwright for browser-driven UI verification) are configured in the project-scope `.mcp.json` at the repository root with pinned versions and no secrets (environment variable references only); personal MCP servers (IntelliJ, optionally GitHub) are configured in local scope and documented with setup instructions; all MCP servers are listed in the tooling inventory, checked by `doctor`, and added only with the author's approval
 - [x] **AIDEV-05**: GSD project settings are enforced as policy: a CI test validates `.planning/config.json` against an explicit policy (e.g. branching strategy, tagging, commit_docs, runtime, no foreign model overrides) and fails on any deviation until the policy itself is deliberately changed
 - [x] **AIDEV-06**: Changes to governance files (`.planning/config.json`, `.claude/settings.json`, `.mcp.json`, `.github/**`, `mise.toml`, Renovate config, CODEOWNERS) fail a CI governance check unless the PR carries a `governance-approved` label applied by a maintainer
@@ -412,9 +412,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TOOL-02 | Phase 1 | Complete |
 | TOOL-03 | Phase 2 | Pending |
 | TOOL-04 | Phase 2 | Pending |
-| AIDEV-01 | Phase 2 | Pending |
+| AIDEV-01 | Phase 2 | Complete |
 | AIDEV-02 | Phase 8 | Pending |
-| AIDEV-03 | Phase 2 | Pending |
+| AIDEV-03 | Phase 2 | Complete |
 | AIDEV-04 | Phase 2 | Complete |
 | AIDEV-05 | Phase 1 | Complete |
 | AIDEV-06 | Phase 1 | Complete |
