@@ -64,6 +64,9 @@ Axon Server runs without a licence for development, with a time limit:
 
 CI uses no token: its jobs are short-lived.
 
+The observations behind these rules, the options that were weighed and the checks that guard them are recorded in
+[ADR-0005](adr/0005-axon-server-licence-and-platform-token.md).
+
 ## Check the connection from inside the network
 
 The `probe` service runs on request. It reaches Axon Server by its service name, on the health endpoint and on the gRPC
