@@ -53,6 +53,8 @@ class CommandServiceConfigurationEnhancer : ConfigurationEnhancer {
         registry.registerComponent(GeneralConverter::class.java) {
             DelegatingGeneralConverter(JacksonConverter(coursesJsonMapper()))
         }
+        // UPSTREAM: UP-0004 Axon's default tag resolver tags the raw UUID of a Kotlin value-class property, so the
+        // resolver is replaced.
         registry.registerComponent(TagResolver::class.java) { KotlinTagResolver() }
         // UPSTREAM: UP-0001 Axon has no public extension point to observe the conditional append, so the capture
         // decorates the @Internal EventStorageEngine.
