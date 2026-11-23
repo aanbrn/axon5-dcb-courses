@@ -1,0 +1,15 @@
+# Local runtime of the course system (INFRA-03). `docker compose up -d --wait` from the repository root starts it; no
+# flag, no `.env` and no Gradle run is needed in a fresh clone.
+#
+# Per-concern files live under compose/ and are pulled in with `include:`. Optional parts use `profiles:`.
+# Image references come only from compose/versions.env, which `./gradlew generateComposeVersions` writes from the
+# version catalog, so a compose file never holds an image literal (D-23, INFRA-09).
+#
+# An untracked `.env` in this directory is read by Compose itself for the pass-through variables of the services. It
+# is never listed as an `env_file`: a listed file that is missing fails, and a listed `.env` would hand every variable
+# in it to a container.
+name: courses
+
+include:
+  - path: compose/infra.yaml
+    env_file: compose/versions.env

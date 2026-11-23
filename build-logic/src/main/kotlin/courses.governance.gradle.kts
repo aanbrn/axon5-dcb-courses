@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: MIT
+import io.github.aanbrn.courses.buildlogic.ComposeVersions
 import io.github.aanbrn.courses.buildlogic.governance.AskRulesCheck
 import io.github.aanbrn.courses.buildlogic.governance.BuildScriptLintCheck
 import io.github.aanbrn.courses.buildlogic.governance.ConfigPolicyCheck
 import io.github.aanbrn.courses.buildlogic.governance.DaemonJvmConsistencyCheck
+import io.github.aanbrn.courses.buildlogic.governance.GeneratedFileCheck
+import io.github.aanbrn.courses.buildlogic.governance.ImageReferenceCheck
 import io.github.aanbrn.courses.buildlogic.governance.PrTemplateCheck
 import io.github.aanbrn.courses.buildlogic.governance.ToolingTableCheck
 
@@ -10,6 +13,8 @@ import io.github.aanbrn.courses.buildlogic.governance.ToolingTableCheck
 // build and CI enforce the same rules. The plugin is applied to the root project only.
 
 plugins { base }
+
+val libs = the<org.gradle.accessors.dm.LibrariesForLibs>()
 
 val reports = layout.buildDirectory.dir("reports/governance")
 
@@ -89,6 +94,35 @@ val checkToolingInventory =
         report.set(reports.map { it.file("tooling-inventory.txt") })
     }
 
+// The images of `compose/versions.env` are the same two catalog entries `generateComposeVersions` renders
+// (courses.root).
+val checkComposeVersions =
+    tasks.register<GeneratedFileCheck>("checkComposeVersions") {
+        group = "verification"
+        description = "Fails when compose/versions.env differs from the image references in the version catalog."
+        expected.set(
+            libs.versions.image.axonserver.zip(libs.versions.image.postgres) { axonserver, postgres ->
+                ComposeVersions.render(mapOf("axonserver" to axonserver, "postgres" to postgres))
+            },
+        )
+        actual.set(layout.projectDirectory.file("compose/versions.env"))
+        fixCommand.set("./gradlew generateComposeVersions")
+        report.set(reports.map { it.file("compose-versions.txt") })
+    }
+
+val checkImageReferences =
+    tasks.register<ImageReferenceCheck>("checkImageReferences") {
+        group = "verification"
+        description = "Fails on a compose image that is not a variable and on a catalog image without tag and digest."
+        composeFiles.from(
+            layout.projectDirectory.asFileTree.matching {
+                include("compose.yaml", "compose.yml", "compose/**/*.yaml", "compose/**/*.yml")
+            },
+        )
+        catalog.set(layout.projectDirectory.file("gradle/libs.versions.toml"))
+        report.set(reports.map { it.file("image-references.txt") })
+    }
+
 tasks.named("check") {
     dependsOn(
         checkGsdConfigPolicy,
@@ -97,5 +131,7 @@ tasks.named("check") {
         checkDaemonJvm,
         checkPrTemplate,
         checkToolingInventory,
+        checkComposeVersions,
+        checkImageReferences,
     )
 }

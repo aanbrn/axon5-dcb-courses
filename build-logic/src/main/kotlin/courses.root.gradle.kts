@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 import io.github.aanbrn.courses.buildlogic.ExecutableOnPath
+import io.github.aanbrn.courses.buildlogic.GenerateComposeVersions
 import io.github.aanbrn.courses.buildlogic.VerifyFormatterBinary
 import io.github.aanbrn.courses.buildlogic.VerifyNodeVersion
 import org.gradle.jvm.toolchain.JavaLanguageVersion
@@ -192,6 +193,16 @@ tasks
 tasks
     .matching { it.name.startsWith("spotlessPrettier") }
     .configureEach { inputs.files(verifyNodeVersion.flatMap { it.output }) }
+
+// The container images of the version catalog reach Docker Compose through the committed `compose/versions.env`
+// (INFRA-09, D-23). `checkComposeVersions` (courses.governance) fails `check` when that file is stale.
+tasks.register<GenerateComposeVersions>("generateComposeVersions") {
+    group = "build setup"
+    description = "Writes compose/versions.env from the image references in the version catalog."
+    images.put("axonserver", libs.versions.image.axonserver)
+    images.put("postgres", libs.versions.image.postgres)
+    target.set(layout.projectDirectory.file("compose/versions.env"))
+}
 
 // build-logic is a separate included build: root `check` reaches its detekt, Dokka and TestKit
 // checks through it.

@@ -121,6 +121,9 @@ class GradleFixture(val projectDir: Path) {
             plugins { id("courses.settings") }
 
             dependencyResolutionManagement {
+                // A fixture may carry its own gradle/libs.versions.toml, which Gradle imports under the default
+                // extension name. Renaming that default keeps it from colliding with the repository catalog below.
+                defaultLibrariesExtensionName.set("fixtureLibs")
                 versionCatalogs { create("libs") { from(files("$catalog")) } }
             }
 

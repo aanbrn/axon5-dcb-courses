@@ -1,0 +1,65 @@
+# Infrastructure shared by every service: the DCB event store and the database server.
+#
+# Both ports of each service are published on the loopback interface only: the development Axon Server has no access
+# control and the PostgreSQL passwords below are development defaults, so neither may be reachable from the network.
+services:
+  axonserver:
+    image: ${AXONSERVER_IMAGE:?run ./gradlew generateComposeVersions}
+    # Fixed on purpose: Axon Server stores its node name in the control database, and a random container hostname
+    # would orphan the stored contexts when the container is recreated (spike 003).
+    hostname: axonserver
+    environment:
+      # Creates the DCB `default` context at boot. There is no init container: calling /v2/cluster/init a second time
+      # corrupts the single-node Raft group.
+      - AXONIQ_AXONSERVER_STANDALONE_DCB=true
+      - AXONIQ_AXONSERVER_DEVMODE_ENABLED=true
+      - AXONIQ_UPDATE_CHECKER_DISABLED=true
+      # The optional AxonIQ Platform token (<environment-id>:<token>) lifts the 12 hour limit of an unregistered
+      # server. The bare name passes the variable through only when `.env` or the shell defines it. An empty value must
+      # never reach the container: the server then treats the Platform as configured, fails with an
+      # IndexOutOfBoundsException and stays "running" with HTTP and gRPC dead (spike 004).
+      - AXONIQ_PLATFORM_AUTHENTICATION
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8024/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    ports:
+      - "127.0.0.1:8024:8024"
+      - "127.0.0.1:8124:8124"
+    volumes:
+      - as-data:/axonserver/data
+      - as-events:/axonserver/events
+      - as-log:/axonserver/log
+
+  postgres:
+    image: ${POSTGRES_IMAGE:?run ./gradlew generateComposeVersions}
+    environment:
+      - POSTGRES_USER=postgres
+      # Development defaults, not secrets. Override them in `.env`; production deployment is out of scope.
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres-dev}
+      - QUERY_SERVICE_DB_PASSWORD=${QUERY_SERVICE_DB_PASSWORD:-query-service-dev}
+      - AUTOMATION_SERVICE_DB_PASSWORD=${AUTOMATION_SERVICE_DB_PASSWORD:-automation-service-dev}
+    healthcheck:
+      # Over TCP on purpose: while the init scripts run, the image starts a temporary server that listens on the Unix
+      # socket only, so a socket probe would report healthy before the service databases exist.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # PostgreSQL 18 keeps its data in a versioned directory below /var/lib/postgresql, so the volume goes here and
+      # not at /var/lib/postgresql/data.
+      - pg-data:/var/lib/postgresql
+      # Runs only when the data directory is empty, that is once per volume. `docker compose down -v` re-arms it.
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+
+volumes:
+  as-data: {}
+  as-events: {}
+  as-log: {}
+  pg-data: {}
