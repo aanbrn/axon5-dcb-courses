@@ -20,6 +20,13 @@ testcontainers = "2.0.5"
 jackson = "3.3.0"
 # Not in any imported BOM, so :platform constrains it explicitly. Generates the UUIDv7 values behind entity IDs.
 java-uuid-generator = "5.2.0"
+# Container images used by the test suites, as full references with tag and digest (INFRA-09). They reach the test tasks
+# as system properties through ContainerImageArguments, so a changed image invalidates the cached test results. The
+# axonserver tag also appears in docker compose from Phase 6. Testcontainers pins its Ryuk reaper through the
+# TESTCONTAINERS_RYUK_CONTAINER_IMAGE environment variable (TOOL-04); the tag is the one Testcontainers 2.0.5 uses.
+image-axonserver = "docker.axoniq.io/axoniq/axonserver:2026.1.8-nonroot@sha256:90a477bc9c51d56b18778f16fe1ccd6d0f614e9ec7bcbf0a9b99b3fbad768577"
+image-postgres = "postgres:18.7@sha256:eb63372c1e05c755f55fa30cbd07aecc443676fc6c0fa90b9002d01537841e1a"
+image-ryuk = "testcontainers/ryuk:0.14.0@sha256:7c1a8a9a47c780ed0f983770a662f80deb115d95cce3e2daa3d12115b8cd28f0"
 
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
@@ -49,6 +56,15 @@ jackson-databind = { module = "tools.jackson.core:jackson-databind" }
 jackson-module-kotlin = { module = "tools.jackson.module:jackson-module-kotlin" }
 jackson-dataformat-yaml = { module = "tools.jackson.dataformat:jackson-dataformat-yaml" }
 java-uuid-generator = { module = "com.fasterxml.uuid:java-uuid-generator", version.ref = "java-uuid-generator" }
+# Governed by the Axoniq Framework BOM (the Axon Server connector and the Testcontainers module live there, not in the
+# Apache-licensed Axon Framework BOM).
+axon-server-connector = { module = "io.axoniq.framework:axon-server-connector" }
+axoniq-testcontainer = { module = "io.axoniq.framework:axoniq-testcontainer" }
+testcontainers = { module = "org.testcontainers:testcontainers" }
+testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql" }
+postgresql = { module = "org.postgresql:postgresql" }
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
+logback-classic = { module = "ch.qos.logback:logback-classic" }
 
 [plugins]
 detekt = { id = "dev.detekt", version.ref = "detekt" }
