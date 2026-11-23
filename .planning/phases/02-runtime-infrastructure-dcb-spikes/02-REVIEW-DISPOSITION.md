@@ -21,7 +21,7 @@ findings:
     title: "`ContainerImageArchitectureTest` strips comments in a way that can hide a violation"
   - id: WR-05
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Second `DecisionCaptureIntegrationTest` case can pass without asserting anything"
   - id: WR-06
     severity: warning
@@ -47,7 +47,7 @@ findings:
     severity: info
     disposition: open
     title: "Necessity (judgment) - the empty `contracts-queries` module and its rule entries have no instantiation yet"
-open: 11
+open: 10
 total: 11
 recorded: 2026-11-23T06:52:19.989Z
 ---
@@ -60,7 +60,7 @@ recorded: 2026-11-23T06:52:19.989Z
 | WR-02 | warning | open | - |
 | WR-03 | warning | open | - |
 | WR-04 | warning | open | - |
-| WR-05 | warning | open | - |
+| WR-05 | warning | fixed | 02-REVIEW.md — fixed by quick task 261123-mub in ae12133 (committed-count assertion before the loop) |
 | WR-06 | warning | open | - |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
