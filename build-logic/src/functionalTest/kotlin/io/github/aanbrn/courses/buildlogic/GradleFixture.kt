@@ -232,8 +232,8 @@ class GradleFixture(private val projectDir: Path) {
 
                     /** A documented public class. */
                     class Library {
-                        /** Returns the answer. */
-                        fun answer(): Int = listOf(40, 2).sum()
+                        /** Adds [left] and [right]. */
+                        fun add(left: Int, right: Int): Int = left + right
                     }
                     """
                         .trimIndent() + "\n",

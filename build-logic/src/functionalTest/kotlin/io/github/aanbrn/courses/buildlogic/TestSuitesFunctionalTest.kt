@@ -86,7 +86,7 @@ class TestSuitesFunctionalTest {
             "test",
             "OnlyUnitTest",
             "the only test of the module",
-            "check(fixture.Library().answer() == 42)",
+            "check(fixture.Library().add(40, 2) == 42)",
         )
 
         val result = fixture.run(":lib:check")

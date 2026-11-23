@@ -1,9 +1,10 @@
 # Strict overrides on top of the detekt defaults (buildUponDefaultConfig). There is no baseline file.
 #
-# The `excludes` lists below are detekt's own defaults for test source sets plus the TestKit test
-# classes (`*FunctionalTest.kt`): the defaults match `**/test/**`, which does not match the
-# `functionalTest` source set, and tests are named in backticked prose. The shared TestKit fixture
-# is not excluded and stays fully documented.
+# The `excludes` lists below are detekt's own defaults for test source sets plus the test source
+# sets of this repository: the TestKit test classes (`*FunctionalTest.kt`) and the JVM test suites
+# `componentTest`, `integrationTest` and `architectureTest`. The defaults match `**/test/**`, which
+# does not match any of those, and tests are named in backticked prose without KDoc. The shared
+# TestKit fixture and the `testFixtures` source set are not excluded and stay fully documented.
 comments:
   UndocumentedPublicClass:
     active: true
@@ -20,6 +21,9 @@ comments:
         "**/jsTest/**",
         "**/iosTest/**",
         "**/*FunctionalTest.kt",
+        "**/componentTest/**",
+        "**/integrationTest/**",
+        "**/architectureTest/**",
       ]
   UndocumentedPublicProperty:
     active: true
@@ -34,6 +38,9 @@ comments:
         "**/jsTest/**",
         "**/iosTest/**",
         "**/*FunctionalTest.kt",
+        "**/componentTest/**",
+        "**/integrationTest/**",
+        "**/architectureTest/**",
       ]
   OutdatedDocumentation:
     active: true
@@ -55,6 +62,9 @@ naming:
         "**/jsTest/**",
         "**/iosTest/**",
         "**/*FunctionalTest.kt",
+        "**/componentTest/**",
+        "**/integrationTest/**",
+        "**/architectureTest/**",
       ]
 
 style:
