@@ -4,8 +4,6 @@ package io.github.aanbrn.courses.contracts.kernel.fixtures
 import com.fasterxml.uuid.Generators
 import com.fasterxml.uuid.UUIDClock
 import com.fasterxml.uuid.impl.TimeBasedEpochGenerator
-import io.github.aanbrn.courses.contracts.kernel.CourseId
-import io.github.aanbrn.courses.contracts.kernel.StudentId
 import java.time.Clock
 import java.util.Random
 import java.util.UUID
@@ -34,18 +32,4 @@ class ClockedUuidV7Generator(clock: Clock, random: Random) {
      * @return a UUID whose timestamp is the current time of the clock
      */
     fun nextUuid(): UUID = generator.generate()
-
-    /**
-     * Generates the next course ID.
-     *
-     * @return a [CourseId] over [nextUuid]
-     */
-    fun nextCourseId(): CourseId = CourseId(nextUuid())
-
-    /**
-     * Generates the next student ID.
-     *
-     * @return a [StudentId] over [nextUuid]
-     */
-    fun nextStudentId(): StudentId = StudentId(nextUuid())
 }

@@ -4,8 +4,10 @@ package io.github.aanbrn.courses.contracts.kernel
 import io.github.aanbrn.courses.contracts.kernel.fixtures.ClockedUuidV7Generator
 import io.github.aanbrn.courses.contracts.kernel.fixtures.TestIds
 import io.github.aanbrn.courses.contracts.kernel.fixtures.courseId
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeStrictlyIncreasing
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.string
 import io.kotest.property.checkAll
@@ -90,11 +92,37 @@ class TypeIdPropertyTest {
         TestIds.studentId(2).toString() shouldBe "student_01hw000000e008000000000002"
     }
 
+    @Test
+    fun `fixed test ids across the documented range are distinct UUIDv7 values with the IETF variant`() {
+        val numbers = listOf(1, 2, TEST_ID_MID, TEST_ID_MAX)
+
+        val courses = numbers.map(TestIds::courseId)
+        val students = numbers.map(TestIds::studentId)
+
+        courses.toSet().size shouldBe numbers.size
+        students.toSet().size shouldBe numbers.size
+        (courses.map { it.uuid } + students.map { it.uuid }).forEach { uuid ->
+            uuid.version() shouldBe UUID_VERSION_7
+            uuid.variant() shouldBe IETF_VARIANT
+        }
+    }
+
+    @Test
+    fun `fixed test ids reject a number outside the documented range`() {
+        listOf(0, TEST_ID_MAX + 1, -1).forEach { number ->
+            shouldThrow<IllegalArgumentException> { TestIds.courseId(number) }.message.orEmpty() shouldContain "$number"
+            shouldThrow<IllegalArgumentException> { TestIds.studentId(number) }
+        }
+    }
+
     private companion object {
         const val SEED = 42
         const val ROUNDS = 100_000
         const val THREADS = 8
         const val CLOCKED_IDS = 1_000
         const val UUID_VERSION_7 = 7
+        const val IETF_VARIANT = 2
+        const val TEST_ID_MID = 500
+        const val TEST_ID_MAX = 9_999
     }
 }

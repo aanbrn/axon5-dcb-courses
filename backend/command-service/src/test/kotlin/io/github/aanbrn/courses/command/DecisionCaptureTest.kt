@@ -128,8 +128,7 @@ class DecisionCaptureTest {
 
         val failure =
             List(2) { pool.submitDecision(StudentId.random(), barrier) }
-                .map { it.get(TIMEOUT_SECONDS, TimeUnit.SECONDS) }
-                .filterNotNull()
+                .mapNotNull { it.get(TIMEOUT_SECONDS, TimeUnit.SECONDS) }
                 .single()
 
         generateSequence(failure) { it.cause }.any { it is AppendEventsTransactionRejectedException } shouldBe true
@@ -140,7 +139,7 @@ class DecisionCaptureTest {
         application.close()
         application =
             CommandServiceTestApplication.inMemory(
-                DecisionRecorder { error("recorder is broken") },
+                recorder = { error("recorder is broken") },
                 withCapacityHarness = true,
             )
         seedCourse(capacity = 1)

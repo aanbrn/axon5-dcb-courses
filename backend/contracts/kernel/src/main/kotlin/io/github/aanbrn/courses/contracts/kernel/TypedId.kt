@@ -2,6 +2,7 @@
 package io.github.aanbrn.courses.contracts.kernel
 
 import com.fasterxml.uuid.Generators
+import com.fasterxml.uuid.impl.TimeBasedEpochGenerator
 import java.util.UUID
 
 /**
@@ -73,6 +74,6 @@ abstract class TypedIdCompanion<T : TypedId>(val prefix: String, private val wra
 
     private companion object {
         /** One generator for all IDs: it is thread-safe and keeps the UUIDs it hands out ordered. */
-        val uuidV7 = Generators.timeBasedEpochGenerator()
+        val uuidV7: TimeBasedEpochGenerator = Generators.timeBasedEpochGenerator()
     }
 }
