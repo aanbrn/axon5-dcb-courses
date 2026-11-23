@@ -28,11 +28,18 @@ class TypedIdTest {
 
     @Test
     fun `malformed text is rejected as a malformed TypeID`() {
-        listOf("garbage", "", "course_", "01h455vb4pex5vsknk084sn02q", "COURSE_01h455vb4pex5vsknk084sn02q").forEach {
+        listOf("garbage", "", "course_", "COURSE_01h455vb4pex5vsknk084sn02q").forEach {
             val failure = shouldThrow<IllegalArgumentException> { CourseId.parse(it) }
 
             failure.message.orEmpty() shouldStartWith "Malformed TypeID '"
         }
+    }
+
+    @Test
+    fun `a suffix without a prefix is rejected as a wrong prefix`() {
+        val failure = shouldThrow<IllegalArgumentException> { CourseId.parse("01h455vb4pex5vsknk084sn02q") }
+
+        failure.message.orEmpty() shouldContain "expected 'course', got ''"
     }
 
     @Test

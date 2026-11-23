@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: MIT
 plugins { id("courses.test-suites") }
 
-dependencies { testImplementation(libs.jackson.dataformat.yaml) }
+dependencies {
+    implementation(libs.java.uuid.generator)
+    testImplementation(libs.jackson.dataformat.yaml)
+}

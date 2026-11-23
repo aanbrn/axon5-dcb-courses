@@ -17,5 +17,7 @@ dependencies {
         // Deliberate override: Spring Boot manages an older Kotlin than the one this build compiles
         // with. The catalog's Kotlin wins, because Gradle selects the highest requested version.
         api(libs.kotlin.stdlib)
+        // Not managed by any imported BOM, so the version is pinned here.
+        api(libs.java.uuid.generator)
     }
 }

@@ -17,6 +17,8 @@ testcontainers = "2.0.5"
 # Aligned explicitly through :platform and free to move ahead of the version Spring Boot manages
 # (fixes and security releases need not wait for a Spring Boot release); CI checks compatibility.
 jackson = "3.3.0"
+# Not in any imported BOM, so :platform constrains it explicitly. Generates the UUIDv7 values behind entity IDs.
+java-uuid-generator = "5.2.0"
 
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
@@ -38,6 +40,7 @@ junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher
 kotest-assertions-core = { module = "io.kotest:kotest-assertions-core" }
 kotest-property = { module = "io.kotest:kotest-property" }
 jackson-dataformat-yaml = { module = "tools.jackson.dataformat:jackson-dataformat-yaml" }
+java-uuid-generator = { module = "com.fasterxml.uuid:java-uuid-generator", version.ref = "java-uuid-generator" }
 
 [plugins]
 detekt = { id = "dev.detekt", version.ref = "detekt" }
