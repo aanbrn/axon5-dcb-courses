@@ -19,5 +19,6 @@ dependencies {
         api(libs.kotlin.stdlib)
         // Not managed by any imported BOM, so the version is pinned here.
         api(libs.java.uuid.generator)
+        api(libs.konsist)
     }
 }

@@ -20,6 +20,7 @@ include(
     ":contracts-queries",
     ":serialization-jackson",
     ":tooling:test-support",
+    ":tooling:architecture",
     ":command-service",
 )
 
