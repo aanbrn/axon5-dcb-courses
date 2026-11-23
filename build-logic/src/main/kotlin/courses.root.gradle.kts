@@ -150,6 +150,8 @@ spotless {
             // REUSE-IgnoreEnd
             .skipLinesMatching("^#!.+?$")
     }
+    // Plain-text files that have no type-specific formatter get whitespace and final-newline checks only; REUSE covers
+    // their licence.
     format("misc") {
         target(
             sources(
@@ -161,6 +163,9 @@ spotless {
                     ".gitignore",
                     ".nvmrc",
                     ".java-version",
+                    ".env.example",
+                    "NOTICE",
+                    "governance/gsd-version",
                 )
                 .matching { exclude("gradle/gradle-daemon-jvm.properties") },
         )

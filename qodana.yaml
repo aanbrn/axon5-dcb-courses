@@ -37,6 +37,7 @@ exclude:
       - backend/command-service/build
       - tooling/test-support/build
       - tooling/architecture/build
+      - tooling/doctor/build
       - .gradle
       - build-logic/.gradle
       - .kotlin

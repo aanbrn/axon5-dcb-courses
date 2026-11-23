@@ -21,6 +21,7 @@ include(
     ":serialization-jackson",
     ":tooling:test-support",
     ":tooling:architecture",
+    ":tooling:doctor",
     ":command-service",
 )
 
