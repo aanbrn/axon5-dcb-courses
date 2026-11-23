@@ -81,6 +81,27 @@ class ImageReferenceCheckFunctionalTest {
     }
 
     @Test
+    fun `a catalog image that is not a double-quoted string fails naming the key, and a quoted key is checked`() {
+        fixture.file(INFRA, services($$"    image: ${AXONSERVER_IMAGE}"))
+        fixture.file(
+            CATALOG,
+            catalog(
+                "image-axonserver = \"$AXONSERVER\"",
+                "image-literal = 'postgres:18.7@sha256:$DIGEST'",
+                "image-rich = { require = \"postgres:18.7@sha256:$DIGEST\" }",
+                "\"image-quoted\" = \"postgres:18.7\"",
+            ),
+        )
+
+        val output = fixture.runAndFail(TASK).output
+
+        output shouldContain "image-literal must be a double-quoted <name>:<tag>@sha256:<64 hex digits>"
+        output shouldContain "image-rich must be a double-quoted <name>:<tag>@sha256:<64 hex digits>"
+        output shouldContain "image-quoted must be <name>:<tag>@sha256:<64 hex digits>, but is 'postgres:18.7'"
+        output shouldNotContain "image-axonserver must"
+    }
+
+    @Test
     fun `keys that do not start with image- and entries of other tables are not image references`() {
         fixture.file(INFRA, services($$"    image: ${AXONSERVER_IMAGE}"))
         fixture.file(

@@ -9,7 +9,6 @@ import io.github.aanbrn.courses.command.fixtures.CollectingDecisionRecorder
 import io.github.aanbrn.courses.command.fixtures.CommandServiceTestApplication
 import io.github.aanbrn.courses.contracts.commands.SubscribeResult
 import io.github.aanbrn.courses.contracts.commands.SubscribeStudent
-import io.github.aanbrn.courses.contracts.events.StudentSubscribed
 import io.github.aanbrn.courses.contracts.kernel.CourseId
 import io.github.aanbrn.courses.contracts.kernel.RejectionCode
 import io.github.aanbrn.courses.contracts.kernel.StudentId
@@ -20,7 +19,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotBeBlank
 import io.kotest.matchers.types.shouldBeInstanceOf
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -29,11 +27,7 @@ import org.axonframework.common.lifecycle.LifecycleHandlerInvocationException
 import org.axonframework.eventsourcing.configuration.EventSourcingConfigurer
 import org.axonframework.eventsourcing.eventstore.AppendEventsTransactionRejectedException
 import org.axonframework.eventsourcing.eventstore.EventStorageEngine
-import org.axonframework.eventsourcing.eventstore.SourcingCondition
 import org.axonframework.eventsourcing.eventstore.inmemory.InMemoryEventStorageEngine
-import org.axonframework.messaging.eventhandling.gateway.EventAppender
-import org.axonframework.messaging.eventstreaming.EventCriteria
-import org.axonframework.messaging.eventstreaming.Tag
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -109,7 +103,7 @@ class DecisionCaptureTest {
         val barrier = ArrivalBarrier(parties = 2)
 
         val failures =
-            List(2) { pool.submitDecision(StudentId.random(), barrier) }
+            List(2) { application.submitDecision(pool, course, StudentId.random(), barrier) }
                 .map { it.get(TIMEOUT_SECONDS, TimeUnit.SECONDS) }
 
         val winner = recorder.committed().single()
@@ -127,7 +121,7 @@ class DecisionCaptureTest {
         val barrier = ArrivalBarrier(parties = 2)
 
         val failure =
-            List(2) { pool.submitDecision(StudentId.random(), barrier) }
+            List(2) { application.submitDecision(pool, course, StudentId.random(), barrier) }
                 .mapNotNull { it.get(TIMEOUT_SECONDS, TimeUnit.SECONDS) }
                 .single()
 
@@ -174,42 +168,6 @@ class DecisionCaptureTest {
             .send(SubscribeStudent(course, student))
             .resultAs(SubscribeResult::class.java)
             .get(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-
-    /**
-     * Runs one decision in a unit of work on a pool thread: source the course, wait at the [barrier] until both
-     * decisions have sourced, then append that [student] subscribed.
-     *
-     * @return the future of the failure of the unit of work, or `null` when it committed
-     */
-    private fun ExecutorService.submitDecision(
-        student: StudentId,
-        barrier: ArrivalBarrier,
-    ): CompletableFuture<Throwable?> =
-        CompletableFuture.supplyAsync(
-            {
-                runCatching {
-                    application.unitOfWorkFactory
-                        .create()
-                        .executeWithResult { context ->
-                            application.eventStore
-                                .transaction(context)
-                                .source(
-                                    SourcingCondition.conditionFor(
-                                        EventCriteria.havingTags(Tag.of(Tags.COURSE, course.toString())),
-                                    ),
-                                )
-                                .reduce(0) { count, _ -> (count ?: 0) + 1 }
-                                .thenCompose { barrier.arrive() }
-                                .thenApply {
-                                    EventAppender.forContext(context).append(StudentSubscribed(course, student))
-                                }
-                        }
-                        .get(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                }
-                    .exceptionOrNull()
-            },
-            this,
-        )
 
     private companion object {
         const val TIMEOUT_SECONDS = 30L

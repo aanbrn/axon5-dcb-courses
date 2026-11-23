@@ -8,7 +8,9 @@
 #   - This script runs only what must work before Gradle can start (mise and its tools, a Java runtime
 #     for the Gradle wrapper, the Docker engine and its image store) and what Gradle does not own: the
 #     Testcontainers settings, the pinned GSD installation (AIDEV-07), the global GSD defaults, the MCP
-#     servers, the Platform token, colima, the Claude Code version and the tracked `.claude` files.
+#     servers, the Platform token, colima, the Claude Code version, the tracked `.claude` files, and the
+#     upstream-removal reminder (every docs/upstream record that is fixed upstream while its workaround
+#     markers remain, with its removal criteria).
 #   - Everything else runs as `./gradlew doctor`: the Node major (verifyNodeVersion), the formatter
 #     binaries (verifyShfmt, verifyTaplo), the daemon JVM criteria (checkDaemonJvm) and Testcontainers
 #     connectivity (testcontainersProbe). The last check below runs it, so each failure carries the
@@ -580,6 +582,82 @@ check_claude_tracking() {
   done <<<"$unexpected"
 }
 
+# The word that opens a workaround marker. It is kept in a variable because written out after a comment opener it would
+# itself be a marker, and `checkUpstreamRecords` would demand a record for it.
+readonly MARKER_WORD=UPSTREAM
+
+# The files that can hold a workaround marker, as git pathspecs: the scope of the `checkUpstreamRecords` Gradle task
+# (the upstream record check of build-logic), limited to the files git tracks.
+readonly -a MARKER_PATHSPECS=(
+  '*.kt' '*.kts' '*.sh' '*.yaml' '*.yml' '*.toml' '*.json' '*.json5' '*.md' '*.properties' '*.xml' '.env.example' NOTICE
+  ':(exclude)docs/upstream' ':(exclude)docs/templates' ':(exclude).planning' ':(exclude).claude'
+  ':(exclude)build-logic/src/functionalTest'
+)
+
+# front_matter_value <file> <key>: the value of a `key: value` line of the front matter, between the first two `---`
+# lines, without its quotes or a carriage return. Prints nothing when there is no such line.
+front_matter_value() {
+  awk -v key="$2" '
+    { sub(/\r$/, "") }
+    NR == 1 { if ($0 == "---") { inside = 1; next } else { exit } }
+    inside && $0 == "---" { exit }
+    inside && index($0, key ": ") == 1 {
+      value = substr($0, length(key) + 3)
+      gsub(/^"|"$/, "", value)
+      print value
+      exit
+    }' "$1"
+}
+
+# removal_criteria <file>: the non-blank lines under `## Removal criteria` up to the next heading, joined into one line.
+removal_criteria() {
+  awk '
+    { sub(/\r$/, "") }
+    /^## Removal criteria[[:space:]]*$/ { inside = 1; next }
+    inside && /^#/ { exit }
+    inside && $0 !~ /^[[:space:]]*$/ { text = text (text == "" ? "" : " ") $0 }
+    END { print text }' "$1"
+}
+
+# workaround_markers <id>: the `path:line` of every tracked workaround marker of the record, comma-separated; nothing
+# when there is none. The pattern mirrors the marker rule of the upstream record check (a comment opener, the marker
+# word, a colon and the ID as a whole word); `checkUpstreamRecords` stays the authority on marker consistency.
+workaround_markers() {
+  local pattern hits
+  pattern="(^|[[:space:]])(//|/\\*|\\*|#|<!--|--)[[:space:]]*$MARKER_WORD: $1([^0-9A-Za-z_]|\$)"
+  hits=$(git -C "$ROOT" grep -n -E -e "$pattern" -- "${MARKER_PATHSPECS[@]}" || true)
+  if [[ -n $hits ]]; then
+    printf '%s\n' "$hits" | cut -d: -f1,2 | paste -sd, - | sed 's/,/, /g'
+  fi
+}
+
+# upstream-removal (also in --ci): every docs/upstream record whose status is fixed-upstream and whose workaround
+# markers still exist in a tracked file is listed with its removal criteria, whatever its product. The dependency
+# update advisory only matches records whose product has a pinned key, so it cannot surface these. A warning never
+# fails the script. Record text is collapsed to one line and printed after a fixed prefix, so a record can never
+# start a GitHub workflow command in the CI log.
+check_upstream_removal() {
+  if ! has git || ! git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    report skip upstream-removal "not a git checkout, so the markers cannot be listed"
+    return
+  fi
+  local record id locations warned=false
+  for record in "$ROOT"/docs/upstream/[0-9][0-9][0-9][0-9]-*.md; do
+    [[ -f $record && $(front_matter_value "$record" status) == fixed-upstream ]] || continue
+    id=$(front_matter_value "$record" id)
+    [[ $id =~ ^UP-[0-9]{4}$ ]] || continue
+    locations=$(workaround_markers "$id")
+    [[ -n $locations ]] || continue
+    warned=true
+    report warn upstream-removal "$id is fixed upstream, but its workaround markers remain: $locations" \
+      "removal criteria (${record#"$ROOT"/}): $(removal_criteria "$record")" \
+      "when they hold, follow How to verify removal in that record, then remove the markers and set its status to workaround-removed"
+  done
+  if [[ $warned == false ]]; then
+    report ok upstream-removal "no fixed-upstream record has workaround markers left"
+  fi
+}
+
 # gradle: the JVM-side checks, run by Gradle itself. `--continue` runs every independent check and
 # reports each failure with the fix its task names. mise puts the pinned Node and formatter binaries
 # on the build's PATH, the same way CI and the lefthook hooks run Gradle.
@@ -637,6 +715,7 @@ main() {
   check_platform_token
   check_claude_code
   check_claude_tracking
+  check_upstream_removal
   check_gradle
   printf 'summary: %d ok, %d warn, %d fail, %d skip\n' "$COUNT_OK" "$COUNT_WARN" "$COUNT_FAIL" "$COUNT_SKIP"
   [[ $COUNT_FAIL -eq 0 ]]

@@ -22,8 +22,11 @@ import org.gradle.api.tasks.TaskAction
  * Two rules keep the version catalog the one source of every image:
  * - every `image:` value in the [composeFiles] is a `${VARIABLE}` interpolation, optionally with a `:?message` default
  *   check, so the reference comes from the generated `compose/versions.env` and never from a literal;
- * - every `image-*` key of the `[versions]` table of the [catalog] is `<name>:<tag>@sha256:<64 hex digits>`, so the tag
- *   names the version for readers and Renovate, and the digest fixes the content.
+ * - every `image-*` key of the `[versions]` table of the [catalog] is a double-quoted string of the form
+ *   `<name>:<tag>@sha256:<64 hex digits>`, so the tag names the version for readers and Renovate, and the digest fixes
+ *   the content. Every such key is matched, bare or quoted, and a value of any other shape (a literal string, an inline
+ *   table, a multi-line string) is reported, because the Renovate custom manager reads only the double-quoted form and
+ *   such an entry would never be updated.
  *
  * Compose files are read line by line instead of with a YAML library: only `image:` entries are needed, and an extra
  * parser dependency in `build-logic` is not worth that. Commented-out lines are skipped. Findings are written as
@@ -77,7 +80,7 @@ abstract class ImageReferenceCheck @Inject constructor(private val layout: Proje
             }
         }
 
-    /** The `image-*` entries of the `[versions]` table that are not a tag-and-digest reference. */
+    /** The `image-*` entries of the `[versions]` table that are not a double-quoted tag-and-digest reference. */
     private fun catalogProblems(path: String, lines: List<String>): List<String> {
         val problems = mutableListOf<String>()
         var inVersions = false
@@ -85,15 +88,20 @@ abstract class ImageReferenceCheck @Inject constructor(private val layout: Proje
             if (line.startsWith("[")) {
                 inVersions = VERSIONS_HEADER.matches(line)
             } else if (inVersions) {
-                CATALOG_IMAGE.find(line)?.let { entry ->
-                    val (key, reference) = entry.destructured
-                    if (!PINNED_REFERENCE.matches(reference)) {
-                        problems += "$path: $key must be <name>:<tag>@sha256:<64 hex digits>, but is '$reference'"
-                    }
-                }
+                catalogProblem(path, line)?.let { problems += it }
             }
         }
         return problems
+    }
+
+    private fun catalogProblem(path: String, line: String): String? {
+        val (_, key, value) = CATALOG_ENTRY.matchEntire(line)?.destructured ?: return null
+        val reference = DOUBLE_QUOTED_VALUE.matchEntire(value)?.groupValues?.get(1)
+        return when {
+            reference == null -> "$path: $key must be a double-quoted $PINNED_FORM, but is '$value'"
+            PINNED_REFERENCE.matches(reference) -> null
+            else -> "$path: $key must be $PINNED_FORM, but is '$reference'"
+        }
     }
 
     private fun unquote(value: String): String =
@@ -127,8 +135,17 @@ abstract class ImageReferenceCheck @Inject constructor(private val layout: Proje
 
         val VERSIONS_HEADER = Regex("""\[versions]\s*(#.*)?""")
 
-        /** A double-quoted `image-*` entry of a TOML table: the key and the value. */
-        val CATALOG_IMAGE = Regex("""^(image-[A-Za-z0-9_.-]+)\s*=\s*"([^"]*)"""")
+        /** The shape of a pinned image reference, as the problems name it. */
+        const val PINNED_FORM = "<name>:<tag>@sha256:<64 hex digits>"
+
+        /**
+         * An `image-*` entry of a TOML table, whatever its value: the quote of the key (empty for a bare key, the same
+         * quote on both sides otherwise), the key, and the rest of the line after the equals sign.
+         */
+        val CATALOG_ENTRY = Regex("""^(["']?)(image-[A-Za-z0-9_.-]+)\1\s*=\s*(.*)$""")
+
+        /** A double-quoted string with an optional trailing comment: the capture is the text between the quotes. */
+        val DOUBLE_QUOTED_VALUE = Regex("""^"([^"]*)"\s*(?:#.*)?$""")
 
         /**
          * `[registry[:port]/][path/]name:tag@sha256:digest`. A colon followed by digits before the first slash is a

@@ -363,8 +363,7 @@ private object UpstreamRecords {
         /** The date of [key], or null for `null`, a missing key or an invalid value (the last two are reported). */
         protected fun date(key: String): String? {
             val entry = entry(key) ?: return null
-            val value = entry.value
-            return when (value) {
+            return when (val value = entry.value) {
                 FrontMatter.Value.Null -> null
                 is FrontMatter.Value.Text if isDate(value.value) -> value.value
                 else -> null.also { problem(entry.line, "`$key` must be a YYYY-MM-DD date or null") }
@@ -476,11 +475,6 @@ private object UpstreamRecords {
     }
 }
 
-/** A level-1 or level-2 heading of a record body and the number of non-blank lines below it. */
-private class Heading(val level: Int, val text: String, val line: Int) {
-    var content = 0
-}
-
 /** The title heading and the required sections of a record body. */
 private object RecordBody {
     private val SECTIONS =
@@ -496,7 +490,7 @@ private object RecordBody {
 
     /** Reports problems through [report] as (line, message) and returns the title, or null when there is none. */
     fun check(front: FrontMatter.Result, id: String?, report: (Int, String) -> Unit): String? {
-        val headings = outline(front)
+        val headings = MarkdownOutline.headings(front)
         val title = headings.firstOrNull { it.level == 1 }?.let { TITLE.matchEntire(it.text) }
         if (title == null) {
             report(front.bodyStartLine, "missing the title heading `# UP-NNNN: <title>`")
@@ -511,23 +505,5 @@ private object RecordBody {
             }
         }
         return title?.groupValues?.get(2)
-    }
-
-    /** The level-1 and level-2 headings outside code fences, each with its count of non-blank content lines. */
-    private fun outline(front: FrontMatter.Result): List<Heading> {
-        val found = mutableListOf<Heading>()
-        var fenced = false
-        front.body.forEachIndexed { index, raw ->
-            val line = front.bodyStartLine + index
-            val text = raw.trimEnd()
-            val isFence = text.trimStart().startsWith("```") || text.trimStart().startsWith("~~~")
-            when {
-                isFence -> fenced = !fenced
-                !fenced && text.startsWith("# ") -> found += Heading(1, text, line)
-                !fenced && text.startsWith("## ") -> found += Heading(2, text, line)
-            }
-            if (text.isNotBlank() && found.isNotEmpty() && found.last().line != line) found.last().content++
-        }
-        return found
     }
 }

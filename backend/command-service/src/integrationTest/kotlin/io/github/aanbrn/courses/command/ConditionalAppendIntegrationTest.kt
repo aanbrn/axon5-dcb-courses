@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 package io.github.aanbrn.courses.command
 
+import io.github.aanbrn.courses.command.fixtures.ArrivalBarrier
 import io.github.aanbrn.courses.command.fixtures.CommandServiceTestApplication
 import io.github.aanbrn.courses.contracts.events.CourseCreated
-import io.github.aanbrn.courses.contracts.events.StudentSubscribed
 import io.github.aanbrn.courses.contracts.kernel.CourseId
 import io.github.aanbrn.courses.contracts.kernel.StudentId
 import io.github.aanbrn.courses.contracts.kernel.Tags
@@ -14,7 +14,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
 import org.axonframework.eventsourcing.eventstore.AppendEventsTransactionRejectedException
 import org.axonframework.eventsourcing.eventstore.SourcingCondition
 import org.axonframework.messaging.eventhandling.gateway.EventAppender
@@ -32,9 +31,9 @@ import org.junit.jupiter.api.TestInstance
  *
  * Each test creates its courses from fresh IDs and the store is never purged, so the tests are repeatable against the
  * same server and do not see each other's events (D-16). Two units of work run concurrently from a two-thread pool, and
- * a barrier holds both back until each has sourced its criteria, so both append against the same, soon outdated marker.
- * Without that barrier, the first unit could commit before the second one sourced anything, and no conflict would exist
- * to detect.
+ * an [ArrivalBarrier] holds both back until each has sourced its criteria, so both append against the same, soon
+ * outdated marker. Without that barrier, the first unit could commit before the second one sourced anything, and no
+ * conflict would exist to detect.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ConditionalAppendIntegrationTest {
@@ -57,11 +56,11 @@ class ConditionalAppendIntegrationTest {
     fun `an append with an outdated marker for overlapping criteria is rejected`() {
         val course = CourseId.random()
         seed(CourseCreated(course, "Event Modeling", capacity = CAPACITY))
-        val barrier = SourcingBarrier(CONCURRENT_UNITS)
+        val barrier = ArrivalBarrier(CONCURRENT_UNITS)
 
         val outcomes =
             listOf(StudentId.random(), StudentId.random())
-                .map { student -> pool.submitDecision(course, student, barrier) }
+                .map { student -> application.submitDecision(pool, course, student, barrier) }
                 .map { it.await() }
 
         outcomes.count { it == null } shouldBe 1
@@ -78,11 +77,11 @@ class ConditionalAppendIntegrationTest {
             CourseCreated(courseA, "Aggregates", capacity = CAPACITY),
             CourseCreated(courseB, "Dynamic Boundaries", CAPACITY),
         )
-        val barrier = SourcingBarrier(CONCURRENT_UNITS)
+        val barrier = ArrivalBarrier(CONCURRENT_UNITS)
 
         val outcomes =
             listOf(courseA, courseB)
-                .map { course -> pool.submitDecision(course, StudentId.random(), barrier) }
+                .map { course -> application.submitDecision(pool, course, StudentId.random(), barrier) }
                 .map {
                     it.await()
                 }
@@ -102,39 +101,6 @@ class ConditionalAppendIntegrationTest {
             }
             .get(TIMEOUT_SECONDS, TimeUnit.SECONDS)
     }
-
-    /**
-     * Runs one decision on a pool thread: source the events tagged with [course], wait at the [barrier] until every
-     * decision has sourced, then append that [student] subscribed.
-     *
-     * @return the future of the failure of the unit of work, or `null` when it committed
-     */
-    private fun ExecutorService.submitDecision(
-        course: CourseId,
-        student: StudentId,
-        barrier: SourcingBarrier,
-    ): CompletableFuture<Throwable?> =
-        CompletableFuture.supplyAsync(
-            {
-                runCatching {
-                    application.unitOfWorkFactory
-                        .create()
-                        .executeWithResult { context ->
-                            application.eventStore
-                                .transaction(context)
-                                .source(SourcingCondition.conditionFor(criteria(course)))
-                                .reduce(0) { count, _ -> (count ?: 0) + 1 }
-                                .thenCompose { barrier.arrive() }
-                                .thenApply {
-                                    EventAppender.forContext(context).append(StudentSubscribed(course, student))
-                                }
-                        }
-                        .get(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                }
-                    .exceptionOrNull()
-            },
-            this,
-        )
 
     /** The names of the course events stored for [course], read in a new unit of work. */
     private fun sourceEventNames(course: CourseId): List<String> =
@@ -158,21 +124,6 @@ class ConditionalAppendIntegrationTest {
     private fun CompletableFuture<Throwable?>.await(): Throwable? = get(TIMEOUT_SECONDS, TimeUnit.SECONDS)
 
     private fun Throwable.causeChain(): Sequence<Throwable> = generateSequence(this) { it.cause }
-
-    /**
-     * Completes once [parties] decisions have arrived, without blocking any of them: a decision that waits on a
-     * blocking latch could occupy the very thread that must complete the sourcing of the other one.
-     */
-    private class SourcingBarrier(private val parties: Int) {
-        private val arrived = AtomicInteger()
-        private val released = CompletableFuture<Unit>()
-
-        /** Registers one sourced decision; the returned future completes when all have arrived. */
-        fun arrive(): CompletableFuture<Unit> {
-            if (arrived.incrementAndGet() == parties) released.complete(Unit)
-            return released
-        }
-    }
 
     private companion object {
         const val CONCURRENT_UNITS = 2

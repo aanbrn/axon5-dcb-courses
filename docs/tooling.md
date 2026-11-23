@@ -149,15 +149,18 @@ absent). It runs as many checks as it can instead of stopping at the first failu
 - The script itself runs the checks that must work before Gradle can start, and the ones Gradle does not own: mise and
   its pinned tools, a Java runtime for the Gradle wrapper, the Docker engine and its image store, the Testcontainers
   settings, the pinned GSD installation against the hashes of its manifest (modified hooks and unexpected files fail),
-  the global GSD defaults, the MCP servers, the Platform token, colima, the Claude Code release and the tracked
-  `.claude/` files.
+  the global GSD defaults, the MCP servers, the Platform token, colima, the Claude Code release, the tracked
+  `.claude/` files and the upstream-removal reminder: every `docs/upstream` record whose status is `fixed-upstream`
+  while its workaround markers remain in a tracked file is listed with its removal criteria, whatever its product (a
+  warning, never a failure).
 - `./gradlew doctor` runs the rest, so that every check has one implementation: the Node.js major
   (`verifyNodeVersion`), the formatter binaries (`verifyShfmt`, `verifyTaplo`), the daemon JVM criteria
   (`checkDaemonJvm`) and Testcontainers connectivity through the Testcontainers library itself
   (`testcontainersProbe`). The script calls it last, with `--continue`, so every failure shows its task's own fix hint.
   Without a Java runtime the script reports that as the failure and skips this step.
 - `scripts/doctor.sh --ci` is what the `Doctor` CI job runs. It skips the checks that only make sense on a developer
-  machine: GSD, the global GSD defaults, the MCP servers, the Platform token, colima and the Claude Code release.
+  machine: GSD, the global GSD defaults, the MCP servers, the Platform token, colima and the Claude Code release. The
+  tracked-file checks (`.claude/` and upstream-removal) read only repository files, so they run in `--ci` too.
 
 ## MCP servers
 

@@ -90,11 +90,6 @@ private class AdrProblem(val path: String, val line: Int, val message: String) {
     fun render(): String = if (line > 0) "$path:$line: $message" else "$path: $message"
 }
 
-/** A level-1 or level-2 heading of an ADR body and the number of non-blank lines below it. */
-private class AdrHeading(val level: Int, val text: String, val line: Int) {
-    var content = 0
-}
-
 /** The ADR rules, kept apart from the task so they read as one specification. */
 private object AdrRules {
     val FILE_NAME = Regex("^([0-9]{4})-[a-z0-9-]+\\.md$")
@@ -165,7 +160,7 @@ private object AdrRules {
 
     private fun structure(file: AdrFile, front: FrontMatter.Result): List<AdrProblem> {
         val problems = mutableListOf<AdrProblem>()
-        val headings = outline(front)
+        val headings = MarkdownOutline.headings(front)
         val title = headings.firstOrNull { it.level == 1 }?.let { TITLE.matchEntire(it.text) }
         if (title == null) {
             problems += AdrProblem(file.path, front.bodyStartLine, "missing the title heading `# ADR-NNNN: <title>`")
@@ -187,24 +182,6 @@ private object AdrRules {
             }
         }
         return problems
-    }
-
-    /** The level-1 and level-2 headings outside code fences, each with its count of non-blank content lines. */
-    private fun outline(front: FrontMatter.Result): List<AdrHeading> {
-        val found = mutableListOf<AdrHeading>()
-        var fenced = false
-        front.body.forEachIndexed { index, raw ->
-            val line = front.bodyStartLine + index
-            val text = raw.trimEnd()
-            val isFence = text.trimStart().startsWith("```") || text.trimStart().startsWith("~~~")
-            when {
-                isFence -> fenced = !fenced
-                !fenced && text.startsWith("# ") -> found += AdrHeading(1, text, line)
-                !fenced && text.startsWith("## ") -> found += AdrHeading(2, text, line)
-            }
-            if (text.isNotBlank() && found.isNotEmpty() && found.last().line != line) found.last().content++
-        }
-        return found
     }
 
     /** Validates the front matter keys of one ADR and collects the problems it finds. */
@@ -248,8 +225,7 @@ private object AdrRules {
             val entry = text("status") ?: return
             val value = (entry.value as FrontMatter.Value.Text).value
             if (value in STATUSES) return
-            val target = SUPERSEDED.matchEntire(value)?.groupValues?.get(1)
-            when (target) {
+            when (val target = SUPERSEDED.matchEntire(value)?.groupValues?.get(1)) {
                 null ->
                     problem(
                         entry.line,

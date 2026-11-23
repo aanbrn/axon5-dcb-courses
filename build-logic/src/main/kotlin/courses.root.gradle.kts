@@ -4,6 +4,7 @@ import io.github.aanbrn.courses.buildlogic.ExecutableOnPath
 import io.github.aanbrn.courses.buildlogic.GenerateComposeVersions
 import io.github.aanbrn.courses.buildlogic.VerifyFormatterBinary
 import io.github.aanbrn.courses.buildlogic.VerifyNodeVersion
+import io.github.aanbrn.courses.buildlogic.readJavaMajorVersion
 import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 
@@ -223,12 +224,7 @@ tasks.named("check") { dependsOn(gradle.includedBuild("build-logic").task(":chec
 tasks.named<UpdateDaemonJvm>("updateDaemonJvm") {
     languageVersion.set(
         providers.fileContents(layout.projectDirectory.file(".java-version")).asText.map { text ->
-            val major =
-                text.trim().substringBefore('.').toIntOrNull()
-                    ?: throw GradleException(
-                        ".java-version must hold a numeric JDK major version, but it holds '${text.trim()}'",
-                    )
-            JavaLanguageVersion.of(major)
+            JavaLanguageVersion.of(readJavaMajorVersion(text))
         },
     )
 }

@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: MIT
+import io.github.aanbrn.courses.buildlogic.readJavaMajorVersion
+
 plugins {
     `java-library`
     id("org.jetbrains.kotlin.jvm")
@@ -23,12 +25,7 @@ configurations
 // `.java-version` is the only place the JDK version lives (INFRA-09).
 val javaLanguageVersion: Provider<JavaLanguageVersion> =
     providers.fileContents(rootDirectory.file(".java-version")).asText.map { text ->
-        val major =
-            text.trim().substringBefore('.').toIntOrNull()
-                ?: throw GradleException(
-                    ".java-version must hold a numeric JDK major version, but it holds '${text.trim()}'",
-                )
-        JavaLanguageVersion.of(major)
+        JavaLanguageVersion.of(readJavaMajorVersion(text))
     }
 
 kotlin {
