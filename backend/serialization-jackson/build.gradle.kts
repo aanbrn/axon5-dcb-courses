@@ -8,5 +8,6 @@ dependencies {
 
     // The module depends on the kernel only (D-02, D-44); the contracts it serialises are test subjects.
     testImplementation(project(":contracts-events"))
+    testImplementation(project(":contracts-commands"))
     testImplementation(testFixtures(project(":contracts-kernel")))
 }

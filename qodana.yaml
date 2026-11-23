@@ -31,6 +31,7 @@ exclude:
       - platform/build
       - backend/contracts/kernel/build
       - backend/contracts/events/build
+      - backend/contracts/commands/build
       - backend/serialization-jackson/build
       - .gradle
       - build-logic/.gradle

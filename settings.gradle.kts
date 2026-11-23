@@ -16,11 +16,14 @@ include(
     ":platform",
     ":contracts-kernel",
     ":contracts-events",
+    ":contracts-commands",
     ":serialization-jackson",
 )
 
 project(":contracts-kernel").projectDir = file("backend/contracts/kernel")
 
 project(":contracts-events").projectDir = file("backend/contracts/events")
+
+project(":contracts-commands").projectDir = file("backend/contracts/commands")
 
 project(":serialization-jackson").projectDir = file("backend/serialization-jackson")
