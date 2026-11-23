@@ -34,6 +34,7 @@ two open points, the effect of restarts and the delivery of the token. It ran no
 - Pass the variable through from the root `.env` with a bare compose entry, `- AXONIQ_PLATFORM_AUTHENTICATION` (chosen).
 - An `env_file` per service with `required: false`, the arrangement spike 004 first proved to work.
 - A committed default of an empty value, the common compose idiom `${AXONIQ_PLATFORM_AUTHENTICATION:-}`.
+- A compose profile `platform` that adds the token, weighed during the discussion of D-25.
 
 ## Decision Outcome
 
@@ -98,6 +99,12 @@ is limited to 12 hours.` and `Shutdown scheduled at <boot + 12 h>`. The limit is
 - Bad, because it needs a dedicated, git-ignored file and an `.example` sibling next to the `.env` that compose already
   reads, and the file would be one more place a token can leak from.
 - Bad, because a listed `.env` would hand every variable in it to the container, so the file must be a different one.
+
+### A compose profile `platform`
+
+- Good, because the token would be opt-in by name.
+- Bad, because every command that uses the token needs the profile flag, and the token would still have to arrive through
+  the environment, so the profile adds a switch without solving the delivery.
 
 ### A committed default of an empty value
 
