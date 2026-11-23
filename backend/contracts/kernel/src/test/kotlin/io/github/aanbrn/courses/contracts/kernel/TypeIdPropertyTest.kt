@@ -94,13 +94,23 @@ class TypeIdPropertyTest {
 
     @Test
     fun `fixed test ids across the documented range are distinct UUIDv7 values with the IETF variant`() {
-        val numbers = listOf(1, 2, TEST_ID_MID, TEST_ID_MAX)
+        val courses =
+            listOf(
+                TestIds.courseId(1),
+                TestIds.courseId(2),
+                TestIds.courseId(TEST_ID_MID),
+                TestIds.courseId(TEST_ID_MAX),
+            )
+        val students =
+            listOf(
+                TestIds.studentId(1),
+                TestIds.studentId(2),
+                TestIds.studentId(TEST_ID_MID),
+                TestIds.studentId(TEST_ID_MAX),
+            )
 
-        val courses = numbers.map(TestIds::courseId)
-        val students = numbers.map(TestIds::studentId)
-
-        courses.toSet().size shouldBe numbers.size
-        students.toSet().size shouldBe numbers.size
+        courses.toSet().size shouldBe courses.size
+        students.toSet().size shouldBe students.size
         (courses.map { it.uuid } + students.map { it.uuid }).forEach { uuid ->
             uuid.version() shouldBe UUID_VERSION_7
             uuid.variant() shouldBe IETF_VARIANT
