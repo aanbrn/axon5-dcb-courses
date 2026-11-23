@@ -6,15 +6,17 @@
 #
 # Which checks live where (D-48, one implementation per check):
 #   - This script runs only what must work before Gradle can start (mise and its tools, a Java runtime
-#     for the Gradle wrapper, the Docker engine) and the local-only checks Gradle does not own.
+#     for the Gradle wrapper, the Docker engine and its image store) and what Gradle does not own: the
+#     Testcontainers settings, the pinned GSD installation (AIDEV-07), the global GSD defaults, the MCP
+#     servers, the Platform token, colima, the Claude Code version and the tracked `.claude` files.
 #   - Everything else runs as `./gradlew doctor`: the Node major (verifyNodeVersion), the formatter
 #     binaries (verifyShfmt, verifyTaplo), the daemon JVM criteria (checkDaemonJvm) and Testcontainers
 #     connectivity (testcontainersProbe). The last check below runs it, so each failure carries the
 #     fix hint of the task that found it.
 #
 # Usage: doctor.sh [--ci] [--help]
-#   --ci    skip the checks that only make sense on a developer machine (GSD, MCP servers, the
-#           Platform token, colima and the Claude Code version); CI runs this mode
+#   --ci    skip the checks that only make sense on a developer machine (gsd, gsd-defaults, mcp,
+#           platform-token, colima and claude-code); CI runs this mode
 #   --help  print this text
 # Environment (for the shell tests): DOCTOR_ROOT is the repository root (default: the parent of
 # this script's directory), DOCTOR_SKIP_GRADLE=1 skips the delegation to Gradle.
@@ -31,6 +33,9 @@ readonly ROOT
 
 CI_MODE=false
 JAVA_OK=false
+# Set by check_docker: whether the engine answered, and the name of the docker context in use.
+DOCKER_OK=false
+DOCKER_CONTEXT=''
 COUNT_OK=0
 COUNT_WARN=0
 COUNT_FAIL=0
@@ -63,6 +68,16 @@ report() {
 
 has() {
   command -v "$1" >/dev/null 2>&1
+}
+
+# local_only <check>: in --ci mode reports skip for a check that only makes sense on a developer machine and succeeds,
+# so that the caller returns (`local_only gsd && return`). Outside --ci it fails and the check runs.
+local_only() {
+  if $CI_MODE; then
+    report skip "$1" "local-only check, skipped by --ci"
+    return 0
+  fi
+  return 1
 }
 
 # The path of jq: the one on PATH, else the one mise has pinned. Fails when neither exists.
@@ -169,6 +184,7 @@ check_docker() {
   fi
   local context version operating_system engine
   context=$(docker context show 2>/dev/null || true)
+  DOCKER_CONTEXT=$context
   if ! version=$(docker info --format '{{.ServerVersion}}' 2>/dev/null) || [[ -z $version ]]; then
     case $context in
     colima*) report fail docker "the engine of context ${context} does not answer" "colima start" ;;
@@ -186,7 +202,378 @@ check_docker() {
   desktop*) engine="Docker Desktop" ;;
   *) if [[ $operating_system == *"Docker Desktop"* ]]; then engine="Docker Desktop"; else engine="engine"; fi ;;
   esac
+  DOCKER_OK=true
   report ok docker "$engine reachable through context ${context:-unknown}, server $version"
+}
+
+# image-store: the classic image store, on which the Testcontainers and Paketo setup was verified. The containerd
+# image store reports the driver `overlayfs` and a snapshotter entry in the driver status.
+check_image_store() {
+  if [[ $DOCKER_OK != true ]]; then
+    report skip image-store "the engine does not answer, see the docker check"
+    return
+  fi
+  local driver status
+  driver=$(docker_field Driver)
+  status=$(docker info --format '{{json .DriverStatus}}' 2>/dev/null || true)
+  if [[ $driver == overlayfs || $status == *io.containerd.snapshotter* ]]; then
+    report warn image-store "the containerd image store is active (driver ${driver:-unknown}), not the classic one" \
+      "colima: colima start --edit, then set docker.features.containerd-snapshotter: false" \
+      "Docker Desktop: Settings > General, turn off 'Use containerd for pulling and storing images'"
+  else
+    report ok image-store "the classic image store is active (driver ${driver:-unknown})"
+  fi
+}
+
+# The awk program that reads the facts of a colima.yaml that this check needs: the number of entries in
+# `network.dns` and the value of `docker.features.containerd-snapshotter`. A comment line is ignored.
+read -r -d '' COLIMA_AWK <<'AWK' || true
+/^[[:space:]]*#/ { next }
+/^[^[:space:]]/ { top = $0; sub(/:.*/, "", top); in_dns = 0; next }
+top == "network" && /^  dns:/ {
+  rest = $0
+  sub(/^  dns:[[:space:]]*/, "", rest)
+  if (rest ~ /^\[/) {
+    gsub(/[][[:space:]]/, "", rest)
+    if (rest != "") dns++
+    in_dns = 0
+  } else {
+    in_dns = 1
+  }
+  next
+}
+top == "network" && in_dns && /^    -/ { dns++; next }
+top == "network" && /^  [^[:space:]-]/ { in_dns = 0 }
+top == "docker" && /containerd-snapshotter:/ {
+  value = $0
+  sub(/.*containerd-snapshotter:[[:space:]]*/, "", value)
+  sub(/[[:space:]]*(#.*)?$/, "", value)
+  snapshotter = value
+}
+END { printf "%d %s\n", dns, (snapshotter == "" ? "unset" : snapshotter) }
+AWK
+readonly COLIMA_AWK
+
+# colima (local only): the two settings of the colima VM that the image pulls and the Testcontainers runs depend on:
+# an explicit DNS list (the default forwarder stalls on AAAA lookups) and the classic image store.
+check_colima() {
+  local_only colima && return
+  case $DOCKER_CONTEXT in
+  colima*) ;;
+  *)
+    report skip colima "the engine is not colima"
+    return
+    ;;
+  esac
+  local profile=${DOCKER_CONTEXT#colima} file facts dns snapshotter
+  profile=${profile#-}
+  file=${HOME:-}/.colima/${profile:-default}/colima.yaml
+  if [[ ! -f $file ]]; then
+    report warn colima "cannot read the colima configuration ~/.colima/${profile:-default}/colima.yaml" \
+      "colima start --edit"
+    return
+  fi
+  facts=$(awk "$COLIMA_AWK" "$file")
+  dns=${facts%% *}
+  snapshotter=${facts#* }
+  local -a problems=() fixes=()
+  if [[ $dns -eq 0 ]]; then
+    problems+=("network.dns is empty, so the default DNS forwarder can stall image pulls")
+    fixes+=("colima stop && colima start --dns 8.8.8.8 --dns 1.1.1.1 (or list servers under network.dns with: colima start --edit)")
+  fi
+  if [[ $snapshotter != false ]]; then
+    problems+=("docker.features.containerd-snapshotter is not false (found $snapshotter)")
+    fixes+=("colima stop && colima start --edit, then set docker.features.containerd-snapshotter: false")
+  fi
+  if [[ ${#problems[@]} -eq 0 ]]; then
+    report ok colima "network.dns lists $dns servers and the containerd snapshotter is off"
+    return
+  fi
+  local detail=${problems[0]} index
+  for ((index = 1; index < ${#problems[@]}; index++)); do
+    detail+="; ${problems[index]}"
+  done
+  report warn colima "$detail" "${fixes[@]}"
+}
+
+# testcontainers-config: how Testcontainers finds the engine and whether its Ryuk reaper runs. Only key names and the
+# scheme of DOCKER_HOST are printed, never the values of the properties file. Real connectivity is the testcontainers
+# check of ./gradlew doctor.
+check_testcontainers_config() {
+  local properties=${HOME:-}/.testcontainers.properties host_state keys='' keys_state ryuk_disabled=false
+  if [[ -n ${DOCKER_HOST:-} ]]; then
+    host_state="DOCKER_HOST set (${DOCKER_HOST%%://*})"
+  else
+    host_state="DOCKER_HOST unset"
+  fi
+  if [[ -f $properties ]]; then
+    keys=$(grep -E '^[[:space:]]*(tc\.host|docker\.host)[[:space:]]*=' "$properties" |
+      sed -E 's/^[[:space:]]*(tc\.host|docker\.host).*/\1/' | sort -u | paste -sd, - | sed 's/,/ and /' || true)
+    if grep -Eq '^[[:space:]]*ryuk\.disabled[[:space:]]*=[[:space:]]*true' "$properties"; then
+      ryuk_disabled=true
+    fi
+  fi
+  if [[ ${TESTCONTAINERS_RYUK_DISABLED:-} == true ]]; then
+    ryuk_disabled=true
+  fi
+  if [[ -n $keys ]]; then
+    keys_state="$keys set"
+  else
+    keys_state="no tc.host or docker.host"
+  fi
+  if [[ $ryuk_disabled == true ]]; then
+    report warn testcontainers-config "Ryuk is disabled, so containers of a crashed test run are never removed" \
+      "unset TESTCONTAINERS_RYUK_DISABLED and remove ryuk.disabled from ~/.testcontainers.properties"
+  elif [[ $DOCKER_CONTEXT == colima* && -z ${DOCKER_HOST:-} && -z $keys ]]; then
+    report warn testcontainers-config "colima: no DOCKER_HOST, tc.host or docker.host, so Testcontainers cannot find the engine" \
+      "add the line tc.host=unix:///var/run/docker.sock to ~/.testcontainers.properties" \
+      "or export DOCKER_HOST=unix://\$HOME/.colima/default/docker.sock and TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock"
+  else
+    report ok testcontainers-config "$host_state, $keys_state, Ryuk enabled"
+  fi
+}
+
+# The files under .claude/ of a GSD installation that its manifest does not list. The installer leaves them out.
+readonly GSD_UNLISTED_ALLOWED=(hooks/package.json scripts/changeset/README.md)
+# The directories under .claude/ that GSD owns. Anything else there (skills, settings) is not GSD's.
+readonly GSD_DIRECTORIES=(gsd-core agents commands hooks scripts)
+
+# gsd (local only, AIDEV-07): the installed GSD is the pinned version and every file is byte for byte what the
+# manifest records. A modified hook changes what agents do, so it is called out as a hook. Files that the manifest does
+# not list under GSD's directories are reported as unexpected. Nothing is repaired: the fix reinstalls the pinned version
+# after you have looked at the difference.
+check_gsd() {
+  local_only gsd && return
+  local claude=$ROOT/.claude pinned_file=$ROOT/governance/gsd-version manifest pinned installed jq install_fix
+  manifest=$claude/gsd-file-manifest.json
+  if [[ ! -f $pinned_file ]]; then
+    report fail gsd "governance/gsd-version is missing" "write the version of the installed GSD into governance/gsd-version"
+    return
+  fi
+  pinned=$(sed -n 1p "$pinned_file" | tr -d '[:space:]')
+  install_fix="npx -y @opengsd/gsd-core@$pinned --claude --local"
+  if [[ ! -f $manifest ]]; then
+    report fail gsd ".claude/gsd-file-manifest.json is missing, so GSD is not installed" "$install_fix"
+    return
+  fi
+  if ! jq=$(find_jq); then
+    report fail gsd "jq is needed to read the GSD manifest and is not installed" "mise install"
+    return
+  fi
+  local -a hasher
+  if has sha256sum; then
+    hasher=(sha256sum)
+  elif has shasum; then
+    hasher=(shasum -a 256)
+  else
+    report fail gsd "neither sha256sum nor shasum is installed, so the files cannot be verified" "install coreutils or perl"
+    return
+  fi
+
+  installed=$("$jq" -r '.version // empty' "$manifest")
+  if [[ $installed != "$pinned" ]]; then
+    report fail gsd "installed GSD ${installed:-unknown} differs from governance/gsd-version $pinned" \
+      "run /gsd-update deliberately, then update governance/gsd-version"
+  fi
+
+  # `hash  path` lines of what the manifest expects and of what is on disk.
+  local expected actual listed on_disk problems total
+  expected=$("$jq" -r '.files | to_entries[] | "\(.value)  \(.key)"' "$manifest")
+  actual=$(cd "$claude" && "$jq" -r '.files | keys[]' "$manifest" |
+    while IFS= read -r path; do
+      if [[ -f $path ]]; then printf '%s\0' "$path"; fi
+    done | xargs -0 "${hasher[@]}" 2>/dev/null || true)
+  problems=$(awk '
+    function path_of(line) { return substr(line, index(line, "  ") + 2) }
+    function hash_of(line) { return substr(line, 1, index(line, "  ") - 1) }
+    FNR == NR { want[path_of($0)] = hash_of($0); next }
+    { got[path_of($0)] = hash_of($0) }
+    END {
+      for (p in want) {
+        if (!(p in got)) print "missing: " p
+        else if (got[p] != want[p]) print (p ~ /^hooks\// ? "modified hook: " : "modified: ") p
+      }
+    }' <(printf '%s\n' "$expected") <(printf '%s\n' "$actual") | sort)
+
+  listed=$("$jq" -r '.files | keys[]' "$manifest" | sort)
+  on_disk=$(
+    cd "$claude"
+    for directory in "${GSD_DIRECTORIES[@]}"; do
+      if [[ -d $directory ]]; then find "$directory" -type f; fi
+    done | sort
+  )
+  local unexpected
+  unexpected=$(comm -13 <(printf '%s\n' "$listed") <(printf '%s\n' "$on_disk") |
+    grep -vxF -f <(printf '%s\n' "${GSD_UNLISTED_ALLOWED[@]}") | grep -v -e '^$' -e '/\.DS_Store$' |
+    sed 's/^/unexpected: /' || true)
+  problems=$(printf '%s\n%s\n' "$problems" "$unexpected" | grep -v '^$' || true)
+
+  if [[ -z $problems ]]; then
+    if [[ $installed == "$pinned" ]]; then
+      total=$("$jq" -r '.files | length' "$manifest")
+      report ok gsd "version $installed, $total files match the manifest, no unexpected files"
+    fi
+    return
+  fi
+  local line count=0 shown=0 limit=25
+  count=$(printf '%s\n' "$problems" | wc -l | tr -d '[:space:]')
+  while IFS= read -r line; do
+    shown=$((shown + 1))
+    if [[ $shown -le $limit ]]; then
+      if [[ $shown -eq $count || $shown -eq $limit ]]; then
+        report fail gsd "$line" "$install_fix"
+      else
+        report fail gsd "$line"
+      fi
+    fi
+  done <<<"$problems"
+  if [[ $count -gt $limit ]]; then
+    report fail gsd "and $((count - limit)) more problems"
+  fi
+}
+
+# gsd-defaults (local only): ~/.gsd/defaults.json is merged into GSD's configuration by some resolvers, so a key in it
+# can change how GSD behaves in this project. Only key names are listed, never values.
+check_gsd_defaults() {
+  local_only gsd-defaults && return
+  local file=${HOME:-}/.gsd/defaults.json name="\$HOME/.gsd/defaults.json" keys jq
+  if [[ ! -f $file ]]; then
+    report ok gsd-defaults "no $name"
+    return
+  fi
+  if ! jq=$(find_jq); then
+    report warn gsd-defaults "jq is needed to read $name and is not installed" "mise install"
+    return
+  fi
+  if ! keys=$("$jq" -r 'if type == "object" then keys | join(", ") else error("not an object") end' "$file" 2>/dev/null); then
+    report warn gsd-defaults "$name is not a JSON object" "repair the file or remove it"
+    return
+  fi
+  if [[ -z $keys ]]; then
+    report ok gsd-defaults "$name sets no keys"
+  else
+    report warn gsd-defaults "$name sets keys that GSD can merge into this project's configuration: $keys (names only)" \
+      "review $name and delete the keys this project must not inherit"
+  fi
+}
+
+# mcp (local only, AIDEV-04): the binary of every server in .mcp.json resolves. A server started through
+# `mise x -- <binary>` is resolved with `mise which`, any other command through PATH.
+check_mcp() {
+  local_only mcp && return
+  local file=$ROOT/.mcp.json jq servers name binary wrapped total=0 unresolved=''
+  if [[ ! -f $file ]]; then
+    report ok mcp "no .mcp.json, so no project MCP servers"
+    return
+  fi
+  if ! jq=$(find_jq); then
+    report warn mcp "jq is needed to read .mcp.json and is not installed" "mise install"
+    return
+  fi
+  # shellcheck disable=SC2016 # a jq program, not shell
+  servers=$("$jq" -r '
+    .mcpServers // {} | to_entries[] | (.value.args // []) as $args
+    | if .value.command == "mise" and ($args[0] == "x" or $args[0] == "exec") and $args[1] == "--"
+      then [.key, $args[2], "mise"] else [.key, .value.command, "path"] end | @tsv' "$file")
+  while IFS=$'\t' read -r name binary wrapped; do
+    [[ -n $name ]] || continue
+    total=$((total + 1))
+    if [[ $wrapped == mise ]]; then
+      if ! has mise || ! (cd "$ROOT" && mise which "$binary" >/dev/null 2>&1); then
+        unresolved+="${unresolved:+, }$name ($binary)"
+      fi
+    elif ! has "$binary"; then
+      unresolved+="${unresolved:+, }$name ($binary)"
+    fi
+  done <<<"$servers"
+  if [[ -n $unresolved ]]; then
+    report warn mcp "servers in .mcp.json whose binary cannot be resolved: $unresolved" "mise install"
+  else
+    report ok mcp "all $total servers in .mcp.json resolve through mise or PATH"
+  fi
+}
+
+# The awk program that classifies the Platform token in a dotenv file as `set`, `empty` or `absent`. It prints that one
+# word and nothing else, so the value can never reach the output. The last assignment of the key wins, as in dotenv.
+read -r -d '' TOKEN_AWK <<'AWK' || true
+/^[[:space:]]*(export[[:space:]]+)?AXONIQ_PLATFORM_AUTHENTICATION[[:space:]]*=/ {
+  value = substr($0, index($0, "=") + 1)
+  sub(/^[[:space:]]+/, "", value)
+  sub(/[[:space:]]+$/, "", value)
+  state = (value == "" || value == "\"\"" || value == "\047\047") ? "empty" : "set"
+}
+END { print (state == "" ? "absent" : state) }
+AWK
+readonly TOKEN_AWK
+
+# platform-token (local only, D-47): an empty definition makes Axon Server start in a zombie state, so it fails; no
+# definition only means the 12-hour window, so it warns. Only the state is tested, never the value.
+check_platform_token() {
+  local_only platform-token && return
+  local dotenv=$ROOT/.env state=absent
+  if [[ -f $dotenv ]]; then
+    state=$(awk "$TOKEN_AWK" "$dotenv")
+  fi
+  case $state in
+  set) report ok platform-token "AXONIQ_PLATFORM_AUTHENTICATION is set in .env (the value is not shown)" ;;
+  empty)
+    report fail platform-token \
+      "AXONIQ_PLATFORM_AUTHENTICATION is defined but empty, which leaves Axon Server running with dead endpoints" \
+      "remove the line or set <environment-id>:<token>"
+    ;;
+  *)
+    report warn platform-token \
+      "AXONIQ_PLATFORM_AUTHENTICATION is not set, so Axon Server stops itself about 12 hours after it starts" \
+      "to lift the limit, set AXONIQ_PLATFORM_AUTHENTICATION=<environment-id>:<token> in .env (see .env.example)"
+    ;;
+  esac
+}
+
+# The only place the minimum Claude Code version lives: marketplaces pinned by commit SHA need it.
+readonly CLAUDE_CODE_MIN_VERSION=2.1.324
+
+# claude-code (local only, AIDEV-04): the installed Claude Code can pin marketplaces by commit SHA.
+check_claude_code() {
+  local_only claude-code && return
+  if ! has claude; then
+    report warn claude-code "the claude CLI is not on PATH" "brew install --cask claude-code@latest"
+    return
+  fi
+  local installed lowest
+  installed=$(claude --version 2>/dev/null | awk 'NR == 1 { print $1 }')
+  if [[ -z $installed ]]; then
+    report warn claude-code "cannot read the version from 'claude --version'" "brew upgrade --cask claude-code@latest"
+    return
+  fi
+  lowest=$(printf '%s\n%s\n' "$CLAUDE_CODE_MIN_VERSION" "$installed" | sort -V | sed -n 1p)
+  if [[ $lowest == "$CLAUDE_CODE_MIN_VERSION" ]]; then
+    report ok claude-code "$installed meets the minimum $CLAUDE_CODE_MIN_VERSION for marketplaces pinned by commit SHA"
+  else
+    report warn claude-code "$installed is older than $CLAUDE_CODE_MIN_VERSION, which marketplaces pinned by commit SHA need" \
+      "brew upgrade --cask claude-code@latest (the stable cask lags behind; claude-code@latest has the minimum)"
+  fi
+}
+
+# claude-tracking (AIDEV-03, also in --ci): the only tracked content under .claude/ is the project-owned settings.json
+# and CLAUDE.md and the spike-findings skills (D-39). The GSD installation and local settings stay untracked.
+check_claude_tracking() {
+  if ! has git || ! git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    report skip claude-tracking "the repository is not a git work tree"
+    return
+  fi
+  local tracked unexpected path count
+  tracked=$(git -C "$ROOT" ls-files -- .claude)
+  unexpected=$(printf '%s\n' "$tracked" |
+    grep -vE '^$|^\.claude/(settings\.json|CLAUDE\.md|skills/spike-findings-[^/]+/.*)$' || true)
+  if [[ -z $unexpected ]]; then
+    count=$(printf '%s\n' "$tracked" | grep -c . || true)
+    report ok claude-tracking "only project-owned files are tracked under .claude ($count files)"
+    return
+  fi
+  while IFS= read -r path; do
+    report fail claude-tracking "$path is tracked, but only settings.json, CLAUDE.md and skills/spike-findings-* may be (AIDEV-03)" \
+      "git rm --cached $path"
+  done <<<"$unexpected"
 }
 
 # gradle: the JVM-side checks, run by Gradle itself. `--continue` runs every independent check and
@@ -237,6 +624,15 @@ main() {
   check_tools
   check_java
   check_docker
+  check_image_store
+  check_colima
+  check_testcontainers_config
+  check_gsd
+  check_gsd_defaults
+  check_mcp
+  check_platform_token
+  check_claude_code
+  check_claude_tracking
   check_gradle
   printf 'summary: %d ok, %d warn, %d fail, %d skip\n' "$COUNT_OK" "$COUNT_WARN" "$COUNT_FAIL" "$COUNT_SKIP"
   [[ $COUNT_FAIL -eq 0 ]]
