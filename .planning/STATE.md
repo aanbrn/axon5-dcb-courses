@@ -132,6 +132,8 @@ Recent decisions affecting current work:
 - [Phase 2/3]: Decision-record capture relies on an `@Internal` Axon SPI; fallback is explicit per-slice stamping plus an architecture rule
 - [Phase 8/10]: `EventCriteria` expressiveness for schedule overlap and the waiting-list head is unverified; fallback is passing candidates in the command and re-validating in the decision
 - [Phases 2, 13]: Third-party skills/MCP servers and upstream issue publication need explicit author approval at execution time (Phase 1 repository settings and the `main` ruleset are applied)
+- [Phase 3]: Review WR-01 deferred: conflict retry is fixed at 10 attempts with uncapped, unjittered back-off, so >~11 contenders on one open course end in raw `AppendEventsTransactionRejectedException`. Phase 3 SC2 must make the bound configurable, add capped full-jitter back-off and a 40-way concurrent subscription test
+- [Phase 3]: Qodana `UnusedSymbol` (profile Default, threshold 0) will likely flag production `@CommandHandler`/`@EventSourcingHandler` methods reached only through annotation scanning; choose the approach (explicit registration, entry-point configuration, or other) before the first slice, without suppressions
 - [Tooling]: GSD hooks fail in Claude Code sessions started inside a git worktree (hooks resolve under `$CLAUDE_PROJECT_DIR`, the worktree has no `.claude/hooks/`); deferred follow-up from UAT test 3
 
 ### Quick Tasks Completed
