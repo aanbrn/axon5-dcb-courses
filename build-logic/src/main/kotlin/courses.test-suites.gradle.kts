@@ -2,6 +2,7 @@
 plugins {
     id("courses.kotlin-library")
     `java-test-fixtures`
+    id("org.jetbrains.kotlinx.kover")
 }
 
 // The three JVM test levels of a module (D-15), as Gradle JVM Test Suites:
@@ -10,7 +11,14 @@ plugins {
 //   integrationTest the real Axon Server (and whatever else the scenario needs)
 // Gradle wires only `test` into `check`; this convention wires all three, so that `check` is the one command that
 // runs every level (D-19). Every suite sees its module, the module's `testFixtures` and the same assertion libraries
-// (D-21); the two infrastructure suites run on a single fork and after the preceding suite (D-22).
+// (D-21); the two infrastructure suites run on a single fork (D-22) and after the preceding suite. The order uses
+// `mustRunAfter`: `shouldRunAfter` is only a hint, and Gradle ran `integrationTest` before `test` in a `check` build
+// (TestSuitesFunctionalTest). `mustRunAfter` adds no dependency, so running one suite alone still runs only that suite.
+
+// Coverage (TEST-11): Kover instruments every `Test` task of the module, so `test`, `componentTest` and
+// `integrationTest` all feed the module's report (`koverXmlReport`, `koverHtmlReport`). No test task is excluded and no
+// class filter is set here. Kover is a Gradle plugin, not a test library: it adds nothing to any suite's dependencies.
+// The cross-module aggregation, the thresholds, the exclusions and the CI reporting are TEST-08 (Phase 3).
 
 val libs = the<org.gradle.accessors.dm.LibrariesForLibs>()
 
@@ -33,7 +41,7 @@ testing {
                 testTask.configure {
                     group = "verification"
                     description = "Runs the component tests of one service: Spring context, PostgreSQL, Axon in memory."
-                    shouldRunAfter(tasks.named("test"))
+                    mustRunAfter(tasks.named("test"))
                     maxParallelForks = 1
                 }
             }
@@ -43,7 +51,7 @@ testing {
                 testTask.configure {
                     group = "verification"
                     description = "Runs the integration tests against a real Axon Server."
-                    shouldRunAfter(tasks.named("componentTest"))
+                    mustRunAfter(tasks.named("componentTest"))
                     maxParallelForks = 1
                 }
             }

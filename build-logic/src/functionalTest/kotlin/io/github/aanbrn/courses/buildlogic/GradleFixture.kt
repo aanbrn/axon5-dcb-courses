@@ -164,6 +164,59 @@ class GradleFixture(private val projectDir: Path) {
             }
 
         /**
+         * Creates a fixture in [projectDir] like [standard], except that `:lib` applies `courses.test-suites`, which
+         * adds the `componentTest` and `integrationTest` suites and the `testFixtures` source set to the three it
+         * starts with.
+         *
+         * `:lib` has a documented class in `src/main` (`fixture.Library`) and a documented object in `src/testFixtures`
+         * (`fixture.fixtures.Samples`); no test exists, so each test adds the ones it needs with [addTest]. A `doFirst`
+         * action on every `Test` task prints `FORKS <task>=<maxParallelForks>` when the task really runs.
+         */
+        fun testSuites(projectDir: Path): GradleFixture =
+            standard(projectDir).apply {
+                file(
+                    "lib/build.gradle.kts",
+                    """
+                    $HEADER
+                    plugins { id("courses.test-suites") }
+
+                    tasks.withType<Test>().configureEach {
+                        doFirst { println("FORKS ${'$'}name=${'$'}maxParallelForks") }
+                    }
+                    """
+                        .trimIndent() + "\n",
+                )
+                file(
+                    "lib/src/main/kotlin/fixture/Library.kt",
+                    """
+                    $HEADER
+                    package fixture
+
+                    /** A documented public class. */
+                    class Library {
+                        /** Adds [left] and [right]. */
+                        fun add(left: Int, right: Int): Int = left + right
+                    }
+                    """
+                        .trimIndent() + "\n",
+                )
+                file(
+                    "lib/src/testFixtures/kotlin/fixture/fixtures/Samples.kt",
+                    """
+                    $HEADER
+                    package fixture.fixtures
+
+                    /** Sample values shared by the tests of every suite. */
+                    object Samples {
+                        /** Returns the sample value. */
+                        fun sample(): String = listOf("sam", "ple").joinToString("")
+                    }
+                    """
+                        .trimIndent() + "\n",
+                )
+            }
+
+        /**
          * The outcomes of a task that passed, whether it ran or its result came from the build cache, which TestKit
          * shares with the user's Gradle home.
          */
@@ -185,4 +238,41 @@ class GradleFixture(private val projectDir: Path) {
                 "System property '$name' is not set; run the fixture through the functionalTest task."
             }
     }
+}
+
+/**
+ * Writes a JUnit test class with one test to the source set of the suite [suite] of the `:lib` project, and returns the
+ * absolute path of the file.
+ *
+ * The class lives in the package `fixture` and carries a one-line KDoc, as every test class in this repository does.
+ * The test is named in backticked prose and has a block body, and it has no KDoc, as the tests of the real suites do.
+ *
+ * @param suite the name of the suite, which is also the name of its source set, for example `componentTest`
+ * @param className the simple name of the test class
+ * @param testName the prose name of the single test function
+ * @param body the single line of Kotlin that makes up the test function
+ * @param imports the import lines the [body] needs, without the `import` keyword
+ */
+fun GradleFixture.addTest(
+    suite: String,
+    className: String,
+    testName: String,
+    body: String,
+    imports: List<String> = emptyList(),
+): Path {
+    val importLines = (listOf("org.junit.jupiter.api.Test") + imports).map { "import $it" }
+    val lines =
+        listOf(GradleFixture.HEADER, "package fixture", "") +
+            importLines +
+            listOf(
+                "",
+                "/** A test in the $suite suite. */",
+                "class $className {",
+                "    @Test",
+                "    fun `$testName`() {",
+                "        $body",
+                "    }",
+                "}",
+            )
+    return file("lib/src/$suite/kotlin/fixture/$className.kt", lines.joinToString("\n", postfix = "\n"))
 }
