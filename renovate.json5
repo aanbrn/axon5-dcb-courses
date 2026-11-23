@@ -61,6 +61,20 @@
       matchStrings: ["linter: (?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"],
       datasourceTemplate: "docker",
     },
+    {
+      // The same reference sits in two files on purpose: gradle/libs.versions.toml is the source (the integration
+      // tests read it) and compose/versions.env is generated from it. Both match the same depName, so Renovate
+      // updates tag and digest in both files in ONE pull request and `checkComposeVersions` stays green. The
+      // `image-*` catalog keys and the `*_IMAGE` variables are the only lines this manager reads.
+      customType: "regex",
+      description: "Container images: tag and digest in the version catalog and compose/versions.env",
+      managerFilePatterns: ["/(^|/)gradle/libs\\.versions\\.toml$/", "/(^|/)compose/versions\\.env$/"],
+      matchStrings: [
+        '\\bimage-[a-z0-9-]+ = "(?<depName>[^:"@\\s]+):(?<currentValue>[^@"\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"',
+        "\\b[A-Z0-9_]+_IMAGE=(?<depName>[^:@\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})",
+      ],
+      datasourceTemplate: "docker",
+    },
   ],
 
   // Rules apply in order and later rules win, so labels and groups come first, then automerge, then
@@ -233,6 +247,35 @@
       prBodyNotes: [
         "Run `./gradlew updateDaemonJvm` on this branch and commit the regenerated `gradle/gradle-daemon-jvm.properties`: `checkDaemonJvm` fails until then. If the JDK major changed, also refresh `mise.lock` with `mise lock`.",
       ],
+    },
+
+    // Container images of the local runtime and the test suites: one pull request per image (Renovate keys the branch
+    // by dependency, and the dependency is the same in both files), never merged by a rule. Placed after the
+    // automerge rules so that it wins.
+    {
+      description: "Container images in the catalog and compose/versions.env: one reviewed pull request each",
+      matchManagers: ["custom.regex"],
+      matchDatasources: ["docker"],
+      matchFileNames: ["gradle/libs.versions.toml", "compose/versions.env"],
+      automerge: false,
+      prBodyNotes: [
+        "The tag and digest change in `gradle/libs.versions.toml` and `compose/versions.env` together. `./gradlew checkComposeVersions checkImageReferences` must stay green; if it fails, run `./gradlew generateComposeVersions` on this branch and commit the result.",
+      ],
+    },
+    {
+      // docker.axoniq.io is an alias of Docker Hub's axoniq/axonserver that lists tags but answers every manifest
+      // request from Renovate with 429, so digests could never be looked up. The files keep the official host; the
+      // lookup goes to Docker Hub, which serves the identical digest.
+      description: "Axon Server: look up tags and digests on Docker Hub",
+      matchDepNames: ["docker.axoniq.io/axoniq/axonserver"],
+      overridePackageName: "axoniq/axonserver",
+    },
+    {
+      // A major PostgreSQL upgrade needs a dump and restore of every data volume, so it is a deliberate decision made
+      // in a change of its own, not a Renovate pull request.
+      description: "PostgreSQL: stay on the current major (a major upgrade is a deliberate decision)",
+      matchDepNames: ["postgres"],
+      allowedVersions: "/^18\\./",
     },
 
     // Qodana: the image tag must match the IntelliJ IDEA release used for development (docs/tooling.md).

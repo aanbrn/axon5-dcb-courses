@@ -33,6 +33,29 @@ services:
       - as-events:/axonserver/events
       - as-log:/axonserver/log
 
+  # Network-level proof of the in-network scenario (D-26, D-46): a container on the compose network reaches Axon Server
+  # by its service name, on the HTTP port and on the gRPC port. It runs only on request, with
+  # `docker compose --profile probe run --rm probe`, and reuses the Axon Server image (it ships `curl`), so no extra
+  # image is pinned. Functional gRPC clients arrive with the services of Phases 3 and 6.
+  probe:
+    image: ${AXONSERVER_IMAGE:?run ./gradlew generateComposeVersions}
+    profiles: [probe]
+    depends_on:
+      axonserver:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        curl -fsS -o /dev/null --max-time 5 http://axonserver:8024/actuator/health
+        echo "probe: http://axonserver:8024/actuator/health is reachable"
+        # gRPC runs over HTTP/2 without TLS here: speaking HTTP/2 to the port proves a listener is accepting connections.
+        # Any answer passes; a refused or timed-out connection exits non-zero.
+        curl -sS -o /dev/null --max-time 5 --retry 5 --retry-delay 1 --retry-connrefused --http2-prior-knowledge \
+          http://axonserver:8124
+        echo "probe: axonserver:8124 accepts connections"
+
   postgres:
     image: ${POSTGRES_IMAGE:?run ./gradlew generateComposeVersions}
     environment:
