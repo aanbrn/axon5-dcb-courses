@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: MIT
+import io.github.aanbrn.courses.buildlogic.ContainerImageArguments
+
 plugins {
     id("courses.kotlin-library")
     `java-test-fixtures`
@@ -20,7 +22,27 @@ plugins {
 // class filter is set here. Kover is a Gradle plugin, not a test library: it adds nothing to any suite's dependencies.
 // The cross-module aggregation, the thresholds, the exclusions and the CI reporting are TEST-08 (Phase 3).
 
+// Container images (INFRA-09, TOOL-04): the two infrastructure suites receive the images of the version catalog as
+// system properties through `ContainerImageArguments`, whose values are task inputs, so a new image re-runs the tests.
+// `-Pcourses.axonserver.external=localhost:8124` makes the tests use an Axon Server that already runs (D-46) and is an
+// input as well. Testcontainers' own Ryuk reaper is pinned through its environment variable, the same way on colima and
+// Docker Desktop, and the Axon update checker is switched off in every test JVM. No image literal exists in any test.
+
 val libs = the<org.gradle.accessors.dm.LibrariesForLibs>()
+
+/** Passes the catalog images and the environment settings of the container-based suites to [this] test task. */
+fun Test.useContainerImages() {
+    jvmArgumentProviders.add(
+        objects.newInstance<ContainerImageArguments>().apply {
+            images.put("axonserver", libs.versions.image.axonserver)
+            images.put("postgres", libs.versions.image.postgres)
+            images.put("ryuk", libs.versions.image.ryuk)
+            axonServerExternal.set(providers.gradleProperty("courses.axonserver.external"))
+        },
+    )
+    environment("AXONIQ_UPDATE_CHECKER_DISABLED", "true")
+    environment("TESTCONTAINERS_RYUK_CONTAINER_IMAGE", libs.versions.image.ryuk.get())
+}
 
 // The JVM Test Suite API is still marked @Incubating. It is the documented way to declare test levels (TEST-11), and a
 // Gradle upgrade that changes it fails this build in its Renovate pull request.
@@ -43,6 +65,7 @@ testing {
                     description = "Runs the component tests of one service: Spring context, PostgreSQL, Axon in memory."
                     mustRunAfter(tasks.named("test"))
                     maxParallelForks = 1
+                    useContainerImages()
                 }
             }
         }
@@ -53,6 +76,7 @@ testing {
                     description = "Runs the integration tests against a real Axon Server."
                     mustRunAfter(tasks.named("componentTest"))
                     maxParallelForks = 1
+                    useContainerImages()
                 }
             }
         }

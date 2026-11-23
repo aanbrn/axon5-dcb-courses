@@ -19,6 +19,8 @@ include(
     ":contracts-commands",
     ":contracts-queries",
     ":serialization-jackson",
+    ":tooling:test-support",
+    ":command-service",
 )
 
 project(":contracts-kernel").projectDir = file("backend/contracts/kernel")
@@ -30,3 +32,5 @@ project(":contracts-commands").projectDir = file("backend/contracts/commands")
 project(":contracts-queries").projectDir = file("backend/contracts/queries")
 
 project(":serialization-jackson").projectDir = file("backend/serialization-jackson")
+
+project(":command-service").projectDir = file("backend/command-service")

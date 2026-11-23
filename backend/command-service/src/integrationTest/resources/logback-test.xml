@@ -1,0 +1,12 @@
+<!-- SPDX-License-Identifier: MIT -->
+<configuration>
+  <!-- Axon and the gRPC stack log at WARN, so a passing integration test stays quiet and a failure shows its cause. -->
+  <appender name="OUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} %-5level %logger{30} - %msg%n</pattern>
+    </encoder>
+  </appender>
+  <root level="WARN">
+    <appender-ref ref="OUT" />
+  </root>
+</configuration>
