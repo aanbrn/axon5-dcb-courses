@@ -101,7 +101,7 @@ Plans:
   3. The contracts modules (commands, events, queries, a shared kernel with the tag registry and sealed result types) contain no Spring or framework logic. Kotlin events with TypeID value-class IDs and tags round-trip through serialization unchanged, and malformed or wrong-prefix TypeIDs are rejected.
   4. MADR ADRs, created from in-repository templates, record the spike outcomes: Axoniq licence behaviour (also reflected in the quick-start notes), the decision-record capture approach, Kotlin serialization and TypeID conventions, and buildpack constraints (pnpm support, image environment defaults). CI checks dependency licences against an allowlist, and NOTICE justifies the Axoniq modules.
   5. Every upstream defect found so far has a `docs/upstream/` record, a CI check keeps workaround markers and records consistent, and dependency update PRs prompt a check of the removal criteria. Vetted Claude Code skills and MCP servers (Context7, Playwright) are installed from pinned sources only after approval and are listed in the tooling inventory. Only `.claude/settings.json` and `.claude/CLAUDE.md` are tracked.
-**Plans:** 13/23 plans executed
+**Plans:** 15/23 plans executed
 
 Plans:
 **Wave 1**
@@ -132,8 +132,8 @@ Plans:
 - [x] 02-13-PLAN.md — Dependency licence allowlist check over per-module CycloneDX SBOMs (JVM; npm project dependencies join in Phase 5 per D-30; mise-pinned npm developer tools out of scope), NOTICE with the Axoniq terms and its mirror check
 
 **Wave 8** *(blocked on Wave 7 completion)*
-- [ ] 02-14-PLAN.md — `doctor` (shell bootstrap, GSD manifest, token, colima; `./gradlew doctor` delegating to the existing Node, formatter and daemon-JVM checks plus the Testcontainers probe) and its CI job
-- [ ] 02-15-PLAN.md — Upstream-record check with the shared front-matter parser, the site-ready status index, and the record and issue templates
+- [x] 02-14-PLAN.md — `doctor` (shell bootstrap, GSD manifest, token, colima; `./gradlew doctor` delegating to the existing Node, formatter and daemon-JVM checks plus the Testcontainers probe) and its CI job
+- [x] 02-15-PLAN.md — Upstream-record check with the shared front-matter parser, the site-ready status index, and the record and issue templates
 
 **Wave 9** *(blocked on Wave 8 completion)*
 - [ ] 02-16-PLAN.md — Axon code-path upstream records UP-0001..UP-0005, UP-0007, UP-0013 with markers and issue drafts
@@ -345,7 +345,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Repository, Build & CI Foundation | 21/21 | Complete    | 2026-11-22 |
-| 2. Runtime Infrastructure & DCB Spikes | 13/23 | In Progress | - |
+| 2. Runtime Infrastructure & DCB Spikes | 15/23 | In Progress | - |
 | 3. Command Walking Skeleton | 0/TBD | Not started | - |
 | 4. Read Side & Live Queries | 0/TBD | Not started | - |
 | 5. BFF & First Live UI | 0/TBD | Not started | - |
