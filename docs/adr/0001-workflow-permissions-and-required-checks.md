@@ -1,12 +1,12 @@
+---
+status: "accepted"
+date: "2026-11-21"
+decision-makers: ["repository author (decision D-21)"]
+---
+
 # ADR-0001: Workflow permissions and required status checks
 
-- Status: accepted
-- Date: 2026-11-21
-- Deciders: repository author (decision D-21)
-
-This is a minimal record. Phase 2 introduces the ADR templates and normalises the format of this note.
-
-## Context
+## Context and Problem Statement
 
 The original plan (D-09) asked for two things: every workflow declares `permissions: read-all` as its
 default token permission, and a single required status check (`ci-success`) gates merges.
@@ -20,7 +20,16 @@ Two findings from the Phase 1 prototype contradict that wording:
   events, so folding it into `ci.yml` would re-run the whole build every time a label changes. Letting a
   skipped job stand in for the check would let a later green run mask a failing one.
 
-## Decision
+## Considered Options
+
+- Workflow-level `permissions: {}` with job-level grants, and an aggregator job in each of `ci.yml` and
+  `governance.yml` behind the two required contexts `ci-success` and `governance-success` (chosen).
+- The wording of D-09: every workflow declares `permissions: read-all`, and a single required status check
+  `ci-success` gates merges.
+- Folding the governance check into `ci.yml`, so that `ci-success` aggregates it.
+- Letting a skipped job stand in for the governance check.
+
+## Decision Outcome
 
 - Every workflow declares `permissions: {}` at workflow level. Each job grants itself only what it needs,
   typically `contents: read`. Every checkout uses `persist-credentials: false`, and every third-party action
@@ -30,7 +39,7 @@ Two findings from the Phase 1 prototype contradict that wording:
   failure.
 - The repository ruleset requires exactly two contexts: `ci-success` and `governance-success`.
 
-## Consequences
+### Consequences
 
 - Adding, renaming or removing a job inside `ci.yml` or `governance.yml` never changes the ruleset, because
   only the aggregators are required.

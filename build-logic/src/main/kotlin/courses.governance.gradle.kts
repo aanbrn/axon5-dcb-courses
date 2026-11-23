@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 import io.github.aanbrn.courses.buildlogic.ComposeVersions
+import io.github.aanbrn.courses.buildlogic.governance.AdrCheck
 import io.github.aanbrn.courses.buildlogic.governance.AskRulesCheck
 import io.github.aanbrn.courses.buildlogic.governance.BuildScriptLintCheck
 import io.github.aanbrn.courses.buildlogic.governance.ConfigPolicyCheck
@@ -140,6 +141,16 @@ val checkNotice =
         report.set(reports.map { it.file("notice.txt") })
     }
 
+// Every ADR has the MADR front matter, a number that continues the sequence without gaps, and the required sections
+// (DOC-03, D-38). The template `docs/templates/adr.md` is outside the input on purpose.
+val checkAdrs =
+    tasks.register<AdrCheck>("checkAdrs") {
+        group = "verification"
+        description = "Fails when an ADR breaks the MADR front matter, numbering or structure rules."
+        adrs.from(layout.projectDirectory.asFileTree.matching { include("docs/adr/*.md") })
+        report.set(reports.map { it.file("adrs.txt") })
+    }
+
 // Every workaround carries an `UPSTREAM` marker that names a record in docs/upstream/, and a record whose workaround is
 // gone leaves no marker behind (UPS-01, UPS-02). The records and the templates are the only places that may show the
 // marker syntax as an example.
@@ -189,5 +200,6 @@ tasks.named("check") {
         checkImageReferences,
         checkNotice,
         checkUpstreamRecords,
+        checkAdrs,
     )
 }
