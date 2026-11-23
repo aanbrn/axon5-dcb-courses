@@ -63,16 +63,56 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-      # Compile, unit tests, TestKit tests, Spotless, detekt, Dokka and the governance checks.
-      # Build Scans are never published from CI.
+      # Compile, unit and component tests (Testcontainers needs only the runner's Docker), TestKit tests,
+      # Spotless, detekt, Dokka and the governance checks. The integration tests run in the parallel
+      # `integration-test` job (D-20). Build Scans are never published from CI.
       - name: Build
-        run: ./gradlew build --console=plain
+        run: ./gradlew build -x integrationTest --console=plain
 
       - name: Upload build reports
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: build-reports
+          path: "**/build/reports/**"
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # The integration tests against a real Axon Server, in their own job so that they run in parallel with
+  # `build` (D-20). The image is pinned by tag and digest in gradle/libs.versions.toml and pulled
+  # anonymously, so the job needs no registry login, no token and no .env file.
+  integration-test:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The JDK comes from .java-version; the integration tests need no mise tools.
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version-file: .java-version
+
+      # The cache is written from main only, so a pull request can never poison what main restores.
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          cache-provider: basic
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: Integration tests
+        run: ./gradlew integrationTest --console=plain
+
+      - name: Upload integration test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: integration-test-reports
           path: "**/build/reports/**"
           retention-days: 7
           if-no-files-found: ignore
@@ -220,7 +260,7 @@ jobs:
 
   ci-success:
     name: ci-success
-    needs: [build, lint, secrets, qodana]
+    needs: [build, lint, secrets, qodana, integration-test]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

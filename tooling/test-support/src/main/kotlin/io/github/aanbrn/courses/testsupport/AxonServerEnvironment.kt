@@ -32,4 +32,12 @@ object AxonServerEnvironment {
 
     /** The gRPC address of the Axon Server, as `host:port`: the external one when set, otherwise the container's. */
     val address: String by lazy { ContainerImages.axonServerExternal ?: container.axonServerAddress }
+
+    /**
+     * The address of the HTTP port (management API and `/actuator/health`) of the container, as `host:port`, or `null`
+     * when an external server is used, because only its gRPC address is configured.
+     */
+    val httpAddress: String? by lazy {
+        if (ContainerImages.axonServerExternal != null) null else "${container.host}:${container.httpPort}"
+    }
 }
