@@ -92,6 +92,8 @@ UP-0009 and UP-0012 link upstream issues that already exist.
 - Good, because the same data feeds the documentation site, and publication has one visible gate.
 - Bad, because the advisory matches version keys, so a record about a product without a pinned key (colima, GSD) never matches,
   and the record says so itself.
+- Good, because `scripts/doctor.sh` lists every fixed-upstream record whose markers remain, with its removal criteria,
+  whatever its product, which covers the records the advisory cannot match.
 - Bad, because markers are text conventions: a workaround that is not marked is invisible to the check. Reviewing new
   workarounds for a marker is a review duty.
 - Bad, because publication needs the author, so a defect can wait unreported.

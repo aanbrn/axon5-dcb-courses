@@ -475,6 +475,80 @@ run_doctor "$ENV"
 assert_code "tracked spike skill" 0
 assert_out "tracked spike skill" "^ok  claude-tracking: "
 
+# --- upstream-removal ----------------------------------------------------------------------------
+
+# The marker word lives in a variable: written out after a comment opener, it would itself be a marker, and the
+# upstream record check would report it for a record that does not exist.
+MARK=UPSTREAM
+
+# add_record <env dir> <number> <status>: a tracked upstream record UP-<number> with two lines of removal criteria.
+add_record() {
+  local dir=$1 number=$2 status=$3 record
+  record="$dir/repo/docs/upstream/$number-sample.md"
+  mkdir -p "$dir/repo/docs/upstream"
+  printf -- '---\nid: "UP-%s"\nproduct: "docker"\nstatus: "%s"\n---\n\n# UP-%s: Sample\n\n## Symptom\n\nIt fails.\n\n' \
+    "$number" "$status" "$number" >"$record"
+  printf '## Removal criteria\n\nThe fixed release is out.\nThe workaround is no longer needed.\n\n' >>"$record"
+  printf '## How to verify removal\n\nRun it.\n' >>"$record"
+  git -C "$dir/repo" add "docs/upstream/$number-sample.md"
+}
+
+# add_marker <env dir> <path> <line text>: a tracked file that holds the line.
+add_marker() {
+  mkdir -p "$(dirname "$1/repo/$2")"
+  printf '%s\n' "$3" >"$1/repo/$2"
+  git -C "$1/repo" add "$2"
+}
+
+fresh
+run_doctor "$ENV"
+assert_code "no record" 0
+assert_out "no record" "^ok  upstream-removal: "
+
+fresh
+add_record "$ENV" 0042 fixed-upstream
+add_marker "$ENV" scripts/sample.sh "# $MARK: UP-0042 sample workaround"
+run_doctor "$ENV"
+assert_code "fixed-upstream record with a marker" 0
+assert_out "fixed-upstream record with a marker" "^warn  upstream-removal: UP-0042 .*scripts/sample\\.sh:1"
+assert_out "fixed-upstream record with a marker" \
+  "^      fix: removal criteria \\(docs/upstream/0042-sample\\.md\\): The fixed release is out\\. The workaround is no longer needed\\.$"
+assert_no_out "fixed-upstream record with a marker" "^ok  upstream-removal: "
+run_doctor "$ENV" --ci
+assert_code "fixed-upstream record with a marker, --ci" 0
+assert_out "fixed-upstream record with a marker, --ci" "^warn  upstream-removal: UP-0042 .*scripts/sample\\.sh:1"
+
+fresh
+add_record "$ENV" 0042 open
+add_marker "$ENV" scripts/sample.sh "# $MARK: UP-0042 sample workaround"
+run_doctor "$ENV"
+assert_out "open record with a marker" "^ok  upstream-removal: "
+assert_no_out "open record with a marker" "^warn  upstream-removal: "
+
+fresh
+add_record "$ENV" 0042 fixed-upstream
+add_marker "$ENV" docs/notes.md "See $MARK: UP-0042 in prose, and UP-0042 alone."
+run_doctor "$ENV"
+assert_out "an ID in prose" "^ok  upstream-removal: "
+
+fresh
+add_record "$ENV" 0042 fixed-upstream
+add_marker "$ENV" docs/templates/sample.md "<!-- $MARK: UP-0042 template example -->"
+run_doctor "$ENV"
+assert_out "a marker under docs/templates" "^ok  upstream-removal: "
+
+fresh
+add_record "$ENV" 0042 fixed-upstream
+add_marker "$ENV" scripts/sample.sh "# $MARK: UP-00421 another record"
+run_doctor "$ENV"
+assert_out "a longer ID" "^ok  upstream-removal: "
+
+fresh
+add_record "$ENV" 0042 fixed-upstream
+printf '# %s: UP-0042 sample workaround\n' "$MARK" >"$ENV/repo/untracked.sh"
+run_doctor "$ENV"
+assert_out "an untracked file" "^ok  upstream-removal: "
+
 # --- --ci -------------------------------------------------------------------------------------------
 
 # The local-only checks are skipped, so a tree without any GSD, token, MCP or colima state passes, and the
