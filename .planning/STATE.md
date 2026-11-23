@@ -4,10 +4,10 @@ current_phase: 02
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: executing
 stopped_at: Phase 2 context gathered
-last_updated: "2026-11-23T10:08:40.708Z"
+last_updated: "2026-11-23T12:21:03.924Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 02 execution started
-state_head: 6d87e5a42da7091a6adf527b74bac0ef0e73d0b2
+state_head: 32bf6fa2c3d4907d5e3c6ad37dd474d7ca19dc89
 progress:
   total_phases: 13
   completed_phases: 1
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-11-22)
 Phase: 02 (Runtime Infrastructure & DCB Spikes) — VERIFYING
 Plan: 23 of 23 executed (all SUMMARYs present)
 Status: Phase 02 verification human_needed (5/5 success criteria verified); 02-UAT.md has 6 pending human items; the phase PR is not open yet
-Last activity: 2026-11-23 - Completed quick task 261123-mub: close pre-ship debt from the interim audit
+Last activity: 2026-11-23 - Completed quick task 261123-p1u: fix the 45 Qodana findings (local Qodana confirmation pending)
 
 Progress: [█░░░░░░░░░] 8%
 
@@ -150,6 +150,7 @@ Recent decisions affecting current work:
 | 10 | Suppress incubating-API warnings with reasons, describe environment check tasks, plan gates for suppressions and IDE-only inspections | 2026-11-22 | 90339a9 | — |
 | 261122-kqn | Adopt Qodana JVM Community as a required CI gate for IDE-only inspections | 2026-11-22 | fc88954 | [261122-kqn-adopt-qodana-as-a-required-ci-gate-for-i](./quick/261122-kqn-adopt-qodana-as-a-required-ci-gate-for-i/) |
 | 261123-mub | Close pre-ship debt from interim audit: govern Qodana files, derive compose image check from catalog, WR-05 assertion, requirements bookkeeping | 2026-11-23 | 6d87e5a | [261123-mub-close-pre-ship-debt-from-interim-audit-g](./quick/261123-mub-close-pre-ship-debt-from-interim-audit-g/) |
+| 261123-p1u | Fix all 45 Qodana findings on the Phase 2 branch without suppressions or baseline (Qodana re-run pending: qodana.cloud unreachable) | 2026-11-23 | 32bf6fa | [261123-p1u-fix-all-45-qodana-findings-on-the-phase-](./quick/261123-p1u-fix-all-45-qodana-findings-on-the-phase-/) |
 
 ## Deferred Items
 
