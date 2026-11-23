@@ -1,12 +1,12 @@
+---
+status: "accepted"
+date: "2026-11-21"
+decision-makers: ["repository author (gap-closure decision on review finding WR-06)"]
+---
+
 # ADR-0003: The governance gate runs from the pull request's own tree
 
-- Status: accepted
-- Date: 2026-11-21
-- Deciders: repository author (gap-closure decision on review finding WR-06)
-
-This is a minimal record. Phase 2 introduces the ADR templates and normalises the format of this note.
-
-## Context
+## Context and Problem Statement
 
 `governance.yml` triggers on `pull_request`. Its checkout takes the default ref, which for that event is the
 merge of the pull request head into the base (`refs/pull/<number>/merge`). The workflow definition,
@@ -36,7 +36,25 @@ What else holds such a pull request today:
 Plan 01-09 accepted this residual as threat T-01-20 at ASVS level 1. Review finding WR-06 asked for it to be
 fixed or recorded.
 
-## Decision
+## Considered Options
+
+The chosen option, described under Decision Outcome, keeps the `pull_request` trigger and accepts the residual.
+The rejected alternatives:
+
+1. `pull_request_target` with a checkout of the base commit only. The workflow file would come from the base
+   branch, but the trigger runs in the base repository's context, with access to its secrets and a token that
+   can carry write permissions. zizmor reports the trigger in its `dangerous-triggers` audit. A single later
+   step that checks out or executes pull request content would turn it into a privileged code-execution path.
+   For one maintainer, that risk outweighs the gain.
+2. Keeping `pull_request` and checking out the base ref for `scripts/governance/**` and
+   `governance/governed-paths.txt` in a second, sparse checkout. The workflow file itself still comes from the
+   pull request, which can change the step to run its own copy or drop the step. The hole moves; it does not
+   close.
+3. A CODEOWNERS file with required code-owner review on the governed paths. With one maintainer, the only code
+   owner is also the author of the pull requests, and GitHub does not accept an author's approval of their own
+   pull request. Every governed change would need the admin bypass, and the rule adds no second reviewer.
+
+## Decision Outcome
 
 Keep the `pull_request` trigger and the checkout of the pull request's merge ref, and accept the residual for
 this one-maintainer repository.
@@ -53,25 +71,10 @@ Reasons:
   that tool needs the author's confirmation (AIDEV-08). The rules do not match shell commands that write files,
   so they make an unconfirmed change unlikely rather than impossible; they are a guard rail, not a security
   boundary, and the maintainer's review of the diff remains the control.
-- T-01-20 already accepted the residual at ASVS L1. The alternatives below either run pull request-adjacent
-  logic in a privileged context or do not close the gap.
+- T-01-20 already accepted the residual at ASVS L1. The alternatives under Considered Options either run pull
+  request-adjacent logic in a privileged context or do not close the gap.
 
-## Rejected alternatives
-
-1. `pull_request_target` with a checkout of the base commit only. The workflow file would come from the base
-   branch, but the trigger runs in the base repository's context, with access to its secrets and a token that
-   can carry write permissions. zizmor reports the trigger in its `dangerous-triggers` audit. A single later
-   step that checks out or executes pull request content would turn it into a privileged code-execution path.
-   For one maintainer, that risk outweighs the gain.
-2. Keeping `pull_request` and checking out the base ref for `scripts/governance/**` and
-   `governance/governed-paths.txt` in a second, sparse checkout. The workflow file itself still comes from the
-   pull request, which can change the step to run its own copy or drop the step. The hole moves; it does not
-   close.
-3. A CODEOWNERS file with required code-owner review on the governed paths. With one maintainer, the only code
-   owner is also the author of the pull requests, and GitHub does not accept an author's approval of their own
-   pull request. Every governed change would need the admin bypass, and the rule adds no second reviewer.
-
-## Consequences
+### Consequences
 
 - `governance-success` stays one of the two required contexts (ADR-0001) and keeps catching unlabelled
   governed changes made in good faith, whether by the maintainer or by the agent. It does not stop an agent
@@ -85,7 +88,9 @@ Reasons:
 - The approval label is not bound to a commit (review finding WR-02). That is a separate residual, deferred by
   the author.
 
-## When to revisit
+## More Information
+
+### When to revisit
 
 Revisit this decision when either of these holds:
 
