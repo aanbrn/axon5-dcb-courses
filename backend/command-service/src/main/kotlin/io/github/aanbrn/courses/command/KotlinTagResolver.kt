@@ -3,6 +3,7 @@ package io.github.aanbrn.courses.command
 
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.memberProperties
+import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaField
 import kotlin.reflect.jvm.javaGetter
 import org.axonframework.eventsourcing.annotation.EventTag
@@ -23,6 +24,9 @@ import org.axonframework.messaging.eventstreaming.Tag
  * The `@EventTag` annotation is found on the Kotlin property, on its backing field and on its getter, because Kotlin
  * places an annotation on a constructor property according to the annotation's targets.
  *
+ * A non-public annotated property is read too, as Axon's resolver does, so a payload may keep its tagged value private.
+ * Only a property that carries `@EventTag` is made accessible; no other member of a payload is ever opened.
+ *
  * An empty `key` falls back to the property name, as Axon's resolver does.
  */
 // UPSTREAM: UP-0004 Axon's tag resolver does not box Kotlin value classes; drop this class when it does.
@@ -41,7 +45,8 @@ class KotlinTagResolver : TagResolver {
             .memberProperties
             .flatMap { property ->
                 val annotations = eventTags(property)
-                val value = if (annotations.isEmpty()) null else property.getter.call(payload)
+                val value =
+                    if (annotations.isEmpty()) null else property.apply { isAccessible = true }.getter.call(payload)
                 if (value == null) {
                     emptyList()
                 } else {
