@@ -35,6 +35,7 @@ For those rows the `Tool` column also carries the exact `mise.toml` key in backt
 | Kotlin                                                        | Language and compiler                                                                   | `gradle/libs.versions.toml`                | Gradle plugin resolved by the build                                                                | local, CI           |
 | JUnit                                                         | Test platform                                                                           | `gradle/libs.versions.toml`                | Dependency resolved by Gradle                                                                      | local, CI           |
 | Kotest                                                        | Assertion library                                                                       | `gradle/libs.versions.toml`                | Dependency resolved by Gradle                                                                      | local, CI           |
+| Konsist                                                       | Architecture rules over the Kotlin sources of the repository                            | `gradle/libs.versions.toml`                | Dependency resolved by Gradle                                                                      | local, CI           |
 | Testcontainers                                                | Starts the containers of component and integration tests                                | `gradle/libs.versions.toml`                | Dependency resolved by Gradle                                                                      | local, CI           |
 | Test container images (`image-*`)                             | Axon Server, PostgreSQL and the Ryuk reaper that the test suites start                  | `gradle/libs.versions.toml (image-*)`      | Pulled by Testcontainers by tag and digest                                                         | local, CI           |
 | Kover                                                         | Coverage of every JVM test suite of a module (aggregation and thresholds: Phase 3)      | `gradle/libs.versions.toml`                | Gradle plugin resolved by the build                                                                | local, CI           |
@@ -65,6 +66,12 @@ For those rows the `Tool` column also carries the exact `mise.toml` key in backt
 
 For a fast loop while developing, run `./gradlew test` or `./gradlew componentTest`; `./gradlew check` and
 `./gradlew build` run every suite, including the integration tests (CI runs those in their own job).
+
+The `architectureTest` suite of `:tooling:architecture` runs from `check` and scans the Kotlin sources of the whole
+repository with Konsist. Its rule classes are `ContractsArchitectureTest` (no framework logic in the contracts),
+`MessageArchitectureTest` (explicit message names and versions, registry tag keys), `TestNamingArchitectureTest`
+(test suffix per suite, block-bodied tests), `ContainerImageArchitectureTest` (no image literals) and
+`ScopeSanityArchitectureTest` (every rule sees the modules it must). The scanned files are declared task inputs.
 
 ## Planned tools
 
