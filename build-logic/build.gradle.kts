@@ -13,6 +13,7 @@ dependencies {
     implementation(libs.dokka.gradle.plugin)
     implementation(libs.kover.gradle.plugin)
     implementation(libs.cyclonedx.gradle.plugin)
+    // UPSTREAM: UP-0008 Gradle exposes no typed `libs` accessor to precompiled script plugins (gradle/gradle#15383).
     // Required for the typed `libs` accessor inside precompiled script plugins (still needed on
     // Gradle 9.9.2).
     implementation(files(libs.javaClass.superclass.protectionDomain.codeSource.location))

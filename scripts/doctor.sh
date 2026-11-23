@@ -206,6 +206,7 @@ check_docker() {
   report ok docker "$engine reachable through context ${context:-unknown}, server $version"
 }
 
+# UPSTREAM: UP-0012 `docker save --platform` fails on the Paketo noble run image with the containerd image store.
 # image-store: the classic image store, on which the Testcontainers and Paketo setup was verified. The containerd
 # image store reports the driver `overlayfs` and a snapshotter entry in the driver status.
 check_image_store() {
@@ -254,6 +255,7 @@ END { printf "%d %s\n", dns, (snapshotter == "" ? "unset" : snapshotter) }
 AWK
 readonly COLIMA_AWK
 
+# UPSTREAM: UP-0011 the colima DNS forwarder never answers AAAA queries, which stalls Go tools for 10 s per lookup.
 # colima (local only): the two settings of the colima VM that the image pulls and the Testcontainers runs depend on:
 # an explicit DNS list (the default forwarder stalls on AAAA lookups) and the classic image store.
 check_colima() {
@@ -281,6 +283,7 @@ check_colima() {
     problems+=("network.dns is empty, so the default DNS forwarder can stall image pulls")
     fixes+=("colima stop && colima start --dns 8.8.8.8 --dns 1.1.1.1 (or list servers under network.dns with: colima start --edit)")
   fi
+  # UPSTREAM: UP-0012 the classic image store is the workaround for the containerd export failure.
   if [[ $snapshotter != false ]]; then
     problems+=("docker.features.containerd-snapshotter is not false (found $snapshotter)")
     fixes+=("colima stop && colima start --edit, then set docker.features.containerd-snapshotter: false")
@@ -506,6 +509,7 @@ END { print (state == "" ? "absent" : state) }
 AWK
 readonly TOKEN_AWK
 
+# UPSTREAM: UP-0006 Axon Server treats an empty token as configured and its endpoints die; this check is the workaround.
 # platform-token (local only, D-47): an empty definition makes Axon Server start in a zombie state, so it fails; no
 # definition only means the 12-hour window, so it warns. Only the state is tested, never the value.
 check_platform_token() {
