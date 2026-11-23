@@ -1,0 +1,32 @@
+{
+  "allowed": ["Apache-2.0", "MIT", "MIT-0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "EPL-1.0", "EPL-2.0", "MPL-2.0"],
+  "forbidden": ["GPL-*", "AGPL-*"],
+  "aliases": {},
+  "exceptions": [
+    {
+      "artifact": "io.axoniq:axonserver-connector-java",
+      "license": "Axoniq Terms of Service",
+      "reason": "Commercial terms, free for development and CI, a licence is required in production. The gRPC client of Axon Server; see the Axoniq Framework terms in NOTICE."
+    },
+    {
+      "artifact": "io.axoniq.framework:axon-server-connector",
+      "license": "Axoniq Terms of Service",
+      "reason": "Commercial terms, free for development and CI, a licence is required in production. The only way to reach the DCB-capable Axon Server; see the Axoniq Framework terms in NOTICE."
+    },
+    {
+      "artifact": "io.axoniq.framework:axoniq-distributed-messaging",
+      "license": "Axoniq Terms of Service",
+      "reason": "Commercial terms, free for development and CI, a licence is required in production. Distributed command, event and query routing through Axon Server; see the Axoniq Framework terms in NOTICE."
+    },
+    {
+      "artifact": "io.axoniq.framework:axoniq-framework-bom",
+      "license": "Axoniq Terms of Service",
+      "reason": "Commercial terms, free for development and CI, a licence is required in production. The bill of materials that aligns every Axoniq Framework artifact; see the Axoniq Framework terms in NOTICE."
+    },
+    {
+      "artifact": "io.axoniq.framework:axoniq-testcontainer",
+      "license": "Axoniq Terms of Service",
+      "reason": "Commercial terms, free for development and CI, test scope only. Starts the Axon Server container of the integration tests; see the Axoniq Framework terms in NOTICE."
+    }
+  ]
+}

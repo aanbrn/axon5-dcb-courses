@@ -148,8 +148,9 @@ class GradleFixture(val projectDir: Path) {
          * `:platform` project, and a `:lib` project that applies `courses.kotlin-library` and declares no dependencies
          * of its own.
          *
-         * The shared Spotless headers, the shared detekt, Prettier, taplo and editor configuration, `.nvmrc`, and a JDK
-         * 25 `.java-version` are copied or written as the real repository has them.
+         * The shared Spotless headers, the shared detekt, Prettier, taplo and editor configuration, `.nvmrc`, the
+         * dependency licence policy, and a JDK 25 `.java-version` are copied or written as the real repository has
+         * them.
          */
         fun standard(projectDir: Path): GradleFixture =
             GradleFixture(projectDir).apply {
@@ -160,6 +161,7 @@ class GradleFixture(val projectDir: Path) {
                 copyFromRepo(".editorconfig")
                 copyFromRepo("config/spotless/license-header-shell.txt")
                 copyFromRepo(".nvmrc")
+                copyFromRepo("governance/dependency-licences.json")
                 file(".java-version", "25\n")
                 file("build.gradle.kts", "$HEADER\nplugins { id(\"courses.root\") }\n")
                 copyFromRepo("platform/build.gradle.kts")
