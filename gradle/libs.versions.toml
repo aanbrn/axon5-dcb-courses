@@ -20,6 +20,8 @@ testcontainers = "2.0.5"
 jackson = "3.3.0"
 # Not in any imported BOM, so :platform constrains it explicitly. Generates the UUIDv7 values behind entity IDs.
 java-uuid-generator = "5.2.0"
+# Not in any imported BOM, so :platform constrains it explicitly. Runs the architecture rules of :tooling:architecture.
+konsist = "1.0.0-beta.1"
 # Container images used by the test suites, as full references with tag and digest (INFRA-09). They reach the test tasks
 # as system properties through ContainerImageArguments, so a changed image invalidates the cached test results. The
 # axonserver tag also appears in docker compose from Phase 6. Testcontainers pins its Ryuk reaper through the
@@ -63,6 +65,7 @@ axoniq-testcontainer = { module = "io.axoniq.framework:axoniq-testcontainer" }
 testcontainers = { module = "org.testcontainers:testcontainers" }
 testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql" }
 postgresql = { module = "org.postgresql:postgresql" }
+konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
 logback-classic = { module = "ch.qos.logback:logback-classic" }
 
