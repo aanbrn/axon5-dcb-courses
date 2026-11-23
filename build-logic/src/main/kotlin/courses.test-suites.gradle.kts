@@ -3,7 +3,6 @@ import io.github.aanbrn.courses.buildlogic.ContainerImageArguments
 
 plugins {
     id("courses.kotlin-library")
-    `java-test-fixtures`
     id("org.jetbrains.kotlinx.kover")
 }
 
@@ -12,10 +11,15 @@ plugins {
 //   componentTest   one service: Spring context, a PostgreSQL container, Axon in memory
 //   integrationTest the real Axon Server (and whatever else the scenario needs)
 // Gradle wires only `test` into `check`; this convention wires all three, so that `check` is the one command that
-// runs every level (D-19). Every suite sees its module, the module's `testFixtures` and the same assertion libraries
-// (D-21); the two infrastructure suites run on a single fork (D-22) and after the preceding suite. The order uses
+// runs every level (D-19). Every suite sees its module and the same assertion libraries (D-21); the two infrastructure
+// suites run on a single fork (D-22) and after the preceding suite. The order uses
 // `mustRunAfter`: `shouldRunAfter` is only a hint, and Gradle ran `integrationTest` before `test` in a `check` build
 // (TestSuitesFunctionalTest). `mustRunAfter` adds no dependency, so running one suite alone still runs only that suite.
+
+// Test fixtures are opt-in. A module that has fixtures applies `java-test-fixtures` in its own plugins block, and then
+// every suite of the module, including `architectureTest`, sees them. A module without fixtures gets no empty
+// `testFixtures` source set: a suite dependency on it would be a dependency nobody uses (D-21), and the IDE would
+// import it as an unused module dependency.
 
 // Coverage (TEST-11): Kover instruments every `Test` task of the module, so `test`, `componentTest` and
 // `integrationTest` all feed the module's report (`koverXmlReport`, `koverHtmlReport`). No test task is excluded and no
@@ -50,12 +54,15 @@ fun Test.useContainerImages() {
 testing {
     suites {
         withType<JvmTestSuite>().configureEach {
+            val suite = this
             useJUnitJupiter(libs.versions.junit)
             dependencies {
                 implementation(project())
-                implementation(testFixtures(project()))
                 implementation(libs.kotest.assertions.core)
                 implementation(libs.kotest.property)
+            }
+            pluginManager.withPlugin("java-test-fixtures") {
+                suite.dependencies { implementation(testFixtures(project())) }
             }
         }
         register<JvmTestSuite>("componentTest") {

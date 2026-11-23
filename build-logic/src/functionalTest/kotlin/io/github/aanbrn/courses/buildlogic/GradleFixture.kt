@@ -179,8 +179,9 @@ class GradleFixture(val projectDir: Path) {
 
         /**
          * Creates a fixture in [projectDir] like [standard], except that `:lib` applies `courses.test-suites`, which
-         * adds the `componentTest` and `integrationTest` suites and the `testFixtures` source set to the three it
-         * starts with.
+         * adds the `componentTest` and `integrationTest` suites to the three it starts with, and `java-test-fixtures`,
+         * which gives it the `testFixtures` source set that every suite then sees. A test that needs a module without
+         * fixtures rewrites `lib/build.gradle.kts`.
          *
          * `:lib` has a documented class in `src/main` (`fixture.Library`) and a documented object in `src/testFixtures`
          * (`fixture.fixtures.Samples`); no test exists, so each test adds the ones it needs with [addTest]. A `doFirst`
@@ -192,7 +193,10 @@ class GradleFixture(val projectDir: Path) {
                     "lib/build.gradle.kts",
                     $$"""
                     $$HEADER
-                    plugins { id("courses.test-suites") }
+                    plugins {
+                        id("courses.test-suites")
+                        `java-test-fixtures`
+                    }
 
                     tasks.withType<Test>().configureEach {
                         doFirst { println("FORKS $name=$maxParallelForks") }

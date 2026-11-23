@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: MIT
-plugins { id("courses.test-suites") }
+plugins {
+    id("courses.test-suites")
+    `java-test-fixtures`
+}
 
 dependencies {
-    implementation(project(":contracts-events"))
-    implementation(project(":contracts-commands"))
-    implementation(project(":serialization-jackson"))
+    // The service compiles against the mapper and needs the module on every runtime classpath (the service, the
+    // fixtures and all suites), but no test source compiles against it. `implementation` would also put it on the
+    // unit-test compile classpath, which `testImplementation` inherits. Phase 3 adds the contracts to main with the
+    // first slice; main imports none of them yet.
+    compileOnly(project(":serialization-jackson"))
+    runtimeOnly(project(":serialization-jackson"))
     implementation(libs.axon.eventsourcing)
     implementation(libs.axon.server.connector)
     implementation(libs.kotlin.reflect)

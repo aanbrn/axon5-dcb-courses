@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: MIT
-plugins { id("courses.test-suites") }
+plugins {
+    id("courses.test-suites")
+    `java-test-fixtures`
+}
 
 dependencies {
     implementation(libs.java.uuid.generator)

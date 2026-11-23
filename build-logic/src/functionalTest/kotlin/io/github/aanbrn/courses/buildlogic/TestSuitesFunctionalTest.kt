@@ -7,6 +7,7 @@ import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.xml.parsers.DocumentBuilderFactory
@@ -48,6 +49,19 @@ class TestSuitesFunctionalTest {
         SUITE_TASKS.forEach { task -> outcome(result, task) shouldBeIn PASSED }
         SUITES.forEach { suite ->
             fixture.testCount(suite, "${suite.replaceFirstChar(Char::uppercase)}SampleTest") shouldBe 1
+        }
+    }
+
+    @Test
+    fun `a module without java-test-fixtures has no testFixtures source set`() {
+        val fixture = GradleFixture.testSuites(projectDir)
+        fixture.file("lib/build.gradle.kts", "${GradleFixture.HEADER}\nplugins { id(\"courses.test-suites\") }\n")
+
+        val output = fixture.run(":lib:tasks", "--all").output
+
+        withClue(output) {
+            output shouldContain "compileTestKotlin"
+            output shouldNotContain "compileTestFixturesKotlin"
         }
     }
 
