@@ -2,9 +2,10 @@
 plugins { id("courses.kotlin-library") }
 
 dependencies {
-    // The probe reaches Docker through Testcontainers itself, the way every test does, so it shares the version and the
-    // configuration (`~/.testcontainers.properties`, `DOCKER_HOST`, Ryuk) with the test infrastructure.
-    implementation(project(":tooling:test-support"))
+    // The probe reaches Docker through the Testcontainers library itself, the way every test does, so it shares the
+    // platform-aligned version and the Testcontainers configuration (`~/.testcontainers.properties`, `DOCKER_HOST`,
+    // Ryuk).
+    implementation(libs.testcontainers)
 }
 
 val testcontainersProbe =

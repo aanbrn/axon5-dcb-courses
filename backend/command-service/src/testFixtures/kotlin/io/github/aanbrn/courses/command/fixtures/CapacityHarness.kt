@@ -14,7 +14,13 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import org.axonframework.eventsourcing.eventstore.EventStore
 import org.axonframework.eventsourcing.eventstore.SourcingCondition
-import org.axonframework.messaging.commandhandling.annotation.CommandHandler
+import org.axonframework.messaging.commandhandling.CommandHandler
+import org.axonframework.messaging.commandhandling.CommandMessage
+import org.axonframework.messaging.commandhandling.CommandResultMessage
+import org.axonframework.messaging.commandhandling.GenericCommandResultMessage
+import org.axonframework.messaging.core.Message
+import org.axonframework.messaging.core.MessageStream
+import org.axonframework.messaging.core.MessageTypeResolver
 import org.axonframework.messaging.core.QualifiedName
 import org.axonframework.messaging.core.conversion.MessageConverter
 import org.axonframework.messaging.core.unitofwork.ProcessingContext
@@ -38,9 +44,14 @@ import org.axonframework.messaging.eventstreaming.Tag
  * to hold the first round of concurrent attempts back until all of them sourced, so every one of them decides on the
  * same events and the conflicts are certain instead of depending on timing.
  *
+ * The harness is an explicit Axon [CommandHandler], registered for the one command name [SUBSCRIBE_STUDENT_NAME]
+ * without annotation scanning, so the registration in the test application shows exactly what it handles.
+ *
  * @param eventStore the store the decision sources from
  * @param unitOfWorkFactory creates the unit of work in which [seedCourse] appends
- * @param converter reads the payloads of sourced events, which are bytes when they come from Axon Server
+ * @param converter reads the command payload and the payloads of sourced events, which are bytes when they come from
+ *   Axon Server
+ * @param messageTypeResolver names the type of the result message, the way Axon's annotated handlers do
  * @param beforeAppend completes when the decision may append; it must not block a thread, because the thread that waits
  *   could be the one that completes another attempt
  */
@@ -48,25 +59,38 @@ class CapacityHarness(
     private val eventStore: EventStore,
     private val unitOfWorkFactory: UnitOfWorkFactory,
     private val converter: MessageConverter,
+    private val messageTypeResolver: MessageTypeResolver,
     private val beforeAppend: () -> CompletableFuture<*>,
-) {
+) : CommandHandler {
 
     /**
      * Decides whether the student of [command] gets a seat.
      *
-     * @param command the subscription to decide
+     * @param command the `SubscribeStudent` message to decide
      * @param context the unit of work of the command, in which the decision sources and appends
-     * @return the result of the decision, after the append has been handed to the store
+     * @return the result message of the decision, completed after the append has been handed to the store
      */
-    @CommandHandler
-    fun handle(command: SubscribeStudent, context: ProcessingContext): CompletableFuture<SubscribeResult> {
-        val criteria = EventCriteria.havingTags(Tag.of(Tags.COURSE, command.courseId.toString()))
-        return eventStore
-            .transaction(context)
-            .source(SourcingCondition.conditionFor(criteria))
-            .reduce(CourseFacts()) { facts, entry -> (facts ?: CourseFacts()).plus(entry.message(), converter) }
-            .thenCompose { facts -> beforeAppend().thenApply { facts } }
-            .thenApply { facts -> decide(command, context, checkNotNull(facts)) }
+    override fun handle(
+        command: CommandMessage,
+        context: ProcessingContext,
+    ): MessageStream.Single<CommandResultMessage> {
+        // Axon's annotated adapter hands its handlers the context with the message in it; the capture reads it from
+        // there.
+        val commandContext = Message.addToContext(context, command)
+        val subscription = checkNotNull(command.payloadAs(SubscribeStudent::class.java, converter))
+        val criteria = EventCriteria.havingTags(Tag.of(Tags.COURSE, subscription.courseId.toString()))
+        val decision =
+            eventStore
+                .transaction(commandContext)
+                .source(SourcingCondition.conditionFor(criteria))
+                .reduce(CourseFacts()) { facts, entry -> (facts ?: CourseFacts()).plus(entry.message(), converter) }
+                .thenCompose { facts -> beforeAppend().thenApply { facts } }
+                .thenApply { facts -> decide(subscription, commandContext, checkNotNull(facts)) }
+        return MessageStream.fromFuture(
+            decision.thenApply { result ->
+                GenericCommandResultMessage(messageTypeResolver.resolveOrThrow(result), result)
+            },
+        )
     }
 
     /**
@@ -108,8 +132,14 @@ class CapacityHarness(
             }
     }
 
-    /** The rejection codes of the harness. */
+    /** The command name and the rejection codes of the harness. */
     companion object {
+        /**
+         * The name the harness is registered under. It must equal the name `@Command` gives `SubscribeStudent`, or a
+         * dispatched command finds no handler.
+         */
+        val SUBSCRIBE_STUDENT_NAME = QualifiedName(MessageNamespace.COURSES, "SubscribeStudent")
+
         /** The course has not been created. */
         const val COURSE_NOT_FOUND = "course-not-found"
 

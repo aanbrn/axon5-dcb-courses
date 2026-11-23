@@ -5,6 +5,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import org.axonframework.common.infra.ComponentDescriptor
 import org.axonframework.eventsourcing.eventstore.AppendCondition
 import org.axonframework.eventsourcing.eventstore.AppendEventsTransactionRejectedException
 import org.axonframework.eventsourcing.eventstore.ConsistencyMarker
@@ -47,6 +48,10 @@ import org.axonframework.messaging.eventhandling.EventMessage
  * A source or append without a [ProcessingContext] belongs to no unit of work and no attempt, so it is passed through
  * uncaptured. Every decision runs in a unit of work.
  *
+ * Every overload that sources or appends is captured: the two that Axon declares as Java default methods
+ * (`source(SourcingCondition)` and the `vararg` `appendEvents`) are overridden here and route to the capturing
+ * overloads, so none of them can reach the delegate unseen. Only the streaming and token methods are forwarded.
+ *
  * @param delegate the engine that stores the events
  * @param recorder receives the record of each finished attempt
  */
@@ -80,6 +85,16 @@ class DecisionCaptureEngine(
     }
 
     /**
+     * Sources the events for [condition] outside any unit of work, so nothing is captured.
+     *
+     * Axon's default body does the same; it is written out because delegation does not forward Java default methods.
+     *
+     * @param condition what to source
+     * @return the stream of the delegate, untouched
+     */
+    override fun source(condition: SourcingCondition): MessageStream<EventMessage> = source(condition, null)
+
+    /**
      * Notes the append condition and the events to append, then appends them through the delegate.
      *
      * A rejection is diagnosed and re-raised unchanged, both when the delegate rejects here and when the returned
@@ -103,6 +118,34 @@ class DecisionCaptureEngine(
         return appended
             .exceptionallyCompose { failure -> diagnose<AppendTransaction<*>>(failure, draft, condition, context) }
             .thenApply { transaction -> CapturingTransaction(transaction, draft, condition, context) }
+    }
+
+    /**
+     * Appends [events] through this engine's capturing [appendEvents] overload.
+     *
+     * It must not forward to the delegate: the delegate's own `vararg` overload calls the delegate's `List` overload,
+     * so a decision appended through it would have no record.
+     *
+     * @param condition the condition the store checks the append against
+     * @param context the unit of work that appends, or `null` outside one
+     * @param events the events to append, with their tags
+     * @return the transaction of the capturing overload
+     */
+    override fun appendEvents(
+        condition: AppendCondition,
+        context: ProcessingContext?,
+        vararg events: TaggedEventMessage<*>,
+    ): CompletableFuture<AppendTransaction<*>> = appendEvents(condition, context, events.asList())
+
+    /**
+     * Describes this engine as a wrapper of its delegate, the way Axon's own decorators do, instead of impersonating
+     * the delegate.
+     *
+     * @param descriptor receives the description
+     */
+    override fun describeTo(descriptor: ComponentDescriptor) {
+        descriptor.describeWrapperOf(delegate)
+        descriptor.describeProperty("recorder", recorder)
     }
 
     private fun draftOf(context: ProcessingContext): DecisionDraft =

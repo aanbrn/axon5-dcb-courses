@@ -15,6 +15,7 @@ import org.axonframework.eventsourcing.eventstore.EventStore
 import org.axonframework.eventsourcing.eventstore.inmemory.InMemoryEventStorageEngine
 import org.axonframework.messaging.commandhandling.configuration.CommandHandlingModule
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway
+import org.axonframework.messaging.core.MessageTypeResolver
 import org.axonframework.messaging.core.conversion.MessageConverter
 import org.axonframework.messaging.core.unitofwork.UnitOfWorkFactory
 
@@ -80,7 +81,7 @@ private constructor(
         ): CommandServiceTestApplication =
             start(recorder, withCapacityHarness, beforeAppend) { registry ->
                 registry.registerComponent(AxonServerConfiguration::class.java) {
-                    AxonServerConfiguration().apply { setServers(address) }
+                    AxonServerConfiguration().apply { servers = address }
                 }
             }
 
@@ -119,17 +120,18 @@ private constructor(
                 }
             if (withCapacityHarness) {
                 configurer.registerCommandHandlingModule(
-                    CommandHandlingModule.named("capacity-harness")
-                        .commandHandlers()
-                        .autodetectedCommandHandlingComponent { configuration ->
-                            CapacityHarness(
-                                    configuration.getComponent(EventStore::class.java),
-                                    configuration.getComponent(UnitOfWorkFactory::class.java),
-                                    configuration.getComponent(MessageConverter::class.java),
-                                    beforeAppend,
-                                )
-                                .also(harness::set)
-                        },
+                    CommandHandlingModule.named("capacity-harness").commandHandlers().commandHandler(
+                        CapacityHarness.SUBSCRIBE_STUDENT_NAME,
+                    ) { configuration ->
+                        CapacityHarness(
+                                configuration.getComponent(EventStore::class.java),
+                                configuration.getComponent(UnitOfWorkFactory::class.java),
+                                configuration.getComponent(MessageConverter::class.java),
+                                configuration.getComponent(MessageTypeResolver::class.java),
+                                beforeAppend,
+                            )
+                            .also(harness::set)
+                    },
                 )
             }
             return CommandServiceTestApplication(configurer.start(), harness)

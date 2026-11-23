@@ -11,6 +11,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.uuid
 import io.kotest.property.checkAll
@@ -18,6 +19,7 @@ import java.util.UUID
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import tools.jackson.core.JacksonException
+import tools.jackson.databind.exc.InvalidFormatException
 
 /**
  * Round trips of the contract messages through the shared Jackson mapper (INFRA-06).
@@ -54,7 +56,7 @@ class JsonRoundTripTest {
 
         val failure = shouldThrow<JacksonException> { mapper.readValue(json, CourseCreated::class.java) }
 
-        failure.message shouldContain "Wrong TypeID prefix"
+        failure.invalidFormat().message shouldContain "Wrong TypeID prefix"
     }
 
     @Test
@@ -63,7 +65,7 @@ class JsonRoundTripTest {
 
         val failure = shouldThrow<JacksonException> { mapper.readValue(json, CourseCreated::class.java) }
 
-        failure.message shouldContain "Malformed TypeID"
+        failure.invalidFormat().message shouldContain "Malformed TypeID"
     }
 
     @Test
@@ -128,8 +130,33 @@ class JsonRoundTripTest {
 
         val failure = shouldThrow<JacksonException> { mapper.readValue(json, SubscribeResult::class.java) }
 
-        failure.message shouldContain "not lower-case kebab-case"
+        failure.invalidFormat().message shouldContain "not lower-case kebab-case"
     }
+
+    @Test
+    fun `a bare string that is not a rejection code fails with the original failure as its cause`() {
+        val failure = shouldThrow<JacksonException> { mapper.readValue("\"Course Full\"", RejectionCode::class.java) }
+
+        val invalid = failure.invalidFormat()
+        invalid.value shouldBe "Course Full"
+        invalid.targetType shouldBe RejectionCode::class.java
+        invalid.cause.shouldBeInstanceOf<IllegalArgumentException>().message shouldContain "not lower-case kebab-case"
+    }
+
+    @Test
+    fun `an ID failure keeps the value, the target type and the original failure`() {
+        val json = """{"courseId":"course_not-a-typeid","name":"Domain-Driven Design","capacity":$CAPACITY}"""
+
+        val failure = shouldThrow<JacksonException> { mapper.readValue(json, CourseCreated::class.java) }
+
+        val invalid = failure.invalidFormat()
+        invalid.value shouldBe "course_not-a-typeid"
+        invalid.targetType shouldBe CourseId::class.java
+        invalid.cause.shouldBeInstanceOf<IllegalArgumentException>()
+    }
+
+    private fun Throwable.invalidFormat(): InvalidFormatException =
+        generateSequence(this) { it.cause }.filterIsInstance<InvalidFormatException>().first()
 
     private companion object {
         const val SUBSCRIBED_JSON = """{"@type":"Subscribed"}"""

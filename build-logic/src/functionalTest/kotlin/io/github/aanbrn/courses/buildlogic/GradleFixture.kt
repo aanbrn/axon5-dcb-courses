@@ -179,8 +179,9 @@ class GradleFixture(val projectDir: Path) {
 
         /**
          * Creates a fixture in [projectDir] like [standard], except that `:lib` applies `courses.test-suites`, which
-         * adds the `componentTest` and `integrationTest` suites and the `testFixtures` source set to the three it
-         * starts with.
+         * adds the `componentTest` and `integrationTest` suites to the three it starts with, and `java-test-fixtures`,
+         * which gives it the `testFixtures` source set that every suite then sees. A test that needs a module without
+         * fixtures rewrites `lib/build.gradle.kts`.
          *
          * `:lib` has a documented class in `src/main` (`fixture.Library`) and a documented object in `src/testFixtures`
          * (`fixture.fixtures.Samples`); no test exists, so each test adds the ones it needs with [addTest]. A `doFirst`
@@ -190,12 +191,15 @@ class GradleFixture(val projectDir: Path) {
             standard(projectDir).apply {
                 file(
                     "lib/build.gradle.kts",
-                    """
-                    $HEADER
-                    plugins { id("courses.test-suites") }
+                    $$"""
+                    $$HEADER
+                    plugins {
+                        id("courses.test-suites")
+                        `java-test-fixtures`
+                    }
 
                     tasks.withType<Test>().configureEach {
-                        doFirst { println("FORKS ${'$'}name=${'$'}maxParallelForks") }
+                        doFirst { println("FORKS $name=$maxParallelForks") }
                     }
                     """
                         .trimIndent() + "\n",
@@ -275,19 +279,20 @@ fun GradleFixture.addTest(
     imports: List<String> = emptyList(),
 ): Path {
     val importLines = (listOf("org.junit.jupiter.api.Test") + imports).map { "import $it" }
-    val lines =
-        listOf(GradleFixture.HEADER, "package fixture", "") +
-            importLines +
-            listOf(
-                "",
-                "/** A test in the $suite suite. */",
-                "class $className {",
-                "    @Test",
-                "    fun `$testName`() {",
-                "        $body",
-                "    }",
-                "}",
-            )
+    val lines = buildList {
+        add(GradleFixture.HEADER)
+        add("package fixture")
+        add("")
+        addAll(importLines)
+        add("")
+        add("/** A test in the $suite suite. */")
+        add("class $className {")
+        add("    @Test")
+        add("    fun `$testName`() {")
+        add("        $body")
+        add("    }")
+        add("}")
+    }
     return file("lib/src/$suite/kotlin/fixture/$className.kt", lines.joinToString("\n", postfix = "\n"))
 }
 
