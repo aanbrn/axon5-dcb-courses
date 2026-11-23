@@ -99,6 +99,7 @@ class DecisionCaptureIntegrationTest {
 
         subscribeConcurrently(course)
 
+        recorder.committed() shouldHaveSize SEATS
         recorder.committed().forEach { record ->
             record.commandType shouldBe SUBSCRIBE_COMMAND
             record.sourcingCriteria.single() shouldContain course.toString()
