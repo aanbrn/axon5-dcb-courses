@@ -117,6 +117,53 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  # Proves both connection scenarios (D-26, D-46) against the compose stack exactly as a contributor starts it: the
+  # host scenario through the conditional-append integration test against localhost:8124, and the in-network scenario
+  # through the `probe` service on the compose network. No token, no .env file and no secret: an unregistered Axon
+  # Server is enough for a job that lives a few minutes.
+  compose-smoke:
+    name: Compose smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The JDK comes from .java-version; the host scenario test needs no mise tools.
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version-file: .java-version
+
+      # The cache is written from main only, so a pull request can never poison what main restores.
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          cache-provider: basic
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: Start the stack
+        run: docker compose up -d --wait
+
+      - name: Host scenario (test against localhost:8124)
+        run: >-
+          ./gradlew :command-service:integrationTest -Pcourses.axonserver.external=localhost:8124
+          --tests '*ConditionalAppendIntegrationTest*' --console=plain
+
+      - name: In-network scenario (probe on the compose network)
+        run: docker compose --profile probe run --rm probe
+
+      - name: Show the container logs
+        if: failure()
+        run: docker compose --profile probe logs --no-color --tail=200
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose --profile probe down -v
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -180,6 +227,11 @@ jobs:
 
       - name: Validate the Renovate configuration
         run: renovate-config-validator --strict renovate.json5
+
+      # No .env exists on the runner and no secret is involved: compose/versions.env supplies the image references and
+      # every other variable has a default. Fails on an unresolvable include, a missing variable or a schema error.
+      - name: Validate compose files
+        run: docker compose config --quiet
 
       # Every tracked shell test runs, so a new scripts/**/test-*.sh joins CI without editing this file.
       - name: Run shell tests
@@ -260,7 +312,7 @@ jobs:
 
   ci-success:
     name: ci-success
-    needs: [build, lint, secrets, qodana, integration-test]
+    needs: [build, lint, secrets, qodana, integration-test, compose-smoke]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
