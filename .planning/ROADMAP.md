@@ -97,11 +97,11 @@ Plans:
 **Requirements**: INFRA-02, INFRA-03, INFRA-04, INFRA-05, INFRA-06, IDEM-04, TEST-11, TEST-12, TEST-14, CICD-09, UPS-01, UPS-02, UPS-03, UPS-04, DOC-03, GH-12, TOOL-03, TOOL-04, AIDEV-01, AIDEV-03, AIDEV-04, AIDEV-07
 **Success Criteria** (what must be TRUE):
   1. One docker compose command starts the pinned Axon Server and PostgreSQL. Axon Server gets its DCB context created automatically and the correct hostname, and image references come only from the version catalog. `doctor` checks the required tools and versions, the Docker engine (colima or Docker Desktop), Testcontainers connectivity and the pinned GSD installation against its manifest, and explains how to fix each problem.
-  2. An automated integration test against Axon Server in Testcontainers shows that a conditional append conflicting with a concurrent append is rejected, while a non-overlapping append succeeds. Unit, component and integration tests run as separate Gradle test suites that share helpers through test fixtures and use the standard toolchain (JUnit 6, Kotest assertions and property testing, Testcontainers, Awaitility).
+  2. An automated integration test against Axon Server in Testcontainers shows that a conditional append conflicting with a concurrent append is rejected, while a non-overlapping append succeeds. Unit, component and integration tests run as separate Gradle test suites that share helpers through test fixtures and use the standard toolchain (JUnit 6, Kotest assertions and property testing, Testcontainers; Awaitility joins with the first eventual-consistency test, per D-21).
   3. The contracts modules (commands, events, queries, a shared kernel with the tag registry and sealed result types) contain no Spring or framework logic. Kotlin events with TypeID value-class IDs and tags round-trip through serialization unchanged, and malformed or wrong-prefix TypeIDs are rejected.
   4. MADR ADRs, created from in-repository templates, record the spike outcomes: Axoniq licence behaviour (also reflected in the quick-start notes), the decision-record capture approach, Kotlin serialization and TypeID conventions, and buildpack constraints (pnpm support, image environment defaults). CI checks dependency licences against an allowlist, and NOTICE justifies the Axoniq modules.
   5. Every upstream defect found so far has a `docs/upstream/` record, a CI check keeps workaround markers and records consistent, and dependency update PRs prompt a check of the removal criteria. Vetted Claude Code skills and MCP servers (Context7, Playwright) are installed from pinned sources only after approval and are listed in the tooling inventory. Only `.claude/settings.json` and `.claude/CLAUDE.md` are tracked.
-**Plans:** 22 plans
+**Plans:** 23 plans
 
 Plans:
 
@@ -130,7 +130,7 @@ Plans:
 - [ ] 02-12-PLAN.md — `.env.example` token path, in-network probe, quick start with licence behaviour, compose CI jobs, Renovate image manager
 
 **Wave 7** *(blocked on Wave 6 completion)*
-- [ ] 02-13-PLAN.md — Dependency licence allowlist check over per-module CycloneDX SBOMs (JVM; npm project dependencies join in Phase 5 per D-30; mise-pinned npm developer tools out of scope), NOTICE with the Axoniq terms, the gate's convention plugin governed
+- [ ] 02-13-PLAN.md — Dependency licence allowlist check over per-module CycloneDX SBOMs (JVM; npm project dependencies join in Phase 5 per D-30; mise-pinned npm developer tools out of scope), NOTICE with the Axoniq terms and its mirror check
 
 **Wave 8** *(blocked on Wave 7 completion)*
 - [ ] 02-14-PLAN.md — `doctor` (shell bootstrap, GSD manifest, token, colima; `./gradlew doctor` delegating to the existing Node, formatter and daemon-JVM checks plus the Testcontainers probe) and its CI job
@@ -143,9 +143,12 @@ Plans:
 - [ ] 02-19-PLAN.md — ADR template and check, ADR-0001..0004 normalised, documentation and Event Modeling templates
 
 **Wave 10** *(blocked on Wave 9 completion)*
-- [ ] 02-20-PLAN.md — ADR-0005..ADR-0014 (spike outcomes and implementation decisions), quick-start link, IDEM-04 wording
+- [ ] 02-20-PLAN.md — Licence gate under governance: `courses.licences` governed path and ask rule, CI `build` naming `checkDependencyLicences`, tooling-inventory row and scope note (npm developer tools outside the check)
 - [ ] 02-21-PLAN.md — GSD `agent_skills` mapping (approval checkpoint), policy and ADR-0004
 - [ ] 02-22-PLAN.md — Upstream issue publication gate (approval checkpoint) and record status updates
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 02-23-PLAN.md — ADR-0005..ADR-0014 (spike outcomes and implementation decisions), quick-start link, IDEM-04 wording
 
 **Research**: Yes. Topics: licence behaviour of the pinned Axon Server (12-hour vs 14-day limit, restart, licence delivery via AxonIQ Platform), DCB container setup, protobuf and Gradle alignment, the Kotlin tag and Jackson round-trip, the decision-record decorator spike, TypeID library maturity (Kotlin and TypeScript), Paketo pnpm support.
 **Approval gates**: Third-party skills and MCP servers (AIDEV-01, AIDEV-04) and upstream issue publication (UPS-03) require explicit author approval.

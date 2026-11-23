@@ -254,6 +254,14 @@ AIDEV-01, AIDEV-03, AIDEV-04, AIDEV-07. Domain decisions (commands, invariants) 
   an empty value is not allowed, because an empty `AXONIQ_PLATFORM_AUTHENTICATION` crashes Axon Server into a zombie
   state (spike 004). Compose passes it as a bare `- AXONIQ_PLATFORM_AUTHENTICATION` entry, which omits it when unset
   (verified in research); `doctor` fails on an empty definition.
+- **D-48 (amends D-27 item 1, author-approved during plan revision 2026-11-23):** Each environment check has one
+  implementation. `scripts/doctor.sh` keeps only the checks that must run before Gradle can start (mise and its tools,
+  Java presence for the wrapper, the Docker engine, GSD and the other local-only checks) and then runs
+  `./gradlew doctor`, which delegates the JDK, Node and formatter checks to the existing Gradle tasks
+  (`verifyNodeVersion`, the formatter-binary checks, `checkDaemonJvm`). When Java is missing, the shell reports that
+  as the fail and the delegated checks as skipped.
+- Verified 2026-11-23: the pinned `docker.axoniq.io/axoniq/axonserver:2026.1.8-nonroot@sha256:90a477bc…` image pulls
+  anonymously (empty Docker config), so CI jobs need no registry login.
 - Spike findings in `.planning/spikes/` and the `spike-findings-axon5-dcb-courses` skill are established facts for
   planning (see `.planning/spikes/WRAP-UP-SUMMARY.md`).
 
