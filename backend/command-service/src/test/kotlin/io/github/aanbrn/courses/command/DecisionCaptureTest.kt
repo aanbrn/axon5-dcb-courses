@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import org.axonframework.common.configuration.ComponentNotFoundException
+import org.axonframework.common.lifecycle.LifecycleHandlerInvocationException
 import org.axonframework.eventsourcing.configuration.EventSourcingConfigurer
 import org.axonframework.eventsourcing.eventstore.AppendEventsTransactionRejectedException
 import org.axonframework.eventsourcing.eventstore.EventStorageEngine
@@ -155,7 +156,13 @@ class DecisionCaptureTest {
                 registry.registerComponent(EventStorageEngine::class.java) { InMemoryEventStorageEngine() }
             }
 
-        shouldThrow<ComponentNotFoundException> { configurer.start() }
+        val failure = shouldThrow<LifecycleHandlerInvocationException> { configurer.start() }
+
+        generateSequence<Throwable>(failure) { it.cause }
+            .filterIsInstance<ComponentNotFoundException>()
+            .single()
+            .message
+            .orEmpty() shouldContain DecisionRecorder::class.java.name
     }
 
     private fun seedCourse(capacity: Int) {

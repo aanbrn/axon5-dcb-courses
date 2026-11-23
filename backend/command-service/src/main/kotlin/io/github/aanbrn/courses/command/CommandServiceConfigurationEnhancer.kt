@@ -9,8 +9,10 @@ import io.github.aanbrn.courses.serialization.coursesJsonMapper
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.BiConsumer
 import org.axonframework.common.configuration.ComponentDefinition
 import org.axonframework.common.configuration.ComponentRegistry
+import org.axonframework.common.configuration.Configuration
 import org.axonframework.common.configuration.ConfigurationEnhancer
 import org.axonframework.common.lifecycle.Phase
 import org.axonframework.conversion.DelegatingGeneralConverter
@@ -55,6 +57,20 @@ class CommandServiceConfigurationEnhancer : ConfigurationEnhancer {
         registry.registerDecorator(EventStorageEngine::class.java, CAPTURE_DECORATION_ORDER) { config, _, engine ->
             DecisionCaptureEngine(engine, config.getComponent(DecisionRecorder::class.java))
         }
+        // The decorator above resolves the recorder only when the storage engine is first built, which can be long
+        // after
+        // the application started. This guard resolves it at start, so that a missing recorder stops the application at
+        // once instead of at the first command.
+        registry.registerComponent(
+            ComponentDefinition.ofType(RecorderGuard::class.java)
+                .withBuilder { RecorderGuard() }
+                .onStart(
+                    Phase.EXTERNAL_CONNECTIONS,
+                    BiConsumer<Configuration, RecorderGuard> { config, _ ->
+                        config.getComponent(DecisionRecorder::class.java)
+                    },
+                ),
+        )
         registry.registerComponent(
             ComponentDefinition.ofType(ConflictRetryExecutor::class.java)
                 .withBuilder { ConflictRetryExecutor() }
@@ -74,6 +90,11 @@ class CommandServiceConfigurationEnhancer : ConfigurationEnhancer {
         const val CAPTURE_DECORATION_ORDER = 0
     }
 }
+
+/**
+ * Exists only to carry the start handler that requires a [DecisionRecorder], see [CommandServiceConfigurationEnhancer].
+ */
+internal class RecorderGuard
 
 /**
  * The threads that run delayed retries of conflicting commands, owned by the Axon configuration and closed with it.
