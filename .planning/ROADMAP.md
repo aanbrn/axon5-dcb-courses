@@ -101,7 +101,7 @@ Plans:
   3. The contracts modules (commands, events, queries, a shared kernel with the tag registry and sealed result types) contain no Spring or framework logic. Kotlin events with TypeID value-class IDs and tags round-trip through serialization unchanged, and malformed or wrong-prefix TypeIDs are rejected.
   4. MADR ADRs, created from in-repository templates, record the spike outcomes: Axoniq licence behaviour (also reflected in the quick-start notes), the decision-record capture approach, Kotlin serialization and TypeID conventions, and buildpack constraints (pnpm support, image environment defaults). CI checks dependency licences against an allowlist, and NOTICE justifies the Axoniq modules.
   5. Every upstream defect found so far has a `docs/upstream/` record, a CI check keeps workaround markers and records consistent, and dependency update PRs prompt a check of the removal criteria. Vetted Claude Code skills and MCP servers (Context7, Playwright) are installed from pinned sources only after approval and are listed in the tooling inventory. Only `.claude/settings.json` and `.claude/CLAUDE.md` are tracked.
-**Plans:** 15/23 plans executed
+**Plans:** 19/23 plans executed
 
 Plans:
 **Wave 1**
@@ -136,10 +136,10 @@ Plans:
 - [x] 02-15-PLAN.md — Upstream-record check with the shared front-matter parser, the site-ready status index, and the record and issue templates
 
 **Wave 9** *(blocked on Wave 8 completion)*
-- [ ] 02-16-PLAN.md — Axon code-path upstream records UP-0001..UP-0005, UP-0007, UP-0013 with markers and issue drafts
-- [ ] 02-17-PLAN.md — Configuration, tooling and host upstream records UP-0006, UP-0008..UP-0012 with markers and issue drafts
-- [ ] 02-18-PLAN.md — UPS-04 advisory CI job for dependency updates
-- [ ] 02-19-PLAN.md — ADR template and check, ADR-0001..0004 normalised, documentation and Event Modeling templates
+- [x] 02-16-PLAN.md — Axon code-path upstream records UP-0001..UP-0005, UP-0007, UP-0013 with markers and issue drafts
+- [x] 02-17-PLAN.md — Configuration, tooling and host upstream records UP-0006, UP-0008..UP-0012 with markers and issue drafts
+- [x] 02-18-PLAN.md — UPS-04 advisory CI job for dependency updates
+- [x] 02-19-PLAN.md — ADR template and check, ADR-0001..0004 normalised, documentation and Event Modeling templates
 
 **Wave 10** *(blocked on Wave 9 completion)*
 - [ ] 02-20-PLAN.md — Licence gate under governance: `courses.licences` governed path and ask rule, CI `build` naming `checkDependencyLicences`, tooling-inventory row and scope note (npm developer tools outside the check)
@@ -345,7 +345,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Repository, Build & CI Foundation | 21/21 | Complete    | 2026-11-22 |
-| 2. Runtime Infrastructure & DCB Spikes | 15/23 | In Progress | - |
+| 2. Runtime Infrastructure & DCB Spikes | 19/23 | In Progress | - |
 | 3. Command Walking Skeleton | 0/TBD | Not started | - |
 | 4. Read Side & Live Queries | 0/TBD | Not started | - |
 | 5. BFF & First Live UI | 0/TBD | Not started | - |
