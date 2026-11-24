@@ -134,6 +134,8 @@ Filled by the planner per task; the requirement-level map is in `02-RESEARCH.md`
 
 **Re-validated 2026-11-24** (after quick tasks changed covered files): full `./gradlew build` green (43 test classes, 328 tests, 0 failures) once `6e2f690` named a magic number that detekt rejected in `ComposeVersionsFunctionalTest` (introduced by quick task 261124-c1g); all seven shell test suites green (684 checks); real `scripts/doctor.sh` run exits 0 with 16 checks and no `fail` line; `docker compose config --quiet` clean
 
+**Re-validated 2026-11-24, second pass** (after quick tasks 261124-kh6 and 261124-nlk changed `scripts/doctor.sh`, both governance hooks, `ImageReferenceCheck` and their tests): every changed behaviour arrived with tests in the same task (`test-doctor.sh`, `test-ask-governed-edit.sh`, `test-ask-governed-merge.sh`, `ImageReferenceCheckFunctionalTest`), so no gap; full `./gradlew build` green (48 test classes, 347 tests, 0 failures); all seven shell test suites green (750 checks); real `scripts/doctor.sh` run exits 0 with 17 checks and no `fail` line; `docker compose config --quiet` clean
+
 ## Validation Audit 2026-11-23
 
 | Metric | Count |
@@ -148,4 +150,12 @@ Filled by the planner per task; the requirement-level map is in `02-RESEARCH.md`
 |---|---|
 | Gaps found | 1 |
 | Resolved | 1 |
+| Escalated | 0 |
+
+## Validation Audit 2026-11-24
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
 | Escalated | 0 |
