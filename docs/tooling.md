@@ -241,7 +241,9 @@ under `extraKnownMarketplaces` (`ref`).
 
 Only these files under `.claude/` are tracked:
 
-- `.claude/settings.json`, the shared project settings, including the marketplace pins above.
+- `.claude/settings.json`, the shared project settings: the governance ask rules and hooks
+  ([ADR-0015](adr/0015-governance-hooks-for-worktrees-and-merges.md)), whose scripts live in
+  `scripts/governance/`, and the marketplace pins above.
 - `.claude/CLAUDE.md`, the project instructions.
 - `.claude/skills/spike-findings-*/`, the spike wrap-up skill that GSD generates (a narrow exception
   from the rule that ignores everything else there).

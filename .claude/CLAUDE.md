@@ -336,3 +336,8 @@ How a Claude Code session takes a change from branch to `main` in this repositor
   dispatches. Commit the quick task's PLAN first, pass the plan commit and its parent as the allowed bases in the
   embedded worktree branch check, and merge the executor's branch back with
   `gsd-tools query worktree.cleanup-wave --manifest <file>`.
+- **Governed paths ask in every worktree.** Two hooks in `.claude/settings.json` (ADR-0015) ask the author before an
+  Edit, Write, MultiEdit or NotebookEdit of a governed path in any worktree, and before a Bash command whose
+  `git merge` or `worktree.cleanup-wave` brings changes to governed paths into a worktree. Change governed files with
+  those tools, not with shell writes, pass the manifest and refs as literal values so the merge hook can resolve them,
+  and when the author declines a prompt, stop and report instead of working around it.

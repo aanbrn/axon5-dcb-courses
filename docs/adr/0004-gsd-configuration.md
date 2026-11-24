@@ -45,7 +45,8 @@ This implements decision D-14.
 ### Changing the configuration deliberately
 
 1. Change `.planning/config.json`, through GSD or by hand. The ask rules in `.claude/settings.json` (AIDEV-08)
-   make the author confirm both routes: the rule for edits to the file and the rule for `config-set` calls.
+   make the author confirm both routes: the rule for edits to the file and the rule for `config-set` calls. In an
+   agent worktree, the edit hook of [ADR-0015](0015-governance-hooks-for-worktrees-and-merges.md) asks instead.
 2. Make the same change to `governance/gsd-config-policy.json` in the same pull request.
    `checkGsdConfigPolicy` passes only when the two agree.
 3. Both files are governed paths, so the pull request needs the `governance-approved` label for

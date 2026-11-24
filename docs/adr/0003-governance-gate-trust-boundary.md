@@ -1,6 +1,6 @@
 ---
 status: "accepted"
-date: "2026-11-21"
+date: "2026-11-23"
 decision-makers: ["repository author (gap-closure decision on review finding WR-06)"]
 ---
 
@@ -66,11 +66,13 @@ Reasons:
 
 - The single maintainer merges every pull request. Through the ruleset, every change to `main` arrives as a
   squash-merged pull request whose diff the maintainer reads, including a rewrite of the gate.
-- Claude Code's ask rules cover every governed path for the agent's file-edit tool (`.claude/settings.json`,
-  kept in step with `governance/governed-paths.txt` by `checkClaudeAskRules`), so an edit to the gate through
-  that tool needs the author's confirmation (AIDEV-08). The rules do not match shell commands that write files,
-  so they make an unconfirmed change unlikely rather than impossible; they are a guard rail, not a security
-  boundary, and the maintainer's review of the diff remains the control.
+- Claude Code's ask rules and the governance hooks of [ADR-0015](0015-governance-hooks-for-worktrees-and-merges.md)
+  cover every governed path for the agent's file-edit tools in every worktree, and the merges that bring changes to
+  one into a worktree (`.claude/settings.json`, kept in step with `governance/governed-paths.txt` by
+  `checkClaudeAskRules`), so an edit to the gate through those tools needs the author's confirmation (AIDEV-08).
+  They match neither every shell command that writes files nor every git command that integrates changes, so they
+  make an unconfirmed change unlikely rather than impossible; they are a guard rail, not a security boundary, and
+  the maintainer's review of the diff remains the control.
 - T-01-20 already accepted the residual at ASVS L1. The alternatives under Considered Options either run pull
   request-adjacent logic in a privileged context or do not close the gap.
 
