@@ -4,10 +4,10 @@ current_phase: 02
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: executing
 stopped_at: Phase 2 context gathered
-last_updated: "2026-11-24T02:20:21.740Z"
-last_activity: 2026-11-23
+last_updated: "2026-11-24T02:59:09.428Z"
+last_activity: 2026-11-24
 last_activity_desc: Phase 02 execution started
-state_head: 614baa7b29541856260110c01e030b963790fac2
+state_head: ecfab86a439a1862636a93a494c25777a73e31c4
 progress:
   total_phases: 13
   completed_phases: 1
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-11-22)
 Phase: 02 (Runtime Infrastructure & DCB Spikes) — VERIFYING
 Plan: 23 of 23 executed (all SUMMARYs present)
 Status: Phase 02 verification human_needed (5/5 success criteria verified); 02-UAT.md has 6 pending human items; the phase PR is not open yet
-Last activity: 2026-11-24 - Completed quick task 261124-cm1: Record the AxonIQ maintainer responses in upstream records
+Last activity: 2026-11-24 - Completed quick task 261124-c1g: Fix review findings WR-07..WR-10 (merge-hook bypasses, ComposeVersions test)
 
 Progress: [█░░░░░░░░░] 8%
 
@@ -159,6 +159,7 @@ Recent decisions affecting current work:
 | 261123-rzt | Fix Phase 2 review findings WR-02/03/04/06, IN-01..04 and the 4 remaining Qodana findings (Qodana: 0 problems) | 2026-11-23 | d2fdd91 | [261123-rzt-fix-phase-2-review-findings-wr-02-wr-03-](./quick/261123-rzt-fix-phase-2-review-findings-wr-02-wr-03-/) |
 | 15 | Record the open decision on governing the other gate configs in STATE.md Blockers/Concerns | 2026-11-24 | 0ee1e67 | — |
 | 261124-cm1 | Record the AxonIQ maintainer responses (2026-11-23) in upstream records UP-0001, -0002, -0003, -0004 and -0007 | 2026-11-24 | 614baa7 | [261124-cm1-record-the-axoniq-maintainer-responses-2](./quick/261124-cm1-record-the-axoniq-maintainer-responses-2/) |
+| 261124-c1g | Fix review findings WR-07..WR-10: merge-hook bypasses and the ComposeVersions functional test | 2026-11-24 | ecfab86 | [261124-c1g-fix-review-findings-wr-07-wr-10-merge-ho](./quick/261124-c1g-fix-review-findings-wr-07-wr-10-merge-ho/) |
 
 ## Deferred Items
 
