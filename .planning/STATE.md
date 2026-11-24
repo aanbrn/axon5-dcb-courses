@@ -4,10 +4,10 @@ current_phase: 02
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: executing
 stopped_at: Phase 2 context gathered
-last_updated: "2026-11-24T03:41:15.327Z"
+last_updated: "2026-11-24T04:32:27.385Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 02 execution started
-state_head: 9fb92b0842998a2918cc185784b1319beaac4b19
+state_head: 4ebefacb7070efbad33622637e7a7095d0bdfff7
 progress:
   total_phases: 13
   completed_phases: 1
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-11-22)
 Phase: 02 (Runtime Infrastructure & DCB Spikes) — VERIFYING
 Plan: 23 of 23 executed (all SUMMARYs present)
 Status: Phase 02 verification human_needed (5/5 success criteria verified); 02-UAT.md has 6 pending human items; the phase PR is not open yet
-Last activity: 2026-11-24 - Completed quick task 261124-dvp: governance edit hook skips verified agent worktrees, merge hook asks once
+Last activity: 2026-11-24 - Completed quick task 261124-eum: Renovate tracks the GSD version pin
 
 Progress: [█░░░░░░░░░] 8%
 
@@ -124,7 +124,6 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- [Phase 2 ship, after 261124-dvp]: Nothing signals a new GSD release (1.23.0 shipped 2026-11-23 unnoticed; pin is 1.22.0). Add a Renovate custom manager for `governance/gsd-version` (datasource npm, package `@opengsd/gsd-core`, no automerge, standard cooldown) and describe the flow in `docs/tooling.md`: the Renovate PR changes only the pin (the GSD installation is gitignored); before merge read the changelog and hook diff, install locally and get `doctor` green; after merge other checkouts' `doctor` asks for a reinstall. Upgrade to 1.23.0 itself only after the Phase 2 PR.
 - [Phase 4 discuss]: Choose the documentation-site tool. Docusaurus 3.10.2 with Mermaid is only a research recommendation (`.planning/research/STACK.md`, SUMMARY.md); PROJECT.md Key Decisions fixes only "docs site as a Gradle subproject" (Pending), and no ADR exists. Needed by INFRA-08 (docs-site skeleton as a Gradle subproject, Phase 4/5), GH-04 (GitHub Pages publication, Phase 8, with Storybook per UI-08), UPS-02's index on the site (Phase 5) and DOC-02 (final docs phase). Record the choice in an ADR and PROJECT.md.
 
 ### Blockers/Concerns
@@ -161,6 +160,7 @@ Recent decisions affecting current work:
 | 261124-cm1 | Record the AxonIQ maintainer responses (2026-11-23) in upstream records UP-0001, -0002, -0003, -0004 and -0007 | 2026-11-24 | 614baa7 | [261124-cm1-record-the-axoniq-maintainer-responses-2](./quick/261124-cm1-record-the-axoniq-maintainer-responses-2/) |
 | 261124-c1g | Fix review findings WR-07..WR-10: merge-hook bypasses and the ComposeVersions functional test | 2026-11-24 | ecfab86 | [261124-c1g-fix-review-findings-wr-07-wr-10-merge-ho](./quick/261124-c1g-fix-review-findings-wr-07-wr-10-merge-ho/) |
 | 261124-dvp | Governance edit hook stops asking inside verified agent worktrees; the merge hook asks once (ADR-0015) | 2026-11-24 | 9fb92b0 | [261124-dvp-stop-the-governance-edit-hook-from-askin](./quick/261124-dvp-stop-the-governance-edit-hook-from-askin/) |
+| 261124-eum | Renovate tracks the GSD version pin; the pin is never exempt from the governance label; GSD update flow in docs/tooling.md | 2026-11-24 | 4ebefac | [261124-eum-add-a-renovate-custom-manager-that-track](./quick/261124-eum-add-a-renovate-custom-manager-that-track/) |
 
 ## Deferred Items
 
