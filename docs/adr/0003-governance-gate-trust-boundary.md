@@ -96,6 +96,13 @@ Reasons:
   whose hooks and agents run in the maintainer's Claude Code session, so a Renovate bump of it always needs
   `governance-approved`, after the review described in `docs/tooling.md` (GSD updates). Every other governed file
   keeps the exemption for version-only diffs.
+- The governed list also covers the configuration of every job that `ci-success` requires and the launchers those
+  jobs run, under every file name and directory level the tool reads (EditorConfig and editorconfig-checker, git
+  attributes, REUSE, Prettier, taplo, the Spotless licence headers, shellcheck, zizmor, gitleaks, Qodana, and the
+  doctor job's `scripts/doctor.sh` and `tooling/doctor/**`), by author decision of 2026-11-24. An unlabelled edit
+  to one of them could otherwise relax a required gate while CI stays green. `governance/governed-paths.txt` names
+  the paths and records the exclusions. No Renovate manager reads a version from these files, so the version-only
+  exemption needs no new exception.
 
 ## More Information
 
