@@ -3,6 +3,34 @@ phase: 02
 review: 02-REVIEW.md
 titles: json
 findings:
+  - id: CR-01
+    severity: critical
+    disposition: open
+    title: "`bash -euo pipefail -c '...'` hides the script from the merge hook"
+  - id: WR-01
+    severity: warning
+    disposition: open
+    title: "Option forms of `git`, `sudo`, `env` and a `GIT_DIR` prefix make the hook read the wrong repository or none"
+  - id: WR-02
+    severity: warning
+    disposition: open
+    title: "Brace expansion assembles a merge command without a trace"
+  - id: WR-03
+    severity: warning
+    disposition: open
+    title: "Refs that an earlier part of the same command moves are read before the command runs"
+  - id: WR-04
+    severity: warning
+    disposition: open
+    title: "The agent worktree exemption does not hold for the `**/` governed entries"
+  - id: WR-05
+    severity: warning
+    disposition: open
+    title: "`doctor` builds a copy-paste install command from the unvalidated pin"
+  - id: WR-06
+    severity: warning
+    disposition: open
+    title: "UP-0001 and UP-0004 still say the contribution is undecided"
   - id: WR-07
     severity: warning
     disposition: fixed
@@ -31,30 +59,6 @@ findings:
     severity: info
     disposition: open
     title: "The hooks need git 2.36 or newer, and `doctor` does not check it"
-  - id: WR-01
-    severity: warning
-    disposition: deferred
-    title: "Conflict retry has a fixed, unconfigurable bound and no jitter, so a busy course exhausts it"
-  - id: WR-02
-    severity: warning
-    disposition: fixed
-    title: "`forbidden` in the licence policy is advisory, so an allowed entry can match a forbidden family"
-  - id: WR-03
-    severity: warning
-    disposition: fixed
-    title: "`KotlinTagResolver` cannot read a non-public `@EventTag` property, which Axon's resolver can"
-  - id: WR-04
-    severity: warning
-    disposition: fixed
-    title: "`ContainerImageArchitectureTest` strips comments in a way that can hide a violation"
-  - id: WR-05
-    severity: warning
-    disposition: fixed
-    title: "Second `DecisionCaptureIntegrationTest` case can pass without asserting anything"
-  - id: WR-06
-    severity: warning
-    disposition: fixed
-    title: "`ImageReferenceCheck` skips catalog image entries that are not a plain double-quoted string"
   - id: IN-01
     severity: info
     disposition: fixed
@@ -75,28 +79,29 @@ findings:
     severity: info
     disposition: skipped
     title: "Necessity (judgment) - the empty `contracts-queries` module and its rule entries have no instantiation yet"
-open: 3
-total: 18
-recorded: 2026-11-24T01:30:29.860Z
+open: 10
+total: 19
+recorded: 2026-11-24T07:24:48.477Z
 ---
 
 # Phase 02: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-07 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in 01bf991 (the early exit tests the command with quotes, backslashes, `$` and line continuations removed, by a linear filter) |
-| WR-08 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in 55247cc (shells reading standard input, here-strings, `env -S`, `sudo`/`doas` and programs whose arguments run git are analysed or ask; the rest is listed in ADR-0015 residual risks) |
-| WR-09 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in bd589d0 (`<<` in arithmetic is not a heredoc; a heredoc without its delimiter line leaves the lexing incomplete) |
-| WR-10 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in 6a06a26 (every test runs on its own fixture image set) |
-| IN-06 | info | open | - |
-| IN-07 | info | open | - |
-| IN-08 | info | open | - |
-| WR-01 | warning | deferred | Phase 3 success criterion 2 (last-seat race, zero infrastructure errors): make the bound configurable, add capped full-jitter back-off and a 40-way concurrent subscription test in the first subscription slice (not in the current review) |
-| WR-02 | warning | fixed | 02-REVIEW.md — fixed by quick task 261123-rzt in cc73961 (an allowed identifier that matches a forbidden family makes the policy invalid) (not in the current review) |
-| WR-03 | warning | fixed | 02-REVIEW.md — fixed by quick task 261123-rzt in 40c4b79 (non-public annotated properties are made accessible before they are read) (not in the current review) |
-| WR-04 | warning | fixed | 02-REVIEW.md — fixed by quick task 261123-rzt in 1b2394f (a string-aware scanner masks comments and literals before the image rule runs) (not in the current review) |
-| WR-05 | warning | fixed | 02-REVIEW.md — fixed by quick task 261123-mub in ae12133 (committed-count assertion before the loop) (not in the current review) |
-| WR-06 | warning | fixed | 02-REVIEW.md — fixed by quick task 261123-rzt in c2222c3 (every image-* catalog key is matched, a non-double-quoted value is reported) (not in the current review) |
+| CR-01 | critical | open | - |
+| WR-01 | warning | open | - |
+| WR-02 | warning | open | - |
+| WR-03 | warning | open | - |
+| WR-04 | warning | open | - |
+| WR-05 | warning | open | - |
+| WR-06 | warning | open | - |
+| WR-07 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in 01bf991 (the early exit tests the command with quotes, backslashes, `$` and line continuations removed, by a linear filter) (not in the current review) |
+| WR-08 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in 55247cc (shells reading standard input, here-strings, `env -S`, `sudo`/`doas` and programs whose arguments run git are analysed or ask; the rest is listed in ADR-0015 residual risks) (not in the current review) |
+| WR-09 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in bd589d0 (`<<` in arithmetic is not a heredoc; a heredoc without its delimiter line leaves the lexing incomplete) (not in the current review) |
+| WR-10 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in 6a06a26 (every test runs on its own fixture image set) (not in the current review) |
+| IN-06 | info | open | - (not in the current review) |
+| IN-07 | info | open | - (not in the current review) |
+| IN-08 | info | open | - (not in the current review) |
 | IN-01 | info | fixed | 02-REVIEW.md — fixed by quick task 261123-rzt in f4fa65f (the pool is sized by STUDENTS and the suppression is gone) (not in the current review) |
 | IN-02 | info | fixed | 02-REVIEW.md — fixed by quick task 261123-rzt in f4fa65f (shared fixture barrier and submitDecision in the tests) and 71a11d1 (one .java-version parser in build-logic) (not in the current review) |
 | IN-03 | info | fixed | 02-REVIEW.md — fixed by quick task 261123-rzt in 57fc03f (one shared outline scanner that closes a fence only on its own fence string) (not in the current review) |
