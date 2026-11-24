@@ -20,8 +20,11 @@ git_quiet() {
   git -c user.name=test -c user.email=test@example.invalid -c init.defaultBranch=main "$@" >/dev/null 2>&1
 }
 
-# The repository the cases edit: a governed list, a few files, two linked worktrees (one under .claude/worktrees/, one
-# outside the repository) and symbolic links into governed paths.
+# The repository the cases edit: a governed list, a few files, linked worktrees and symbolic links into governed paths.
+# The worktrees under .claude/worktrees/ are agent worktrees (agent-a on worktree-agent-a, agent-n on agent-n),
+# worktrees that are not (feature-x, feature-y) and attempts to look like one: a different branch, a detached HEAD,
+# another agent's branch, a directory replaced by a symbolic link to the repository and an unregistered directory. One
+# more worktree sits outside the repository, another with an agent-shaped name and branch.
 REPO="$TMP/repo"
 mkdir -p "$REPO/governance" "$REPO/docs"
 cat >"$REPO/governance/governed-paths.txt" <<'EOF'
@@ -38,10 +41,23 @@ git_quiet init "$REPO"
 git_quiet -C "$REPO" add -A
 git_quiet -C "$REPO" commit -m initial
 git_quiet -C "$REPO" worktree add "$REPO/.claude/worktrees/agent-a" -b worktree-agent-a
+git_quiet -C "$REPO" worktree add "$REPO/.claude/worktrees/agent-n" -b agent-n
+git_quiet -C "$REPO" worktree add "$REPO/.claude/worktrees/feature-x" -b worktree-feature-x
+git_quiet -C "$REPO" worktree add "$REPO/.claude/worktrees/feature-y" -b gsd/phase-9-probe
+git_quiet -C "$REPO" worktree add "$REPO/.claude/worktrees/agent-p" -b gsd/phase-9-agent-dir
+git_quiet -C "$REPO" worktree add --detach "$REPO/.claude/worktrees/agent-d"
+git_quiet -C "$REPO" worktree add "$REPO/.claude/worktrees/agent-m" -b worktree-agent-other
+git_quiet -C "$REPO" worktree add "$TMP/agent-o" -b worktree-agent-o
 git_quiet -C "$REPO" worktree add "$TMP/elsewhere" -b elsewhere
+git_quiet -C "$REPO" worktree add "$REPO/.claude/worktrees/agent-s" -b worktree-agent-s
+rm -rf "$REPO/.claude/worktrees/agent-s"
+ln -s "$REPO" "$REPO/.claude/worktrees/agent-s"
+mkdir -p "$REPO/.claude/worktrees/agent-ghost"
 ln -s governance "$REPO/linked-dir"
 ln -s ../mise.toml "$REPO/docs/alias.toml"
 AGENT="$REPO/.claude/worktrees/agent-a"
+ln -s "$REPO/mise.toml" "$AGENT/docs/escape.toml"
+ln -s "$REPO/governance" "$AGENT/linked-main"
 
 # edit_input <tool> <path> [cwd]: the PreToolUse input for a file tool call.
 edit_input() {
@@ -107,21 +123,70 @@ run_case "a file outside every worktree passes silently" none '' "$(edit_input W
 run_case "a governed name in a subdirectory is not governed" none '' \
   "$(edit_input Write "$REPO/docs/mise.toml")"
 
-# --- other worktrees (the gap the project ask rules leave) ----------------------------------------------------------
+# --- agent worktrees: the merge hook asks, the edit hook stays silent ---------------------------------------------
 
-run_case "a governed file in an agent worktree under .claude/worktrees asks" ask \
-  'governance/governed-paths\.txt in .*/agent-a is a governed path' \
+run_case "an agent worktree: the merge hook asks, not the edit hook, for the governed list" none '' \
   "$(edit_input Edit "$AGENT/governance/governed-paths.txt" "$AGENT")"
-run_case "the settings file of an agent worktree asks" ask '\.claude/settings\.json' \
+run_case "an agent worktree: the merge hook asks, not the edit hook, for the settings file" none '' \
   "$(edit_input Write "$AGENT/.claude/settings.json" "$AGENT")"
-run_case "a governed file in a worktree outside the repository asks" ask 'mise/config\.toml' \
-  "$(edit_input Write "$TMP/elsewhere/mise/config.toml" "$TMP/elsewhere")"
-run_case "a governed file under an unregistered .claude/worktrees directory asks" ask 'CODEOWNERS.*ghost' \
-  "$(edit_input Write "$REPO/.claude/worktrees/ghost/CODEOWNERS")"
+run_case "an agent worktree: MultiEdit on a governed file stays silent" none '' \
+  "$(edit_input MultiEdit "$AGENT/mise.toml" "$AGENT")"
+run_case "an agent worktree: NotebookEdit on a governed notebook stays silent" none '' \
+  "$(edit_input NotebookEdit "$AGENT/governance/a.ipynb" "$AGENT")"
+run_case "an agent worktree on the agent-<id> branch namespace stays silent" none '' \
+  "$(edit_input Write "$REPO/.claude/worktrees/agent-n/mise.toml" "$REPO/.claude/worktrees/agent-n")"
 run_case "a file that is not governed in an agent worktree passes silently" none '' \
   "$(edit_input Edit "$AGENT/docs/readme.md" "$AGENT")"
-run_case "a session started inside a worktree still guards the main checkout" ask 'mise\.toml' \
-  "$(edit_input Edit "$REPO/mise.toml" "$AGENT")" CLAUDE_PROJECT_DIR="$AGENT"
+
+# --- trees that keep asking: the main checkout, the session's own tree and worktrees that are not agent worktrees ---
+
+run_case "the main checkout asks for MultiEdit on a governed file" ask 'mise\.toml in .*/repo is a governed path' \
+  "$(edit_input MultiEdit "$REPO/mise.toml")"
+run_case "the main checkout asks for NotebookEdit and reads notebook_path" ask \
+  'governance/a\.ipynb in .*/repo is a governed path' "$(edit_input NotebookEdit "$REPO/governance/a.ipynb")"
+run_case "the main checkout asks while agent worktrees exist" ask 'mise\.toml in .*/repo is a governed path' \
+  "$(edit_input Edit "$REPO/mise.toml" "$AGENT")"
+run_case "a session started inside an agent worktree asks for its own tree" ask \
+  'mise\.toml in .*/agent-a is a governed' "$(edit_input Edit "$AGENT/mise.toml" "$AGENT")" CLAUDE_PROJECT_DIR="$AGENT"
+run_case "a session started inside a worktree still guards the main checkout" ask \
+  'mise\.toml in .*/repo is a governed' "$(edit_input Edit "$REPO/mise.toml" "$AGENT")" CLAUDE_PROJECT_DIR="$AGENT"
+run_case "a governed file in a worktree outside the repository asks" ask 'mise/config\.toml' \
+  "$(edit_input Write "$TMP/elsewhere/mise/config.toml" "$TMP/elsewhere")"
+run_case "an EnterWorktree worktree on worktree-<name> asks" ask 'mise\.toml in .*/feature-x is a governed path' \
+  "$(edit_input Edit "$REPO/.claude/worktrees/feature-x/mise.toml" "$REPO/.claude/worktrees/feature-x")"
+run_case "an EnterWorktree worktree renamed to a gsd/phase branch asks" ask \
+  'CODEOWNERS in .*/feature-y is a governed path' \
+  "$(edit_input Write "$REPO/.claude/worktrees/feature-y/CODEOWNERS" "$REPO/.claude/worktrees/feature-y")"
+run_case "a governed file under an unregistered .claude/worktrees directory asks" ask 'CODEOWNERS.*ghost' \
+  "$(edit_input Write "$REPO/.claude/worktrees/ghost/CODEOWNERS")"
+
+# --- attempts to pass as an agent worktree -----------------------------------------------------------------------
+
+run_case "an unregistered directory with an agent-shaped name asks" ask \
+  'CODEOWNERS in .*/agent-ghost is a governed path' \
+  "$(edit_input Write "$REPO/.claude/worktrees/agent-ghost/CODEOWNERS")"
+run_case "an agent-named worktree on a gsd/phase branch asks" ask 'mise\.toml in .*/agent-p is a governed path' \
+  "$(edit_input Edit "$REPO/.claude/worktrees/agent-p/mise.toml" "$REPO/.claude/worktrees/agent-p")"
+run_case "a detached agent-named worktree asks" ask 'mise\.toml in .*/agent-d is a governed path' \
+  "$(edit_input Edit "$REPO/.claude/worktrees/agent-d/mise.toml" "$REPO/.claude/worktrees/agent-d")"
+run_case "an agent-named worktree on another agent's branch asks" ask 'mise\.toml in .*/agent-m is a governed path' \
+  "$(edit_input Edit "$REPO/.claude/worktrees/agent-m/mise.toml" "$REPO/.claude/worktrees/agent-m")"
+run_case "an agent-shaped worktree outside .claude/worktrees asks" ask 'mise\.toml in .*/agent-o is a governed path' \
+  "$(edit_input Edit "$TMP/agent-o/mise.toml" "$TMP/agent-o")"
+run_case "a path from an agent worktree up through .. into the main checkout asks" ask \
+  'mise\.toml in .*/repo is a governed path' "$(edit_input Edit "$AGENT/../../../mise.toml" "$AGENT")"
+run_case "a relative path from an agent worktree into the main checkout asks" ask \
+  'mise\.toml in .*/repo is a governed path' "$(edit_input Edit ../../../mise.toml "$AGENT")"
+run_case "a symbolic link file in an agent worktree to a main checkout file asks" ask \
+  'mise\.toml in .*/repo is a governed path' "$(edit_input Edit "$AGENT/docs/escape.toml" "$AGENT")"
+run_case "a symbolic link directory in an agent worktree to a main checkout directory asks" ask \
+  'governance/new\.json in .*/repo is a governed path' \
+  "$(edit_input Write "$AGENT/linked-main/new.json" "$AGENT")"
+run_case "a registered agent worktree replaced by a symbolic link to the main checkout asks" ask \
+  'mise\.toml in .*(agent-s|/repo) is a governed path' \
+  "$(edit_input Edit "$REPO/.claude/worktrees/agent-s/mise.toml" "$REPO")"
+run_case "a different case spelling of an agent worktree directory asks" ask \
+  'mise\.toml in .*AGENT-A is a governed path' "$(edit_input Edit "$REPO/.claude/worktrees/AGENT-A/mise.toml" "$REPO")"
 
 # --- path spellings --------------------------------------------------------------------------------------------------
 
@@ -136,12 +201,6 @@ run_case "mixed case spelling of a governed directory asks" ask 'Governance/new\
   "$(edit_input Write "$REPO/Governance/new.json")"
 run_case "a relative path resolves against the cwd" ask 'governance/x\.json' \
   "$(edit_input Write governance/x.json "$REPO")"
-
-# --- tools ------------------------------------------------------------------------------------------------------------
-
-run_case "MultiEdit on a governed file asks" ask 'mise\.toml' "$(edit_input MultiEdit "$AGENT/mise.toml" "$AGENT")"
-run_case "NotebookEdit reads notebook_path and asks" ask 'governance/a\.ipynb' \
-  "$(edit_input NotebookEdit "$AGENT/governance/a.ipynb" "$AGENT")"
 
 # --- the governed list and its location ---------------------------------------------------------------------------
 
