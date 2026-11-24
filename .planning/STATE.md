@@ -4,10 +4,10 @@ current_phase: 02
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: executing
 stopped_at: Phase 2 context gathered
-last_updated: "2026-11-24T10:22:49.150Z"
+last_updated: "2026-11-24T10:23:27.014Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 02 execution started
-state_head: 54f0e5378eb8bb07d27d1ba138dbfb524cb0327b
+state_head: 2ad525f4701aff645a06cbbe304b305b82ae19dc
 progress:
   total_phases: 13
   completed_phases: 1
@@ -169,6 +169,7 @@ Recent decisions affecting current work:
 | 261124-hbh | Govern the courses.kotlin-library convention plugin (detekt, allWarningsAsErrors, licence apply line, Dokka failOnWarning); narrow the residual to per-module build scripts | 2026-11-24 | f818100 | [261124-hbh-govern-build-logic-src-main-kotlin-cours](./quick/261124-hbh-govern-build-logic-src-main-kotlin-cours/) |
 | 261124-kh6 | Fix Phase 2 review findings CR-01 and WR-01..WR-06 (merge-hook bypass forms, agent-worktree ** exemption, GSD pin validation, upstream records) and deduplicate merge-hook reasons | 2026-11-24 | e34377b | [261124-kh6-fix-phase-02-review-findings-cr-01-and-w](./quick/261124-kh6-fix-phase-02-review-findings-cr-01-and-w/) |
 | 261124-nlk | Close Phase 2 review findings IN-06 (false positive, guarded by tests), IN-07 (value-only KDoc) and IN-08 (doctor checks git >= 2.36) | 2026-11-24 | 54f0e53 | [261124-nlk-fix-phase-02-review-findings-in-06-and-i](./quick/261124-nlk-fix-phase-02-review-findings-in-06-and-i/) |
+| 24 | Record the 2026-11-24 maintainer reply on AxonFramework#5326 in UP-0001 (package, callback with logging default, assignment, target main) | 2026-11-24 | 2ad525f | — |
 
 ## Deferred Items
 
