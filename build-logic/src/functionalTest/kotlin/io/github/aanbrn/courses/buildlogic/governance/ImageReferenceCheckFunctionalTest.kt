@@ -237,9 +237,14 @@ class ImageReferenceCheckFunctionalTest {
                 match.groups["currentDigest"]?.value shouldBe "sha256:$DIGEST"
             }
         }
-        (REJECTED_KEYS + DOTTED_KEY + REJECTED_SEPARATORS).forEach { sample ->
-            withClue("rejected entry: ${sample.line}") { regex.find(sample.line) shouldBe null }
+        buildList {
+            addAll(REJECTED_KEYS)
+            add(DOTTED_KEY)
+            addAll(REJECTED_SEPARATORS)
         }
+            .forEach { sample ->
+                withClue("rejected entry: ${sample.line}") { regex.find(sample.line) shouldBe null }
+            }
         // The manager does match a registry port, but reads `localhost` as the image and `5000/app:1.0` as the tag.
         val port = withClue("port entry") { regex.find(PORT_LINE).shouldNotBeNull() }
         port.groups["depName"]?.value shouldBe "localhost"

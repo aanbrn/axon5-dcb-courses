@@ -29,7 +29,7 @@ internal fun hookHandler(script: String): Map<String, Any?> =
     linkedMapOf(
         "type" to "command",
         "command" to "bash",
-        "args" to listOf("\${CLAUDE_PROJECT_DIR}/$script"),
+        "args" to listOf($$"${CLAUDE_PROJECT_DIR}/$$script"),
         "timeout" to HOOK_TIMEOUT_SECONDS,
         "onFailure" to "block",
     )

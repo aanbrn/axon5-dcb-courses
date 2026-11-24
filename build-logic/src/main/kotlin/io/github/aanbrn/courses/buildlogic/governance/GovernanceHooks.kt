@@ -36,7 +36,7 @@ internal object GovernanceHooks {
             Hook("Bash", "scripts/governance/ask-governed-merge.sh"),
         )
 
-    private const val PROJECT_DIR = "\${CLAUDE_PROJECT_DIR}"
+    private const val PROJECT_DIR = $$"${CLAUDE_PROJECT_DIR}"
     private const val COMMAND = "bash"
     private const val ON_FAILURE = "block"
 
