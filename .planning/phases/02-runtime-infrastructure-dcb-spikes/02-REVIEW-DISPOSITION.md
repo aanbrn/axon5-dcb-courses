@@ -5,15 +5,15 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "An `.mcp.json` server without `command` is reported as an unresolved binary named `path`"
   - id: IN-01
     severity: info
-    disposition: open
+    disposition: fixed
     title: "The \"mise.toml cannot be read\" fix suggests `git restore` for what may be a permissions problem"
   - id: IN-02
     severity: info
-    disposition: open
+    disposition: fixed
     title: "Catalog findings sort lexicographically, so line 10 comes before line 2"
   - id: WR-02
     severity: warning
@@ -88,9 +88,9 @@ recorded: 2026-11-24T14:30:55.384Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
-| IN-01 | info | open | - |
-| IN-02 | info | open | - |
+| WR-01 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-uwn in 53dac4e (jq emits three never-empty tab fields per server; a url-only server has no binary to resolve and its url is never read; tests cover url-only and credential-bearing url servers) |
+| IN-01 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-uwn in 0e67cf3 (a missing mise.toml gets `git restore`, an unreadable one gets `chmod u+r`, with tests) |
+| IN-02 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-uwn in ab720cc and e2ec662 (findings sorted by path, then numeric line number; functional test puts line 3 before line 12) |
 | WR-02 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-oyk in 9392b29 (KDoc states the observed raw-UUID map key; JsonRoundTripTest pins it; key form left to an ADR when a contract first holds an ID-keyed map) (not in the current review) |
 | WR-03 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-oyk in b61e980 (check accepts exactly the form the Renovate image manager reads, rejects registry ports; parity test reads the regex from renovate.json5) (not in the current review) |
 | CR-01 | critical | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 9f8be86 (shell option clusters and value-taking long options parsed as bash does; unknown forms ask) (not in the current review) |
