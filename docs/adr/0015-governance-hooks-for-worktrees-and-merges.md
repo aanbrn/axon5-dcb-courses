@@ -65,11 +65,19 @@ where worktree work enters the main checkout.
   matches a governed entry, ignoring ASCII case as the default macOS file system does, it asks and names the entry and
   the worktree.
 - **`scripts/governance/ask-governed-merge.sh`** (matcher `Bash`). A command that mentions neither `merge` nor
-  `cleanup-wave` leaves at once. Otherwise a small lexer finds `git ... merge <ref>...`, also with `-C`, after `cd`, in
-  lists, pipelines, subshells, command substitutions, `bash -c`, `eval` and heredocs fed to a shell, and GSD's
-  `worktree.cleanup-wave --manifest <file>`, which merges every branch of the manifest. For each merged ref it lists the
-  files changed since the merge base with the target's `HEAD` (`git diff --no-renames --name-only HEAD...<ref>`, so a file
-  moved out of a governed path counts) and asks when one is governed, listing them. `git merge --abort` and `--quit` pass.
+  `cleanup-wave` leaves at once, once quotes, backslashes, `$` and line continuations are removed from the text (so
+  `git mer''ge` and `git mer\<newline>ge` count as mentions); the test is linear, because bash pattern substitution on a
+  long command is quadratic in bash 3.2 and would run into the hook's timeout. Otherwise a small lexer finds
+  `git ... merge <ref>...`, also with `-C`, after `cd`, in lists, pipelines, subshells, command substitutions, `bash -c`,
+  `eval`, heredocs and here-strings fed to a shell, behind `env` (also `env -S`), `sudo` and `doas`, behind programs that
+  take git or `bash -c` among their arguments (`mise x -- git merge`, `stdbuf`, `caffeinate`, `script`), and GSD's
+  `worktree.cleanup-wave --manifest <file>`, which merges every branch of the manifest. `<<` inside `$((...))` or
+  `((...))` is arithmetic, not a heredoc. For each merged ref the hook lists the files changed since the merge base with
+  the target's `HEAD` (`git diff --no-renames --name-only HEAD...<ref>`, so a file moved out of a governed path counts)
+  and asks when one is governed, listing them. `git merge --abort` and `--quit` pass. It also asks when a shell reads its
+  script from standard input (a pipe, `/dev/stdin`, a process substitution, a heredoc fed to another command), when a
+  script, eval text or program comes from a shell expansion, or when the lexing is left incomplete (an unterminated
+  quote, substitution or heredoc), if the command mentions a merge anywhere.
 - **Shared code.** `governed-paths.sh` holds the grammar and the glob matcher and is now also sourced by `check-pr.sh`;
   `hook-common.sh` holds the hook protocol. [ADR-0003](0003-governance-gate-trust-boundary.md) does not require the gate to
   be self-contained: the library lies under the same governed `scripts/governance/**` and comes from the same tree.
@@ -88,8 +96,9 @@ where worktree work enters the main checkout.
 
 - Good, because a worktree agent's edit of a governed path prompts the author again, in auto mode and in background
   subagents: a hook's ask goes to the permission prompt, not to the auto mode classifier.
-- Good, because governed content that shell commands, scripts or git wrote in a worktree is caught when it is merged,
-  with the governed files listed in the prompt.
+- Good, because governed content that shell commands, scripts or git wrote in a worktree is caught when it is merged
+  through `git merge` or `worktree.cleanup-wave`, with the governed files listed in the prompt. That holds for the forms
+  the hook analyses or, failing that, asks about; the forms under Residual risks stay outside.
 - Good, because the hooks fail closed, and `checkClaudeAskRules` fails the build when a registration, a script or its
   governance is missing.
 - Bad, because every Edit and Write pays for a hook run, about 80 ms, and every Bash command for a short one; a command
@@ -97,13 +106,24 @@ where worktree work enters the main checkout.
 - Bad, because a merge the hook cannot resolve, such as `git merge "$BRANCH"`, asks even when it brings nothing
   governed, and an executor that merges the base branch into its own worktree is asked when the base changed governed
   paths.
+- Bad, because failing closed also asks for some commands that only mention a merge next to a script the hook cannot
+  read (a pipe into a shell, `eval "$x"`), and an argument list that names git and merge, such as `echo git merge x`, is
+  checked as a merge.
 - Bad, because shell writes in a worktree are still not prompted when they happen, only when they are merged.
 
 ### Residual risks
 
 - The merge hook does not see other integration channels: `git pull`, `cherry-pick`, `rebase`, `reset`,
-  `checkout <ref> -- <path>`, `apply` and `am`, git aliases, and programs that run git themselves. The pull request gate
+  `checkout <ref> -- <path>`, `apply` and `am`, git aliases, and programs that run git themselves, except the wrappers
+  and the argument lists it analyses (see The hooks). The pull request gate
   (`governance-success`) and the maintainer's review stay the control there, as ADR-0003 records.
+- The hook never sees a merge word or git subcommand that the command text does not mention: one assembled by a
+  parameter expansion or a command substitution (`git mer${E}ge`) or by ANSI-C escapes (`$'...'` with a hex or octal
+  escape) leaves at the early probe.
+- A script file that a shell or `source` runs counts with the programs that run git themselves: the hook does not read
+  the file.
+- A shell that reads standard input behind a program the hook does not know as a wrapper (for example
+  `echo ... | stdbuf bash`) is not asked about.
 - A shell write by the main session into a governed path of its own tree is not prompted. That is unchanged since
   Phase 1, and the same review covers it.
 - `disableAllHooks` in the untracked `.claude/settings.local.json` or in the user settings switches the hooks off;

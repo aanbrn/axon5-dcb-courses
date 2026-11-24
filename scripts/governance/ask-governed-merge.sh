@@ -8,18 +8,25 @@
 # point: it reads the Bash command and asks when the command merges a ref that changes a governed path since its merge
 # base with the target's HEAD. It recognises
 #   - `git ... merge <ref>...`, with git's global options such as `-C <dir>`, inside pipelines, lists, subshells,
-#     command substitutions, `bash -c`, `eval` and heredocs fed to a shell, after `cd`, `env` and similar wrappers;
+#     command substitutions, `bash -c`, `eval`, heredocs and here-strings fed to a shell, after `cd`, `env` (also
+#     `env -S`), `sudo`, `doas` and similar wrappers, and behind programs that take git or `bash -c` among their
+#     arguments (`mise x -- git merge`, `stdbuf`, `caffeinate`, `script`);
 #   - `worktree.cleanup-wave --manifest <file>` of GSD, which merges every branch of the manifest's `worktrees` list.
 # `git merge --abort` and `--quit` merge nothing. When the hook cannot resolve a merge, because the ref, the manifest or
-# the directory comes from a shell expansion, does not exist or cannot be read, it asks as well. It never allows a
-# call; a command without a merge gets no output.
+# the directory comes from a shell expansion, does not exist or cannot be read, it asks as well. It also asks when the
+# command mentions a merge anywhere and a shell reads its script from standard input (a pipe, `/dev/stdin`, a process
+# substitution, a heredoc fed to another command) or a script, eval text or program comes from a shell expansion,
+# because that text is not visible to the hook. `<<` in arithmetic is no heredoc. It never allows a call; a command
+# without a merge gets no output.
 #
 # The governed list is ${CLAUDE_PROJECT_DIR}/governance/governed-paths.txt, as for the edit hook. The hook runs on every
 # Bash command, so a command that does not mention `merge` or `cleanup-wave` leaves before anything else is loaded. It
 # looks for the words as written and again with quotes, backslashes, `$` and line continuations removed, so a word that
 # the shell assembles (`git mer''ge`) takes the full check; the early probe below says how.
-# Outside its view on purpose (ADR-0015): `git pull`, cherry-pick, rebase, reset, checkout of paths, git aliases and
-# programs that run git themselves; the pull request gate and the maintainer's review stay the control there.
+# Outside its view on purpose (ADR-0015): `git pull`, cherry-pick, rebase, reset, checkout of paths, git aliases, script
+# files that a shell or `source` runs, programs that run git themselves, a merge word that a parameter expansion or
+# ANSI-C escapes assemble, and a shell that reads standard input behind a program the hook does not know as a wrapper;
+# the pull request gate and the maintainer's review stay the control there.
 set -uo pipefail
 export LC_ALL=C
 unset CDPATH
@@ -81,6 +88,10 @@ readonly ARITHMETIC_COMMAND_PATTERN='^(if|while|until|elif|then|do|else|for|!|\{
 # What the analysis found: governed files a merge brings in, and merges it could not check.
 HITS=()
 PROBLEMS=()
+# 1 when the whole command mentions a merge (see mentions_merge). A script, eval text, program or git subcommand that
+# comes from a shell expansion, or from standard input, is text from elsewhere in the command, so such a source matters
+# when the command mentions a merge anywhere.
+COMMAND_MENTIONS_MERGE=0
 
 # --- lexer ----------------------------------------------------------------------------------------------------------
 # lex_command <text> splits a shell command into words without running anything, close enough to bash to find the
@@ -88,7 +99,8 @@ PROBLEMS=()
 #   TOKENS          each word with its quotes removed;
 #   TOKEN_SEGMENT   the number of the simple command the word belongs to;
 #   TOKEN_DYNAMIC   1 when the word holds an expansion the hook cannot evaluate ($NAME, $(...), `...`, $'...');
-#   TOKEN_REDIRECT  1 when the word is the target of a redirection or a here-string;
+#   TOKEN_REDIRECT  1 when the word is the target of a redirection, 2 when it is the text of a here-string;
+#   HEREDOC_SHELL_SEGMENTS  the numbers of the simple commands that run a shell on a heredoc;
 #   TOKEN_DEPTH     how many command substitutions enclose the word;
 #   NESTED_SCRIPTS  the bodies of heredocs fed to a shell, to be analysed like the command;
 #   LEX_INCOMPLETE  1 when quoting, a substitution or an arithmetic is left open, an arithmetic closes with a single `)`,
@@ -277,7 +289,7 @@ lex_redirect() {
   fi
   if [[ ${text:i:3} == '<<<' ]]; then
     i=$((i + 3))
-    redirect=1
+    redirect=2
   elif [[ ${text:i:2} == '<<' ]]; then
     i=$((i + 2))
     if [[ ${text:i:1} == '-' ]]; then
@@ -287,7 +299,10 @@ lex_redirect() {
       heredoc_strips+=(0)
     fi
     case $segment_command in
-    bash | sh | zsh | dash | ksh) heredoc_shells+=(1) ;;
+    bash | sh | zsh | dash | ksh)
+      heredoc_shells+=(1)
+      HEREDOC_SHELL_SEGMENTS+=("$segment")
+      ;;
     *) heredoc_shells+=(0) ;;
     esac
     lex_heredoc_delimiter
@@ -351,6 +366,7 @@ lex_command() {
   TOKEN_REDIRECT=()
   TOKEN_DEPTH=()
   NESTED_SCRIPTS=()
+  HEREDOC_SHELL_SEGMENTS=()
   LEX_INCOMPLETE=0
   LEX_HEREDOC_SUBSTITUTION=0
   while ((i < length)); do
@@ -679,7 +695,7 @@ analyze_git() {
   done
   ((index < count)) || return 0
   if [[ ${WORD_DYNAMIC[index]} -eq 1 ]]; then
-    if mentions_merge "${WORDS[@]}"; then
+    if [[ $COMMAND_MENTIONS_MERGE -eq 1 ]]; then
       PROBLEMS+=("git runs a subcommand given by a shell expansion: ${WORDS[index]}")
     fi
     return 0
@@ -747,32 +763,101 @@ analyze_git() {
   done
 }
 
-# analyze_shell <index of the shell>: analyses the script of `bash -c <script>` and similar shells.
+# analyze_stdin_script: a shell or `source` reads its script from standard input. A heredoc that the lexer registered for
+# this very shell was analysed with the command already. A here-string is the script itself and is analysed here. Any
+# other source of standard input (a pipe, a process substitution, a heredoc fed through a wrapper) cannot be read, which
+# matters when the command mentions a merge anywhere. It reads the current segment of analyze_command.
+analyze_stdin_script() {
+  local index shell_heredoc=0 here_index=-1 here_string
+  for index in ${heredoc_segments[@]+"${heredoc_segments[@]}"}; do
+    if [[ $index == "$segment" ]]; then
+      shell_heredoc=1
+    fi
+  done
+  [[ $shell_heredoc -eq 0 ]] || return 0
+  for ((index = 0; index < ${#herestring_segments[@]}; index++)); do
+    if [[ ${herestring_segments[index]} == "$segment" ]]; then
+      here_index=$index
+    fi
+  done
+  if [[ $here_index -ge 0 ]]; then
+    here_string=${herestring_words[here_index]}
+    if [[ ${herestring_dynamic[here_index]} -eq 1 ]]; then
+      if [[ $COMMAND_MENTIONS_MERGE -eq 1 ]]; then
+        PROBLEMS+=("cannot read a shell script that holds a shell expansion: $here_string")
+      fi
+    else
+      analyze_command "$here_string" "$cwd" $((DEPTH + 1))
+    fi
+    return 0
+  fi
+  if [[ $COMMAND_MENTIONS_MERGE -eq 1 ]]; then
+    PROBLEMS+=("a shell reads its script from standard input, which the hook cannot read")
+  fi
+}
+
+# is_stdin_operand <word>: succeeds for the file names that stand for standard input.
+is_stdin_operand() {
+  case $1 in
+  /dev/stdin | /dev/fd/[0-9]*) return 0 ;;
+  esac
+  return 1
+}
+
+# analyze_shell <index of the shell> [embedded]: analyses the script of `bash -c <script>` and similar shells. Without
+# -c the shell reads standard input when it has option -s, no operand, or /dev/stdin as the operand; a script file is
+# not analysed and stays with the programs that run git themselves (ADR-0015). A shell that only appears among the
+# arguments of another program (embedded=1) is not asked for its standard input.
 analyze_shell() {
-  local index=$(($1 + 1)) count=${#WORDS[@]} word has_script=0
+  local index=$(($1 + 1)) embedded=${2:-0} count=${#WORDS[@]} word has_script=0 has_stdin_option=0
   while ((index < count)); do
     word=${WORDS[index]}
     case $word in
-    --) break ;;
+    --)
+      index=$((index + 1))
+      break
+      ;;
     -o | +o | -O | +O) index=$((index + 2)) ;;
     --*) index=$((index + 1)) ;;
     -* | +*)
       if [[ $word == -*c* ]]; then
         has_script=1
       fi
+      if [[ $word == -*s* ]]; then
+        has_stdin_option=1
+      fi
       index=$((index + 1))
       ;;
     *) break ;;
     esac
   done
-  [[ $has_script -eq 1 && $index -lt $count ]] || return 0
-  if [[ ${WORD_DYNAMIC[index]} -eq 1 ]]; then
-    if mentions_merge "${WORDS[index]}"; then
-      PROBLEMS+=("cannot read a shell script that holds a shell expansion: ${WORDS[index]}")
+  if [[ $has_script -eq 1 ]]; then
+    ((index < count)) || return 0
+    if [[ ${WORD_DYNAMIC[index]} -eq 1 ]]; then
+      if [[ $COMMAND_MENTIONS_MERGE -eq 1 ]]; then
+        PROBLEMS+=("cannot read a shell script that holds a shell expansion: ${WORDS[index]}")
+      fi
+      return 0
     fi
+    analyze_command "${WORDS[index]}" "$cwd" $((DEPTH + 1))
     return 0
   fi
-  analyze_command "${WORDS[index]}" "$cwd" $((DEPTH + 1))
+  [[ $embedded -eq 0 ]] || return 0
+  if [[ $has_stdin_option -eq 1 ]] || ((index >= count)) || is_stdin_operand "${WORDS[index]}"; then
+    analyze_stdin_script
+  fi
+}
+
+# analyze_source <index of source>: `source` and `.` read a script file; standard input or a process substitution (no
+# operand is left of it) is a script the hook cannot read.
+analyze_source() {
+  local index=$(($1 + 1)) count=${#WORDS[@]}
+  while ((index < count)) && [[ ${WORDS[index]} == -?* ]]; do
+    index=$((index + 1))
+  done
+  if ((index >= count)) || is_stdin_operand "${WORDS[index]}"; then
+    analyze_stdin_script
+  fi
 }
 
 # analyze_eval <index of eval>: analyses the words eval joins into a command.
@@ -780,7 +865,7 @@ analyze_eval() {
   local index=$(($1 + 1)) script=''
   for (( ; index < ${#WORDS[@]}; index++)); do
     if [[ ${WORD_DYNAMIC[index]} -eq 1 ]]; then
-      if mentions_merge "${WORDS[@]}"; then
+      if [[ $COMMAND_MENTIONS_MERGE -eq 1 ]]; then
         PROBLEMS+=("cannot read an eval command that holds a shell expansion")
       fi
       return 0
@@ -790,13 +875,70 @@ analyze_eval() {
   analyze_command "$script" "$cwd" $((DEPTH + 1))
 }
 
+# analyze_env_split <index of the -S option of env>: analyses the script that `env -S`, `-Svalue`, `--split-string value`
+# or `--split-string=value` builds from the value and the words after it.
+analyze_env_split() {
+  local index=$1 count=${#WORDS[@]} word=${WORDS[$1]} script dynamic next=$(($1 + 1))
+  case $word in
+  --split-string=*)
+    script=${word#--split-string=}
+    dynamic=${WORD_DYNAMIC[index]}
+    ;;
+  --split-string | -S | -[A-RT-Za-z]*S)
+    script=${WORDS[next]:-}
+    dynamic=${WORD_DYNAMIC[next]:-0}
+    next=$((next + 1))
+    ;;
+  *)
+    script=${word#-S}
+    dynamic=${WORD_DYNAMIC[index]}
+    ;;
+  esac
+  for (( ; next < count; next++)); do
+    script+=" ${WORDS[next]}"
+    if [[ ${WORD_DYNAMIC[next]} -eq 1 ]]; then
+      dynamic=1
+    fi
+  done
+  if [[ $dynamic -eq 1 ]]; then
+    if [[ $COMMAND_MENTIONS_MERGE -eq 1 ]]; then
+      PROBLEMS+=("cannot read an env -S command that holds a shell expansion: $script")
+    fi
+    return 0
+  fi
+  analyze_command "$script" "$cwd" $((DEPTH + 1))
+}
+
+# analyze_embedded <index of the program>: a program that is none of those analysed above may run git or a shell with
+# its arguments (`mise x -- git merge`, `stdbuf`, `caffeinate`, `script`, `watch`). The first argument whose basename is
+# git is analysed as git, and the first shell as `bash -c`. An argument list that merely names git and merge, such as
+# `echo git merge x`, is checked as well, which only adds prompts.
+analyze_embedded() {
+  local index count=${#WORDS[@]} git_index=-1 shell_index=-1
+  for ((index = $1 + 1; index < count; index++)); do
+    [[ ${WORD_DYNAMIC[index]} -eq 0 ]] || continue
+    case ${WORDS[index]##*/} in
+    git) [[ $git_index -ge 0 ]] || git_index=$index ;;
+    bash | sh | zsh | dash | ksh) [[ $shell_index -ge 0 ]] || shell_index=$index ;;
+    esac
+  done
+  if [[ $git_index -ge 0 ]]; then
+    analyze_git "$git_index"
+  fi
+  if [[ $shell_index -ge 0 ]]; then
+    analyze_shell "$shell_index" 1
+  fi
+}
+
 # analyze_words: analyses the simple command in SEGMENT_WORDS and SEGMENT_DYNAMIC.
 analyze_words() {
   local -a WORDS=("${SEGMENT_WORDS[@]}") WORD_DYNAMIC=("${SEGMENT_DYNAMIC[@]}")
-  local count=${#SEGMENT_WORDS[@]} index=0 wrapper ARGUMENTS_FROM_STDIN=0
-  # Reserved words, assignments and wrappers in front of the program that runs.
+  local count=${#SEGMENT_WORDS[@]} index=0 wrapper value_options interactive_shell
+  local ARGUMENTS_FROM_STDIN=0
+  # Reserved words, assignments and wrappers in front of the program that runs. An assignment may hold an expansion
+  # (`x=$((1<<2))`), which is no program.
   while ((index < count)); do
-    if [[ ${WORD_DYNAMIC[index]} -eq 0 && ${WORDS[index]} =~ $ASSIGNMENT_PATTERN ]]; then
+    if [[ ${WORDS[index]} =~ $ASSIGNMENT_PATTERN ]]; then
       index=$((index + 1))
       continue
     fi
@@ -811,11 +953,50 @@ analyze_words() {
           cwd=''
           index=$((index + 2))
           ;;
-        -u | --unset | -S | --split-string) index=$((index + 2)) ;;
+        -u | --unset) index=$((index + 2)) ;;
+        -S | -S?* | --split-string | --split-string=* | -[A-RT-Za-z]*S)
+          analyze_env_split "$index"
+          return 0
+          ;;
         -*) index=$((index + 1)) ;;
         *) break ;;
         esac
       done
+      ;;
+    sudo | doas)
+      index=$((index + 1))
+      interactive_shell=0
+      # The options of these wrappers that take a value; the long forms of sudo may also be written --option=value.
+      if [[ $wrapper == sudo ]]; then
+        value_options=' -u -g -h -p -C -D -R -r -T -t -U --user --group --host --prompt --chdir --role --type '
+        value_options+='--other-user --close-from '
+      else
+        value_options=' -u -C '
+      fi
+      while ((index < count)); do
+        case ${WORDS[index]} in
+        --)
+          index=$((index + 1))
+          break
+          ;;
+        -*)
+          case ${WORDS[index]} in
+          -s | -i | --shell | --login) interactive_shell=1 ;;
+          -D | --chdir) cwd='' ;;
+          esac
+          if [[ $value_options == *" ${WORDS[index]} "* ]]; then
+            index=$((index + 2))
+          else
+            index=$((index + 1))
+          fi
+          ;;
+        *) break ;;
+        esac
+      done
+      # `sudo -s` and `doas -s` without a command start a shell that reads standard input.
+      if ((index >= count)) && [[ $interactive_shell -eq 1 ]]; then
+        analyze_stdin_script
+      fi
       ;;
     command | builtin | exec | nohup | time | nice | timeout | xargs)
       if [[ $wrapper == xargs ]]; then
@@ -826,6 +1007,11 @@ analyze_words() {
       while ((index < count)); do
         case ${WORDS[index]} in
         -n | -s | -k | -I | -L | -P | -d | -E | -a) index=$((index + 2)) ;;
+        -*[vV]*)
+          # `command -v` and `command -V` look a name up and run nothing.
+          [[ $wrapper != command ]] || return 0
+          index=$((index + 1))
+          ;;
         -*) index=$((index + 1)) ;;
         *) break ;;
         esac
@@ -840,7 +1026,7 @@ analyze_words() {
   ((index < count)) || return 0
   analyze_cleanup_wave
   if [[ ${WORD_DYNAMIC[index]} -eq 1 ]]; then
-    if mentions_merge "${WORDS[@]:index}"; then
+    if [[ $COMMAND_MENTIONS_MERGE -eq 1 ]]; then
       PROBLEMS+=("the command runs a program named by a shell expansion: ${WORDS[index]}")
     fi
     return 0
@@ -850,6 +1036,8 @@ analyze_words() {
   git) analyze_git "$index" ;;
   bash | sh | zsh | dash | ksh) analyze_shell "$index" ;;
   eval) analyze_eval "$index" ;;
+  source | .) analyze_source "$index" ;;
+  *) analyze_embedded "$index" ;;
   esac
 }
 
@@ -886,6 +1074,9 @@ analyze_command() {
   local -a tokens=(${TOKENS[@]+"${TOKENS[@]}"}) token_segment=(${TOKEN_SEGMENT[@]+"${TOKEN_SEGMENT[@]}"})
   local -a token_dynamic=(${TOKEN_DYNAMIC[@]+"${TOKEN_DYNAMIC[@]}"}) token_depth=(${TOKEN_DEPTH[@]+"${TOKEN_DEPTH[@]}"})
   local -a token_redirect=(${TOKEN_REDIRECT[@]+"${TOKEN_REDIRECT[@]}"})
+  # What analyze_stdin_script needs: the segments that run a shell on a heredoc, and the here-strings with their segment.
+  local -a heredoc_segments=(${HEREDOC_SHELL_SEGMENTS[@]+"${HEREDOC_SHELL_SEGMENTS[@]}"})
+  local -a herestring_segments=() herestring_words=() herestring_dynamic=()
   nested=(${NESTED_SCRIPTS[@]+"${NESTED_SCRIPTS[@]}"})
   # The words in order of depth, which keeps every simple command in one run, and then run by run.
   for ((index = 0; index < ${#tokens[@]}; index++)); do
@@ -916,6 +1107,10 @@ analyze_command() {
     if [[ ${token_redirect[index]} -eq 0 ]]; then
       SEGMENT_WORDS+=("${tokens[index]}")
       SEGMENT_DYNAMIC+=("${token_dynamic[index]}")
+    elif [[ ${token_redirect[index]} -eq 2 ]]; then
+      herestring_segments+=("${token_segment[index]}")
+      herestring_words+=("${tokens[index]}")
+      herestring_dynamic+=("${token_dynamic[index]}")
     fi
   done
   for script in ${nested[@]+"${nested[@]}"}; do
@@ -932,6 +1127,9 @@ input_string CWD '.cwd' || ask_author "the cwd in the hook input is not a usable
 [[ $CWD == /* ]] || CWD=''
 load_governed_globs "$SCRIPT_DIR"
 
+if mentions_merge "$COMMAND"; then
+  COMMAND_MENTIONS_MERGE=1
+fi
 analyze_command "$COMMAND" "$CWD" 0
 
 if [[ ${#HITS[@]} -eq 0 && ${#PROBLEMS[@]} -eq 0 ]]; then

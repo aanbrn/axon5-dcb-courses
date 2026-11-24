@@ -254,6 +254,62 @@ run_case "a command substitution inside arithmetic is still analysed" ask "$ONLY
 run_case "a subshell that looks like an arithmetic expansion leaves the lexing incomplete" ask \
   'leaves quoting, a substitution or a heredoc open' $'echo $((git merge governed); true)'
 
+# --- scripts handed to a shell ------------------------------------------------------------------------------------
+
+run_case "a here-string fed to a shell is analysed" ask "$ONLY_MISE" 'bash <<< "git merge governed"'
+run_case "a here-string from a shell variable fed to a shell asks" ask 'shell expansion' \
+  $'S="git merge governed"; bash <<< "$S"'
+run_case "a script piped into bash asks" ask 'standard input' 'echo "git merge governed" | bash'
+run_case "a script piped into sh -s asks" ask 'standard input' "printf 'git merge governed' | sh -s"
+run_case "a heredoc fed to another command and piped into a shell asks" ask 'standard input' \
+  $'cat <<EOF | bash\ngit merge governed\nEOF'
+run_case "bash /dev/stdin asks" ask 'standard input' 'echo "git merge governed" | bash /dev/stdin'
+run_case "a process substitution handed to bash asks" ask 'standard input' 'bash <(echo "git merge governed")'
+run_case "source of standard input asks" ask 'standard input' 'echo "git merge governed" | source /dev/stdin'
+run_case "source of a process substitution asks" ask 'standard input' 'source <(echo "git merge governed")'
+run_case "a heredoc behind env and a shell asks" ask "$ONLY_MISE|standard input" \
+  $'env bash <<\'EOF\'\ngit merge governed\nEOF'
+run_case "a heredoc in front of a shell word asks" ask "$ONLY_MISE|standard input" \
+  $'<<\'EOF\' bash\ngit merge governed\nEOF'
+run_case "a script from a shell variable handed to bash -c asks" ask 'shell expansion' \
+  $'s="git merge governed"; bash -c "$s"'
+run_case "a script from a shell variable handed to eval asks" ask 'shell expansion' \
+  $'s="git merge governed"; eval "$s"'
+run_case "a script from a command substitution handed to bash -c asks" ask 'shell expansion' \
+  $'echo "git merge governed" | bash -c "$(cat)"'
+run_case "a program named by a variable that holds a merge asks" ask 'named by a shell expansion' \
+  $'CMD="git merge governed"; $CMD'
+run_case "a script file run by a shell is not standard input" none '' \
+  'bash scripts/governance/test-ask-governed-merge.sh'
+run_case "command -v looks a name up and runs nothing" none '' \
+  'command -v bash >/dev/null && git merge-base HEAD governed'
+run_case "a shell whose script is a file next to merge-base passes silently" none '' \
+  'bash -c "git merge-base HEAD governed"'
+
+# --- wrappers that run another command ----------------------------------------------------------------------------
+
+run_case "sudo in front of git asks" ask "$ONLY_MISE" 'sudo git merge governed'
+run_case "sudo -u in front of git asks" ask "$ONLY_MISE" 'sudo -u root git merge governed'
+run_case "doas in front of git asks" ask "$ONLY_MISE" 'doas git merge governed'
+run_case "doas -u in front of git asks" ask "$ONLY_MISE" 'doas -u root git merge governed'
+run_case "sudo bash -c asks" ask "$ONLY_MISE" "sudo bash -c 'git merge governed'"
+run_case "sudo -s without a command reads standard input" ask 'standard input' \
+  'echo "git merge governed" | sudo -s'
+run_case "env -S asks" ask "$ONLY_MISE" 'env -S "git merge governed"'
+run_case "env -S with an attached value asks" ask "$ONLY_MISE" "env -S'git merge governed'"
+run_case "env --split-string asks" ask "$ONLY_MISE" "env --split-string='git merge governed'"
+run_case "env -S with a value from a shell variable asks" ask 'shell expansion' \
+  $'s="git merge governed"; env -S "$s"'
+run_case "mise x -- in front of git asks" ask "$ONLY_MISE" 'mise x -- git merge governed'
+run_case "stdbuf in front of git asks" ask "$ONLY_MISE" 'stdbuf -oL git merge governed'
+run_case "caffeinate in front of git asks" ask "$ONLY_MISE" 'caffeinate git merge governed'
+run_case "script in front of git asks" ask "$ONLY_MISE" 'script -q /dev/null git merge governed'
+run_case "mise x -- bash -c asks" ask "$ONLY_MISE" "mise x -- bash -c 'git merge governed'"
+run_case "a program with a git merge that changes no governed file passes silently" none '' \
+  'mise x -- git merge docs-only'
+run_case "git log --merges piped to head is not a merge" none '' 'git log --merges --oneline | head -5'
+run_case "grep for a merge word is not a merge" none '' 'echo merge | grep merge'
+
 # --- GSD cleanup-wave ---------------------------------------------------------------------------------------------
 
 GSD='node .claude/gsd-core/bin/gsd-tools.cjs'
