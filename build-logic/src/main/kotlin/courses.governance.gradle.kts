@@ -32,7 +32,7 @@ val checkGsdConfigPolicy =
 val checkClaudeAskRules =
     tasks.register<AskRulesCheck>("checkClaudeAskRules") {
         group = "verification"
-        description = "Fails when the Claude Code ask rules do not cover every governed path and config-set."
+        description = "Fails when the Claude Code ask rules and governance hooks do not cover the governed paths."
         claudeSettings.set(layout.projectDirectory.file(".claude/settings.json"))
         governedPaths.set(layout.projectDirectory.file("governance/governed-paths.txt"))
         report.set(reports.map { it.file("claude-ask-rules.txt") })

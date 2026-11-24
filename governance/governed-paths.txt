@@ -3,12 +3,14 @@
 # A pull request that touches one of these paths needs the `governance-approved` label
 # (scripts/governance/check-pr.sh), and Claude Code asks before it edits one
 # (.claude/settings.json, kept in sync by the checkClaudeAskRules Gradle task: exactly one
-# `Edit(/<entry>)` ask rule per entry).
+# `Edit(/<entry>)` ask rule per entry, plus the hooks of ADR-0015, which ask before an edit in
+# any worktree and before a merge that brings a change to one).
 #
 # Format. One glob per line. `**` matches any characters including `/`; every other character
 # is literal. Blank lines and lines starting with `#` are ignored. Leading and trailing spaces,
 # tabs and carriage returns are stripped. Entries must be printable ASCII. A file without any
-# entry fails closed. The shell gate and the Gradle check read this file with one grammar.
+# entry fails closed. The shell gate, the Claude Code hooks and the Gradle check read this file
+# with one grammar.
 #
 # Boundary rule. A path is governed when a change to it alone can rewrite the policy, stop a
 # governance check from running, or make one pass without evaluating. That covers the policy

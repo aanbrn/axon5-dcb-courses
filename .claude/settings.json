@@ -63,6 +63,34 @@
       "Bash(*config-set*)"
     ]
   },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": ["${CLAUDE_PROJECT_DIR}/scripts/governance/ask-governed-edit.sh"],
+            "timeout": 30,
+            "onFailure": "block"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": ["${CLAUDE_PROJECT_DIR}/scripts/governance/ask-governed-merge.sh"],
+            "timeout": 60,
+            "onFailure": "block"
+          }
+        ]
+      }
+    ]
+  },
   "extraKnownMarketplaces": {
     "axoniq": {
       "source": {

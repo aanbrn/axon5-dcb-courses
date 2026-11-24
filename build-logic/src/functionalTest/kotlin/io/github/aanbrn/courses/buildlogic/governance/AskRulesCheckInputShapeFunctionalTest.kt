@@ -69,9 +69,9 @@ class AskRulesCheckInputShapeFunctionalTest {
     private companion object {
         const val TASK = "checkClaudeAskRules"
         const val GOVERNED = ".mcp.json\nmise.toml\n"
-        val EXPECTED = arrayOf("Edit(/.mcp.json)", "Edit(/mise.toml)", "Bash(*config-set*)")
+        val EXPECTED = arrayOf("Edit(/.mcp.json)", "Edit(/mise.toml)", CONFIG_SET_RULE)
 
-        fun settings(vararg rules: String): String =
-            """{"permissions": {"ask": [${rules.joinToString { "\"$it\"" }}]}}""" + "\n"
+        /** Settings with the [rules] and without hooks: every case here fails on the shape of its input. */
+        fun settings(vararg rules: String): String = claudeSettings(rules.toList(), hooks = null)
     }
 }
