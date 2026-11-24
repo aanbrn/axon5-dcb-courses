@@ -110,9 +110,11 @@ the milestone is adjusted otherwise.
 
 Status on 2026-11-24: open, milestone "Release 5.5.0", labels "Priority 4: Would" and "Ideal for Contribution".
 
-Open decision for the author: upstream would welcome a pull request that adds a `debug` log statement with all the
-information to the `EventStorageEngine` or an opt-in decorator definition. This repository has not decided whether to
-contribute it; until it does, the 5.5.0 milestone may move.
+Decision of the author on 2026-11-24: contribute a pull request to `AxonIQ/AxonFramework` after this repository's
+Phase 2 pull request merges. It comes first for #5326, as an opt-in decorator definition: the public way to observe the
+conditional append, which lets the command service drop its decorator of the `@Internal` `EventStorageEngine`
+(milestone 5.5.0). The pull request for #5328 (UP-0004) follows. This record is updated when the pull request merges,
+and the workaround is removed only after a release that contains the change.
 
 ### Public extension point to observe the conditional append of a decision
 

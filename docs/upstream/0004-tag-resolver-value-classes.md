@@ -96,8 +96,10 @@ Axoniq team to tackle at their earliest convenience.
 
 Status on 2026-11-24: open, milestone "Release 5.7.0", label "Priority 3: Could".
 
-Open decision for the author: upstream would much welcome a pull request. This repository has not decided whether to
-contribute the Kotlin-aware resolver that the published issue offers.
+Decision of the author on 2026-11-24: contribute the Kotlin-aware tag resolver that the published issue offers, after this
+repository's Phase 2 pull request merges and after the UP-0001 pull request (#5326), starting with where the code
+belongs (core or the Kotlin extension). This record is updated when the pull request merges, and the workaround is
+removed only after a release.
 
 ### AnnotationBasedTagResolver tags the unboxed value of a Kotlin value-class property
 

@@ -334,6 +334,20 @@ assert_out "version differs" "^fail  gsd: installed GSD 1\\.22\\.0 differs from 
 assert_out "version differs" "^      fix: npx -y @opengsd/gsd-core@1\\.23\\.0 --claude --local"
 
 fresh
+printf '\n' >"$ENV/repo/governance/gsd-version"
+run_doctor "$ENV"
+assert_code "empty pin" 1
+assert_out "empty pin" "^fail  gsd: governance/gsd-version must hold one version such as 1\\.2\\.3"
+assert_no_out "empty pin" "@opengsd/gsd-core@ "
+
+fresh
+printf '1.0.0; echo x\n' >"$ENV/repo/governance/gsd-version"
+run_doctor "$ENV"
+assert_code "garbage pin" 1
+assert_out "garbage pin" "^fail  gsd: governance/gsd-version must hold one version such as 1\\.2\\.3"
+assert_no_out "garbage pin" "echo ?x"
+
+fresh
 rm "$ENV/repo/.claude/gsd-file-manifest.json"
 run_doctor "$ENV"
 assert_code "no manifest" 1
