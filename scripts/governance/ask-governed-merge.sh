@@ -7,26 +7,31 @@
 # reaches a governed file in an agent worktree, through the file tools or a shell command (sed, a heredoc, a script),
 # enters the main checkout through a merge, and this hook stands at that point: it reads the Bash command and asks when
 # the command merges a ref that changes a governed path since its merge base with the target's HEAD. It recognises
-#   - `git ... merge <ref>...`, with git's global options such as `-C <dir>`, inside pipelines, lists, subshells,
-#     command substitutions, `bash -c`, `eval`, heredocs and here-strings fed to a shell, after `cd`, `env` (also
-#     `env -S`), `sudo`, `doas` and similar wrappers, and behind programs that take git or `bash -c` among their
-#     arguments (`mise x -- git merge`, `stdbuf`, `caffeinate`, `script`);
+#   - `git ... merge <ref>...`, with git's global options such as `-C <dir>` and `--attr-source <tree>`, inside
+#     pipelines, lists, subshells, command substitutions, `bash -c` (behind option clusters such as `-euo pipefail` and
+#     options with a value such as `--rcfile <file>`), `eval`, heredocs and here-strings fed to a shell, after `cd`,
+#     `env` (also `env -S`), `sudo`, `doas` and similar wrappers with their option clusters, and behind programs that
+#     take git or `bash -c` among their arguments (`mise x -- git merge`, `stdbuf`, `caffeinate`, `script`);
 #   - `worktree.cleanup-wave --manifest <file>` of GSD, which merges every branch of the manifest's `worktrees` list.
 # `git merge --abort` and `--quit` merge nothing. When the hook cannot resolve a merge, because the ref, the manifest or
-# the directory comes from a shell expansion, does not exist or cannot be read, it asks as well. It also asks when the
-# command mentions a merge anywhere and a shell reads its script from standard input (a pipe, `/dev/stdin`, a process
-# substitution, a heredoc fed to another command) or a script, eval text or program comes from a shell expansion,
-# because that text is not visible to the hook. `<<` in arithmetic is no heredoc. It never allows a call; a command
-# without a merge gets no output.
+# the directory comes from a shell expansion (an unquoted brace expansion such as `{a,b}` counts as one), does not
+# exist or cannot be read, it asks as well. So it does when the directory is changed by `env -C`, `--chdir` or
+# `sudo -D`, or when the command sets GIT_DIR, GIT_WORK_TREE, GIT_COMMON_DIR or GIT_CEILING_DIRECTORIES anywhere, so
+# that the repository is unknown. It also asks when the command mentions a merge anywhere and a shell reads its script
+# from standard input (a pipe, `/dev/stdin`, a process substitution, a heredoc fed to another command), a shell option
+# is unknown or comes from a shell expansion, or a script, eval text or program comes from a shell expansion, because
+# that text is not visible to the hook. `<<` in arithmetic is no heredoc. It never allows a call; a command without a
+# merge gets no output.
 #
 # The governed list is ${CLAUDE_PROJECT_DIR}/governance/governed-paths.txt, as for the edit hook. The hook runs on every
 # Bash command, so a command that does not mention `merge` or `cleanup-wave` leaves before anything else is loaded. It
 # looks for the words as written and again with quotes, backslashes, `$` and line continuations removed, so a word that
 # the shell assembles (`git mer''ge`) takes the full check; the early probe below says how.
 # Outside its view on purpose (ADR-0015): `git pull`, cherry-pick, rebase, reset, checkout of paths, git aliases, script
-# files that a shell or `source` runs, programs that run git themselves, a merge word that a parameter expansion or
-# ANSI-C escapes assemble, and a shell that reads standard input behind a program the hook does not know as a wrapper;
-# the pull request gate and the maintainer's review stay the control there.
+# files that a shell or `source` runs, programs that run git themselves, a merge word that a parameter expansion, a
+# brace expansion inside one word (`mer{g,}e`) or ANSI-C escapes assemble, a merge option value that splits into several
+# words, and a shell that reads standard input behind a program the hook does not know as a wrapper; the pull request
+# gate and the maintainer's review stay the control there.
 set -uo pipefail
 export LC_ALL=C
 unset CDPATH
@@ -84,10 +89,19 @@ readonly ASSIGNMENT_PATTERN='^[A-Za-z_][A-Za-z0-9_]*='
 readonly DIGITS_PATTERN='^[0-9]+$'
 # The first word of a simple command after which `((` starts an arithmetic command (or none: `((i++))`, `for ((...))`).
 readonly ARITHMETIC_COMMAND_PATTERN='^(if|while|until|elif|then|do|else|for|!|\{)?$'
+# Unquoted text that bash expands as a brace expansion: braces around a comma or a `..`, as in `{a,b}` and `{1..3}`.
+readonly BRACE_EXPANSION_PATTERN='[{][^{}]*(,|\.\.)[^{}]*[}]'
+# An assignment or a bare name of a variable that moves git to another repository, which the hook cannot follow.
+readonly GIT_REPOSITORY_VARIABLE_PATTERN='^(GIT_DIR|GIT_WORK_TREE|GIT_COMMON_DIR|GIT_CEILING_DIRECTORIES)(=|$)'
 
 # What the analysis found: governed files a merge brings in, and merges it could not check.
 HITS=()
 PROBLEMS=()
+# 1 when the analysis met a merge it could check or fail to check (not `--abort` and `--quit`), and 1 when the command
+# sets one of the variables of GIT_REPOSITORY_VARIABLE_PATTERN anywhere. The two are combined in main, regardless of
+# order: a variable exported in one segment, or in a nested `bash -c`, reaches merges anywhere after it.
+MERGE_SEEN=0
+GIT_REPOSITORY_ENV=0
 # 1 when the whole command mentions a merge (see mentions_merge). A script, eval text, program or git subcommand that
 # comes from a shell expansion, or from standard input, is text from elsewhere in the command, so such a source matters
 # when the command mentions a merge anywhere.
@@ -98,7 +112,8 @@ COMMAND_MENTIONS_MERGE=0
 # simple commands it runs. It sets
 #   TOKENS          each word with its quotes removed;
 #   TOKEN_SEGMENT   the number of the simple command the word belongs to;
-#   TOKEN_DYNAMIC   1 when the word holds an expansion the hook cannot evaluate ($NAME, $(...), `...`, $'...');
+#   TOKEN_DYNAMIC   1 when the word holds an expansion the hook cannot evaluate ($NAME, $(...), `...`, $'...', or an
+#                   unquoted brace expansion such as {a,b} and {1..3}, which bash turns into several words);
 #   TOKEN_REDIRECT  1 when the word is the target of a redirection, 2 when it is the text of a here-string;
 #   HEREDOC_SHELL_SEGMENTS  the numbers of the simple commands that run a shell on a heredoc;
 #   TOKEN_DEPTH     how many command substitutions enclose the word;
@@ -119,6 +134,10 @@ COMMAND_MENTIONS_MERGE=0
 
 lex_end_word() {
   if [[ $in_word -eq 1 ]]; then
+    # `shadow` holds the unquoted text of the word, which is all that brace expansion looks at.
+    if [[ $shadow == *'{'* && $shadow =~ $BRACE_EXPANSION_PATTERN ]]; then
+      dynamic=1
+    fi
     TOKENS+=("$word")
     TOKEN_SEGMENT+=("$segment")
     TOKEN_DYNAMIC+=("$dynamic")
@@ -130,6 +149,7 @@ lex_end_word() {
     redirect=0
   fi
   word=''
+  shadow=''
   in_word=0
   dynamic=0
 }
@@ -198,6 +218,7 @@ lex_close_arithmetic() {
   lex_close_substitution
   if [[ $kind == C ]]; then
     word=''
+    shadow=''
     in_word=0
     dynamic=0
   fi
@@ -283,6 +304,7 @@ lex_heredoc_delimiter() {
 lex_redirect() {
   if [[ $in_word -eq 1 && $dynamic -eq 0 && $word =~ $DIGITS_PATTERN ]]; then
     word=''
+    shadow=''
     in_word=0
   else
     lex_end_word
@@ -357,7 +379,7 @@ lex_heredoc_bodies() {
 
 lex_command() {
   local text=$1 length=${#1} i=0 c next context top rest chunk
-  local word='' in_word=0 dynamic=0 redirect=0 segment=0 segment_count=0 segment_command=''
+  local word='' shadow='' in_word=0 dynamic=0 redirect=0 segment=0 segment_count=0 segment_command=''
   local -a contexts=(U) depths=(0) saved_words=() saved_segments=() saved_commands=()
   local -a heredoc_delimiters=() heredoc_quoted=() heredoc_strips=() heredoc_shells=()
   TOKENS=()
@@ -539,6 +561,7 @@ lex_command() {
         i=$((i + ${#rest}))
       else
         word+=$c
+        shadow+=$c
         i=$((i + 1))
       fi
       ;;
@@ -548,6 +571,7 @@ lex_command() {
       # A character that ends a run without being special, such as a carriage return, is taken alone.
       [[ -n $chunk ]] || chunk=$c
       word+=$chunk
+      shadow+=$chunk
       in_word=1
       i=$((i + ${#chunk}))
       ;;
@@ -646,6 +670,7 @@ analyze_cleanup_wave() {
   done
   # Without --manifest, cleanup-wave refuses to run and merges nothing.
   [[ $found -eq 1 && -n $manifest ]] || return 0
+  MERGE_SEEN=1
   if [[ $manifest_dynamic -eq 1 || $base_dynamic -eq 1 || -z $base ]]; then
     PROBLEMS+=("cannot resolve the manifest of worktree.cleanup-wave: $manifest")
     return 0
@@ -680,7 +705,7 @@ analyze_git() {
       fi
       index=$((index + 2))
       ;;
-    -c | --namespace | --config-env | --super-prefix) index=$((index + 2)) ;;
+    -c | --namespace | --config-env | --super-prefix | --attr-source) index=$((index + 2)) ;;
     --git-dir | --work-tree)
       repository_known=0
       index=$((index + 2))
@@ -738,6 +763,7 @@ analyze_git() {
     index=$((index + 1))
   done
   [[ $abort -eq 0 ]] || return 0
+  MERGE_SEEN=1
   if [[ $ARGUMENTS_FROM_STDIN -eq 1 ]]; then
     PROBLEMS+=("git merge takes further refs from xargs")
     return 0
@@ -809,16 +835,39 @@ is_stdin_operand() {
 # not analysed and stays with the programs that run git themselves (ADR-0015). A shell that only appears among the
 # arguments of another program (embedded=1) is not asked for its standard input.
 analyze_shell() {
-  local index=$(($1 + 1)) embedded=${2:-0} count=${#WORDS[@]} word has_script=0 has_stdin_option=0
+  local index=$(($1 + 1)) embedded=${2:-0} count=${#WORDS[@]} word has_script=0 has_stdin_option=0 letters
+  # The options end at the first word that is none: `--` and a lone `-` end them too. bash takes a value for each o and
+  # O of a short cluster (`-euo pipefail`, `-oo pipefail errexit`, `+eo pipefail`), and for --rcfile and --init-file.
   while ((index < count)); do
     word=${WORDS[index]}
+    if [[ ${WORD_DYNAMIC[index]} -eq 1 ]]; then
+      # A word from an expansion may be an option, an option value or the script, so the hook cannot tell the script.
+      if [[ $COMMAND_MENTIONS_MERGE -eq 1 ]]; then
+        if [[ $has_script -eq 1 ]]; then
+          PROBLEMS+=("cannot read a shell script that holds a shell expansion: $word")
+        else
+          PROBLEMS+=("cannot tell where the options of ${WORDS[$1]} end: they come from a shell expansion")
+        fi
+      fi
+      return 0
+    fi
     case $word in
-    --)
+    -- | -)
       index=$((index + 1))
       break
       ;;
-    -o | +o | -O | +O) index=$((index + 2)) ;;
-    --*) index=$((index + 1)) ;;
+    --rcfile | --init-file) index=$((index + 2)) ;;
+    --login | --noprofile | --norc | --posix | --restricted | --verbose | --version | --help | --debug | --debugger | \
+      --dump-strings | --dump-po-strings | --pretty-print | --noediting | --wordexp | --protected | --rcfile=* | \
+      --init-file=*)
+      index=$((index + 1))
+      ;;
+    --*)
+      if [[ $COMMAND_MENTIONS_MERGE -eq 1 ]]; then
+        PROBLEMS+=("cannot tell where the options of ${WORDS[$1]} end: unknown option $word")
+      fi
+      return 0
+      ;;
     -* | +*)
       if [[ $word == -*c* ]]; then
         has_script=1
@@ -826,7 +875,8 @@ analyze_shell() {
       if [[ $word == -*s* ]]; then
         has_stdin_option=1
       fi
-      index=$((index + 1))
+      letters=${word//[!oO]/}
+      index=$((index + 1 + ${#letters}))
       ;;
     *) break ;;
     esac
@@ -875,25 +925,11 @@ analyze_eval() {
   analyze_command "$script" "$cwd" $((DEPTH + 1))
 }
 
-# analyze_env_split <index of the -S option of env>: analyses the script that `env -S`, `-Svalue`, `--split-string value`
-# or `--split-string=value` builds from the value and the words after it.
+# analyze_env_split <value> <dynamic> <index of the first word after the value>: analyses the script that `env -S`,
+# `-Svalue`, `-iSvalue`, `--split-string value` or `--split-string=value` builds from the value (read by
+# read_wrapper_option) and the words after it.
 analyze_env_split() {
-  local index=$1 count=${#WORDS[@]} word=${WORDS[$1]} script dynamic next=$(($1 + 1))
-  case $word in
-  --split-string=*)
-    script=${word#--split-string=}
-    dynamic=${WORD_DYNAMIC[index]}
-    ;;
-  --split-string | -S | -[A-RT-Za-z]*S)
-    script=${WORDS[next]:-}
-    dynamic=${WORD_DYNAMIC[next]:-0}
-    next=$((next + 1))
-    ;;
-  *)
-    script=${word#-S}
-    dynamic=${WORD_DYNAMIC[index]}
-    ;;
-  esac
+  local script=$1 dynamic=$2 next=$3 count=${#WORDS[@]}
   for (( ; next < count; next++)); do
     script+=" ${WORDS[next]}"
     if [[ ${WORD_DYNAMIC[next]} -eq 1 ]]; then
@@ -916,7 +952,15 @@ analyze_env_split() {
 analyze_embedded() {
   local index count=${#WORDS[@]} git_index=-1 shell_index=-1
   for ((index = $1 + 1; index < count; index++)); do
-    [[ ${WORD_DYNAMIC[index]} -eq 0 ]] || continue
+    if [[ ${WORD_DYNAMIC[index]} -eq 1 ]]; then
+      # A brace expansion such as {git,merge,x} or an expansion that holds the word git can name git or a merge.
+      if [[ $COMMAND_MENTIONS_MERGE -eq 1 ]]; then
+        if mentions_merge "${WORDS[index]}" || [[ ${WORDS[index]} == *git* ]]; then
+          PROBLEMS+=("a program's argument holds a shell expansion that may name git or a merge: ${WORDS[index]}")
+        fi
+      fi
+      continue
+    fi
     case ${WORDS[index]##*/} in
     git) [[ $git_index -ge 0 ]] || git_index=$index ;;
     bash | sh | zsh | dash | ksh) [[ $shell_index -ge 0 ]] || shell_index=$index ;;
@@ -930,15 +974,110 @@ analyze_embedded() {
   fi
 }
 
+# read_wrapper_option <env|sudo|doas> <index of an option word>: reads one option of env, sudo or doas from WORDS, which
+# may be a long option, or a cluster of short options in which the first letter that takes a value takes the rest of the
+# word, or the next word when nothing is left. It sets
+#   OPTION_NEXT         the index of the first word after the option and its value;
+#   OPTION_CLEARS_CWD   1 when the option changes the directory the command runs in (env -C and --chdir, sudo -D and
+#                       --chdir), which makes the repository unknown;
+#   OPTION_INTERACTIVE  1 for the sudo and doas options that start a shell (-s, -i, --shell, --login);
+#   OPTION_SPLIT        1 for env -S and --split-string, with OPTION_SPLIT_VALUE and OPTION_SPLIT_DYNAMIC.
+read_wrapper_option() {
+  local kind=$1 index=$2 word=${WORDS[$2]} cluster letter values dynamic
+  OPTION_NEXT=$((index + 1))
+  OPTION_CLEARS_CWD=0
+  OPTION_INTERACTIVE=0
+  OPTION_SPLIT=0
+  OPTION_SPLIT_VALUE=''
+  OPTION_SPLIT_DYNAMIC=0
+  if [[ $word == --* ]]; then
+    case $word in
+    --chdir=*)
+      [[ $kind == doas ]] || OPTION_CLEARS_CWD=1
+      ;;
+    --split-string=*)
+      if [[ $kind == env ]]; then
+        OPTION_SPLIT=1
+        OPTION_SPLIT_VALUE=${word#--split-string=}
+        OPTION_SPLIT_DYNAMIC=${WORD_DYNAMIC[index]}
+      fi
+      ;;
+    --*=*) ;;
+    --chdir)
+      [[ $kind == doas ]] || OPTION_CLEARS_CWD=1
+      OPTION_NEXT=$((index + 2))
+      ;;
+    --split-string)
+      if [[ $kind == env ]]; then
+        OPTION_SPLIT=1
+        OPTION_SPLIT_VALUE=${WORDS[index + 1]:-}
+        OPTION_SPLIT_DYNAMIC=${WORD_DYNAMIC[index + 1]:-0}
+        OPTION_NEXT=$((index + 2))
+      fi
+      ;;
+    --shell | --login) OPTION_INTERACTIVE=1 ;;
+    *)
+      # The long options that take a value; sudo's may also be written --option=value, which the case above took.
+      case $kind in
+      env) values=' --unset --argv0 ' ;;
+      sudo)
+        values=' --user --group --host --prompt --role --type --other-user --close-from '
+        ;;
+      *) values=' ' ;;
+      esac
+      if [[ $values == *" $word "* ]]; then
+        OPTION_NEXT=$((index + 2))
+      fi
+      ;;
+    esac
+    return 0
+  fi
+  case $kind in
+  env) values=CuPaSLU ;;
+  sudo) values=ughpCDRrTtU ;;
+  *) values=uC ;;
+  esac
+  cluster=${word#-}
+  while [[ -n $cluster ]]; do
+    letter=${cluster:0:1}
+    cluster=${cluster:1}
+    if [[ $kind != env && ($letter == s || $letter == i) ]]; then
+      OPTION_INTERACTIVE=1
+    fi
+    if [[ $values != *"$letter"* ]]; then
+      continue
+    fi
+    if [[ $letter == C && $kind == env ]] || [[ $letter == D && $kind == sudo ]]; then
+      OPTION_CLEARS_CWD=1
+    fi
+    if [[ -n $cluster ]]; then
+      dynamic=${WORD_DYNAMIC[index]}
+    else
+      cluster=${WORDS[index + 1]:-}
+      dynamic=${WORD_DYNAMIC[index + 1]:-0}
+      OPTION_NEXT=$((index + 2))
+    fi
+    if [[ $kind == env && $letter == S ]]; then
+      OPTION_SPLIT=1
+      OPTION_SPLIT_VALUE=$cluster
+      OPTION_SPLIT_DYNAMIC=$dynamic
+    fi
+    return 0
+  done
+}
+
 # analyze_words: analyses the simple command in SEGMENT_WORDS and SEGMENT_DYNAMIC.
 analyze_words() {
   local -a WORDS=("${SEGMENT_WORDS[@]}") WORD_DYNAMIC=("${SEGMENT_DYNAMIC[@]}")
-  local count=${#SEGMENT_WORDS[@]} index=0 wrapper value_options interactive_shell
+  local count=${#SEGMENT_WORDS[@]} index=0 wrapper interactive_shell
   local ARGUMENTS_FROM_STDIN=0
   # Reserved words, assignments and wrappers in front of the program that runs. An assignment may hold an expansion
   # (`x=$((1<<2))`), which is no program.
   while ((index < count)); do
     if [[ ${WORDS[index]} =~ $ASSIGNMENT_PATTERN ]]; then
+      if [[ ${WORDS[index]} =~ $GIT_REPOSITORY_VARIABLE_PATTERN ]]; then
+        GIT_REPOSITORY_ENV=1
+      fi
       index=$((index + 1))
       continue
     fi
@@ -949,16 +1088,21 @@ analyze_words() {
       index=$((index + 1))
       while ((index < count)); do
         case ${WORDS[index]} in
-        -C | --chdir)
-          cwd=''
-          index=$((index + 2))
+        --)
+          index=$((index + 1))
+          break
           ;;
-        -u | --unset) index=$((index + 2)) ;;
-        -S | -S?* | --split-string | --split-string=* | -[A-RT-Za-z]*S)
-          analyze_env_split "$index"
-          return 0
+        -*)
+          read_wrapper_option env "$index"
+          if [[ $OPTION_SPLIT -eq 1 ]]; then
+            analyze_env_split "$OPTION_SPLIT_VALUE" "$OPTION_SPLIT_DYNAMIC" "$OPTION_NEXT"
+            return 0
+          fi
+          if [[ $OPTION_CLEARS_CWD -eq 1 ]]; then
+            cwd=''
+          fi
+          index=$OPTION_NEXT
           ;;
-        -*) index=$((index + 1)) ;;
         *) break ;;
         esac
       done
@@ -966,13 +1110,6 @@ analyze_words() {
     sudo | doas)
       index=$((index + 1))
       interactive_shell=0
-      # The options of these wrappers that take a value; the long forms of sudo may also be written --option=value.
-      if [[ $wrapper == sudo ]]; then
-        value_options=' -u -g -h -p -C -D -R -r -T -t -U --user --group --host --prompt --chdir --role --type '
-        value_options+='--other-user --close-from '
-      else
-        value_options=' -u -C '
-      fi
       while ((index < count)); do
         case ${WORDS[index]} in
         --)
@@ -980,15 +1117,14 @@ analyze_words() {
           break
           ;;
         -*)
-          case ${WORDS[index]} in
-          -s | -i | --shell | --login) interactive_shell=1 ;;
-          -D | --chdir) cwd='' ;;
-          esac
-          if [[ $value_options == *" ${WORDS[index]} "* ]]; then
-            index=$((index + 2))
-          else
-            index=$((index + 1))
+          read_wrapper_option "$wrapper" "$index"
+          if [[ $OPTION_INTERACTIVE -eq 1 ]]; then
+            interactive_shell=1
           fi
+          if [[ $OPTION_CLEARS_CWD -eq 1 ]]; then
+            cwd=''
+          fi
+          index=$OPTION_NEXT
           ;;
         *) break ;;
         esac
@@ -1037,6 +1173,14 @@ analyze_words() {
   bash | sh | zsh | dash | ksh) analyze_shell "$index" ;;
   eval) analyze_eval "$index" ;;
   source | .) analyze_source "$index" ;;
+  export | declare | typeset | local | readonly)
+    # These change the environment of the commands after them.
+    for ((index = index + 1; index < count; index++)); do
+      if [[ ${WORDS[index]} =~ $GIT_REPOSITORY_VARIABLE_PATTERN ]]; then
+        GIT_REPOSITORY_ENV=1
+      fi
+    done
+    ;;
   *) analyze_embedded "$index" ;;
   esac
 }
@@ -1131,6 +1275,10 @@ if mentions_merge "$COMMAND"; then
   COMMAND_MENTIONS_MERGE=1
 fi
 analyze_command "$COMMAND" "$CWD" 0
+if [[ $MERGE_SEEN -eq 1 && $GIT_REPOSITORY_ENV -eq 1 ]]; then
+  PROBLEMS+=("the command sets GIT_DIR, GIT_WORK_TREE, GIT_COMMON_DIR or GIT_CEILING_DIRECTORIES, so the hook cannot \
+tell which repository git merge runs in")
+fi
 
 if [[ ${#HITS[@]} -eq 0 && ${#PROBLEMS[@]} -eq 0 ]]; then
   no_decision

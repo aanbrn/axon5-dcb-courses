@@ -286,6 +286,30 @@ run_case "command -v looks a name up and runs nothing" none '' \
 run_case "a shell whose script is a file next to merge-base passes silently" none '' \
   'bash -c "git merge-base HEAD governed"'
 
+# --- options of a shell before its script -------------------------------------------------------------------------
+# bash takes the words after -o and +o (and after -O and +O) as option names, so `-euo pipefail` is one cluster with a
+# value, and --rcfile and --init-file take a file; the script of `-c` comes after all of them.
+
+run_case "bash -euo pipefail -c asks" ask "$ONLY_MISE" "bash -euo pipefail -c 'git merge governed'"
+run_case "bash -eo pipefail -c asks" ask "$ONLY_MISE" "bash -eo pipefail -c 'git merge governed'"
+run_case "sh -eu -c asks" ask "$ONLY_MISE" "sh -eu -c 'git merge governed'"
+run_case "bash --rcfile with a file before -c asks" ask "$ONLY_MISE" \
+  "bash --rcfile /dev/null -c 'git merge governed'"
+run_case "bash --init-file with a file before -c asks" ask "$ONLY_MISE" \
+  "bash --init-file /dev/null -c 'git merge governed'"
+run_case "bash -oo with two option names before -c asks" ask "$ONLY_MISE" \
+  "bash -oo pipefail errexit -c 'git merge governed'"
+run_case "bash +eo pipefail -c asks" ask "$ONLY_MISE" "bash +eo pipefail -c 'git merge governed'"
+run_case "sudo bash -euo pipefail -c asks" ask "$ONLY_MISE" "sudo bash -euo pipefail -c 'git merge governed'"
+run_case "env -S with bash -euo pipefail -c asks" ask "$ONLY_MISE" \
+  $'env -S "bash -euo pipefail -c \'git merge governed\'"'
+run_case "mise x -- bash -eo pipefail -c asks" ask "$ONLY_MISE" "mise x -- bash -eo pipefail -c 'git merge governed'"
+run_case "a script behind strict-mode options is analysed, not blanket-asked" none '' \
+  "bash -euo pipefail -c 'git merge docs-only'"
+run_case "an unknown long option of a shell asks" ask 'unknown option' \
+  "bash --unknown-option -c 'git merge docs-only'"
+run_case "an option word from a shell expansion asks" ask 'shell expansion' "bash \$OPTS -c 'git merge docs-only'"
+
 # --- wrappers that run another command ----------------------------------------------------------------------------
 
 run_case "sudo in front of git asks" ask "$ONLY_MISE" 'sudo git merge governed'
@@ -309,6 +333,43 @@ run_case "a program with a git merge that changes no governed file passes silent
   'mise x -- git merge docs-only'
 run_case "git log --merges piped to head is not a merge" none '' 'git log --merges --oneline | head -5'
 run_case "grep for a merge word is not a merge" none '' 'echo merge | grep merge'
+
+# --- options of git and of the wrappers that change the repository or hide the command --------------------------------
+
+run_case "git --attr-source takes a value before the subcommand" ask "$ONLY_MISE" 'git --attr-source HEAD merge governed'
+run_case "git --attr-source before a merge without a governed change passes silently" none '' \
+  'git --attr-source HEAD merge docs-only'
+run_case "sudo --chdir= makes the repository unknown" ask 'cannot tell which repository' \
+  "sudo --chdir=$TMP git merge docs-only"
+run_case "sudo -D with an attached directory makes the repository unknown" ask 'cannot tell which repository' \
+  "sudo -D$TMP git merge docs-only"
+run_case "env --chdir= makes the repository unknown" ask 'cannot tell which repository' \
+  "env --chdir=$TMP git merge docs-only"
+run_case "env -C with an attached directory makes the repository unknown" ask 'cannot tell which repository' \
+  "env -C$TMP git merge docs-only"
+run_case "an env cluster that holds C makes the repository unknown" ask 'cannot tell which repository' \
+  "env -iC $TMP git merge docs-only"
+run_case "an env cluster that holds S with an attached script is analysed" ask "$ONLY_MISE" \
+  "env -iS'git merge governed'"
+run_case "a sudo cluster with a value letter is analysed" ask "$ONLY_MISE" 'sudo -iu root git merge governed'
+run_case "GIT_DIR and GIT_WORK_TREE in front of git ask" ask 'cannot tell which repository' \
+  "GIT_DIR=$TMP/x/.git GIT_WORK_TREE=$TMP/x git merge docs-only"
+run_case "an exported GIT_DIR asks" ask 'cannot tell which repository' \
+  "export GIT_DIR=$TMP/x/.git; git merge docs-only"
+run_case "GIT_WORK_TREE after env asks" ask 'cannot tell which repository' \
+  "env GIT_WORK_TREE=$TMP/x git merge docs-only"
+run_case "another GIT_ variable in front of a merge passes silently" none '' 'GIT_EDITOR=true git merge docs-only'
+
+# --- brace expansion is a shell expansion ---------------------------------------------------------------------------
+
+run_case "a subcommand from a brace expansion asks" ask 'subcommand given by a shell expansion' 'git {merge,governed}'
+run_case "a command from a brace expansion asks" ask 'named by a shell expansion' '{git,merge,governed}'
+run_case "a ref from a brace expansion asks" ask 'holds a shell expansion' 'git merge {governed,docs-only}'
+run_case "a brace expansion behind a wrapper program asks" ask 'shell expansion' 'mise x -- {git,merge,governed}'
+run_case "a quoted brace expression is no expansion" none '' '"{git,merge,governed}"'
+run_case "a group command is no brace expansion" ask "$ONLY_MISE" '{ git merge governed; }'
+run_case "a brace expansion in an unrelated command next to a merge passes silently" none '' \
+  'echo {a,b} && git merge docs-only'
 
 # --- GSD cleanup-wave ---------------------------------------------------------------------------------------------
 
