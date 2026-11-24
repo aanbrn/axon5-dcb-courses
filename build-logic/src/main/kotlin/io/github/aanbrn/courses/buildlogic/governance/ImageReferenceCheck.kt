@@ -39,7 +39,8 @@ import org.gradle.api.tasks.TaskAction
  * Compose files are read line by line instead of with a YAML library: only `image:` entries are needed, and an extra
  * parser dependency in `build-logic` is not worth that. Commented-out lines are skipped. Findings are written as
  * `path:line: message` for compose files and for the catalog lines that the manager reads outside the verified entries,
- * and as `path: message` for the other catalog findings, sorted, so the report is identical on every run.
+ * and as `path: message` for the other catalog findings. The findings are sorted by path and then by line number, so
+ * the report is identical on every run and reads top to bottom.
  */
 @CacheableTask
 abstract class ImageReferenceCheck @Inject constructor(private val layout: ProjectLayout) : DefaultTask() {
@@ -53,13 +54,13 @@ abstract class ImageReferenceCheck @Inject constructor(private val layout: Proje
     /** The version catalog, `gradle/libs.versions.toml`. */
     @get:InputFile @get:PathSensitive(PathSensitivity.RELATIVE) abstract val catalog: RegularFileProperty
 
-    /** The file the sorted findings are written to; empty when there are none. */
+    /** The file the findings are written to, by path and line number; empty when there are none. */
     @get:OutputFile abstract val report: RegularFileProperty
 
     /** Checks every compose `image:` value and every catalog `image-*` entry, and fails with all findings. */
     @TaskAction
     fun check() {
-        val problems = buildList {
+        val findings = buildList {
             composeFiles.asFileTree.visit {
                 if (!isDirectory) {
                     addAll(composeProblems(relativePath.pathString, file.readLines()))
@@ -69,23 +70,33 @@ abstract class ImageReferenceCheck @Inject constructor(private val layout: Proje
                 layout.projectDirectory.asFile.toPath().relativize(catalog.get().asFile.toPath()).joinToString("/")
             addAll(catalogProblems(catalogPath, catalog.get().asFile.readLines()))
         }
-        val sorted = problems.sorted()
+        val problems = findings.sortedWith(compareBy({ it.path }, { it.line }, { it.message })).map { it.message }
         report.get().asFile.apply {
             parentFile.mkdirs()
-            writeText(sorted.joinToString(separator = "") { "$it\n" })
+            writeText(problems.joinToString(separator = "") { "$it\n" })
         }
-        if (sorted.isNotEmpty()) {
-            throw GradleException(failureMessage(sorted))
+        if (problems.isNotEmpty()) {
+            throw GradleException(failureMessage(problems))
         }
     }
 
-    private fun composeProblems(path: String, lines: List<String>): List<String> =
+    /**
+     * A finding: the rendered [message], and the [path] and 1-based [line] it is ordered by. A message that names no
+     * line still carries the line of its entry, for ordering only.
+     */
+    private data class Finding(val path: String, val line: Int, val message: String)
+
+    private fun composeProblems(path: String, lines: List<String>): List<Finding> =
         lines.withIndex().mapNotNull { (index, raw) ->
             val value = IMAGE_LINE.matchEntire(raw)?.groupValues?.get(1)?.let(::unquote)
             if (value == null || INTERPOLATION.matches(value)) {
                 null
             } else {
-                $$"$$path:$${index + 1}: image '$$value' must be a ${VARIABLE} interpolation of a generated value"
+                Finding(
+                    path,
+                    index + 1,
+                    $$"$$path:$${index + 1}: image '$$value' must be a ${VARIABLE} interpolation of a generated value",
+                )
             }
         }
 
@@ -93,8 +104,8 @@ abstract class ImageReferenceCheck @Inject constructor(private val layout: Proje
      * The `image-*` entries of the `[versions]` table that are not a double-quoted tag-and-digest reference, and every
      * other line (any table, comments included) on which the Renovate image manager reads an image.
      */
-    private fun catalogProblems(path: String, lines: List<String>): List<String> {
-        val problems = mutableListOf<String>()
+    private fun catalogProblems(path: String, lines: List<String>): List<Finding> {
+        val problems = mutableListOf<Finding>()
         var inVersions = false
         for ((index, raw) in lines.withIndex()) {
             val line = raw.trim()
@@ -102,7 +113,7 @@ abstract class ImageReferenceCheck @Inject constructor(private val layout: Proje
             if (header) {
                 inVersions = VERSIONS_HEADER.matches(line)
             } else if (inVersions) {
-                catalogProblem(path, line)?.let { problems += it }
+                catalogProblem(path, line)?.let { problems += Finding(path, index + 1, it) }
             }
             problems += readOutsideEntries(path, index + 1, line, verified = inVersions && !header)
         }
@@ -114,13 +125,17 @@ abstract class ImageReferenceCheck @Inject constructor(private val layout: Proje
      * [catalogProblem] never verifies them: every [MANAGER_READ] match, except the entry that starts a `[versions]`
      * line (`verified`), which [catalogProblem] has checked.
      */
-    private fun readOutsideEntries(path: String, number: Int, line: String, verified: Boolean): List<String> =
+    private fun readOutsideEntries(path: String, number: Int, line: String, verified: Boolean): List<Finding> =
         MANAGER_READ.findAll(line)
             .filterNot { verified && it.range.first == 0 }
             .map {
-                "$path:$number: the Renovate image manager reads ${it.value.substringBefore(" = ")} here, " +
-                    "outside the [versions] entries this check verifies; " +
-                    "delete it or make it an image-* entry of [versions]"
+                Finding(
+                    path,
+                    number,
+                    "$path:$number: the Renovate image manager reads ${it.value.substringBefore(" = ")} here, " +
+                        "outside the [versions] entries this check verifies; " +
+                        "delete it or make it an image-* entry of [versions]",
+                )
             }
             .toList()
 

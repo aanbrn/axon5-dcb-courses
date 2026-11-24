@@ -34,7 +34,8 @@
 #   - every worktree that `git worktree list` reports;
 #   - <session root or main worktree root>/.claude/worktrees/<name>/, registered as a worktree or not.
 # The path is checked twice: as written with `.` and `..` applied, and with the symbolic links of its longest existing
-# prefix and of its final component resolved. The comparison ignores ASCII case, as the default macOS file system does.
+# prefix and of its final component resolved. The comparison ignores ASCII case, as the default macOS file system does;
+# a reason shows the path and its root as written.
 # Any problem, such as missing jq, unreadable input, an unusable governed list or a failing git, is answered with "ask".
 set -uo pipefail
 export LC_ALL=C
@@ -95,7 +96,7 @@ add_root() {
   fi
 }
 
-# match_relative <relative path> <root>: asks the author when the relative path is governed.
+# match_relative <relative path> <root as written in the path>: asks the author when the relative path is governed.
 match_relative() {
   local entry=''
   if match_governed entry "$1"; then
@@ -249,8 +250,9 @@ fi
 
 # check_candidate <absolute path>: asks the author when the path, taken relative to a root, is governed, except for a
 # path below the root of an agent worktree: the match relative to the agent root and the match relative to any root that
-# contains it are both exempt, byte for byte. The prefix test compares folded case; the relative path keeps the spelling
-# of the candidate.
+# contains it are both exempt, byte for byte. The prefix test compares folded case; the relative path and the root that
+# the reason names both keep the spelling of the candidate, so the reason is the same whichever root matches first and
+# on every file system.
 check_candidate() {
   local candidate=$1 folded_candidate='' folded='' root base relative
   fold_case folded_candidate "$candidate"
@@ -258,7 +260,7 @@ check_candidate() {
     fold_case folded "$root"
     if [[ $folded != / && $folded_candidate == "$folded"/* ]] && ! is_agent_root "$root" "$candidate" &&
       ! below_agent_root "$root" "$candidate"; then
-      match_relative "${candidate:${#root}+1}" "$root"
+      match_relative "${candidate:${#root}+1}" "${candidate:0:${#root}}"
     fi
   done
   for base in "${BASES[@]}"; do
@@ -267,7 +269,7 @@ check_candidate() {
       relative=${candidate:${#base}+${#CLAUDE_WORKTREES}}
       root=$base$CLAUDE_WORKTREES${relative%%/*}
       if ! is_agent_root "$root" "$candidate"; then
-        match_relative "${relative#*/}" "$root"
+        match_relative "${relative#*/}" "${candidate:0:${#root}}"
       fi
     fi
   done

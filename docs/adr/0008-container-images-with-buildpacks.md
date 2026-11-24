@@ -81,17 +81,19 @@ nginx and JVM setting visible in the repository. The settings that the spike pro
 
 ### Local prerequisites
 
-Two defects of the local engine broke the spike's first builds. Neither is part of the repository, so `doctor` checks them
-and prints the fix:
+Two defects of the local engine broke the spike's first builds. Neither is part of the repository, so `doctor` checks the
+DNS setting and prints the fix, and reports the image store:
 
 - **colima DNS.** The built-in resolver of colima never answers AAAA queries, and Go-based tools wait for both A and AAAA,
   so every lookup took 10 seconds and the buildpacks timed out downloading the JRE. The fix is explicit resolvers,
   `colima start --dns <resolver> --dns <resolver>`. Tracked as UP-0011.
 - **Docker 29 containerd image store.** Exporting an image onto `ubuntu-noble-run` fails with `no suitable export target
 found` on both `pack` and `BootBuildImage`. The fix is the classic image store (`overlay2`): in colima
-  `docker.features.containerd-snapshotter: false`. Tracked as UP-0012, which is fixed upstream in Docker 29.9.0; the
-  workaround stays until every engine that builds the images is 29.9.0 or newer. The CI image job has to pin a runner
-  image that is not affected, or switch the snapshotter off, because the defect can hit CI runners too.
+  `docker.features.containerd-snapshotter: false`. Tracked as UP-0012, which is fixed upstream in Docker 29.9.0. The
+  workaround was removed on 2026-11-24 after the export of the noble run image succeeded on a Docker 29.10.0 engine
+  with the containerd store: both image stores are accepted, and the containerd store needs Docker 29.9.0 or newer
+  (`docs/tooling.md`). The CI image job (CICD-02) needs such an engine when its runner uses the containerd store,
+  because the defect can hit CI runners too.
 
 ### Consequences
 
@@ -105,15 +107,15 @@ found` on both `pack` and `BootBuildImage`. The fix is the classic image store (
   image, and the health check needs the same variables again in compose.
 - Bad, because a first image build takes about four minutes cold (about 20 seconds warm) and needs a Docker daemon, which
   is why the images are built by a separate task and CI job, not by `check` (decision for Phase 6).
-- Bad, because two local engine defects must be fixed by hand until upstream moves.
+- Bad, because the colima DNS defect (UP-0011) must be fixed by hand until upstream moves.
 
 ### Confirmation
 
 - Phase 6 builds the images in CI and is to check the settings above against the spike's observations: the nginx cases
   (fallback, immutable assets, 404 for a missing asset, `/healthz`, the streaming proxy), the health check and the
   labels. Until then the spike is the evidence, and no test in this repository builds an image.
-- `scripts/doctor.sh` has the `colima` check (DNS and the image-store flag) and the `image-store` check, both carrying
-  their `UPSTREAM` markers.
+- `scripts/doctor.sh` has the `colima` check (DNS, carrying the `UPSTREAM` marker of UP-0011) and the `image-store`
+  check, which reports the active image store.
 - A Konsist rule keeps image names out of source literals, so every image comes from the version catalog.
 
 ## Pros and Cons of the Options
@@ -148,6 +150,6 @@ found` on both `pack` and `BootBuildImage`. The fix is the classic image store (
 - Decisions: D-35 (prebuilt `dist/`, Web Servers buildpack, no pnpm in the image); the deferred image builds belong to
   Phase 6 (CICD-02, CICD-10).
 - Upstream records: [UP-0011](../upstream/0011-colima-aaaa-dns.md) (colima DNS, not yet reported) and
-  [UP-0012](../upstream/0012-docker-containerd-platform-export.md) (containerd image store, fixed upstream).
+  [UP-0012](../upstream/0012-docker-containerd-platform-export.md) (containerd image store, workaround removed).
 - Revisit the settings when Paketo changes the Liberica or health-checker buildpacks, when a Spring Boot or Paketo release
-  makes `BPE_DEFAULT_JAVA_TOOL_OPTIONS` work, and when UP-0011 and UP-0012 let the `doctor` checks go.
+  makes `BPE_DEFAULT_JAVA_TOOL_OPTIONS` work, and when UP-0011 lets the `colima` check of `doctor` go.

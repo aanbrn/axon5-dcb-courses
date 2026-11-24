@@ -129,8 +129,10 @@ Desktop is available on the author's machine.
     can mount it. `scripts/doctor.sh` reports the `tc.host` and `docker.host` keys by name and never their values.
   - `network.dns` in the colima configuration lists at least one resolver (`colima start --dns <address>`), because the
     default forwarder can stall image pulls on AAAA lookups.
-  - `docker.features.containerd-snapshotter` is `false`, the classic image store. The containerd store behaves
-    differently for image pulls and builds, and `doctor` warns when it is active.
+  - Either image store works. The classic store (`docker.features.containerd-snapshotter: false`) is the one this
+    repository was verified on. The containerd store needs Docker Engine 29.9.0 or newer, because older engines cannot
+    export the Paketo noble run image
+    ([UP-0012](upstream/0012-docker-containerd-platform-export.md)). `doctor` reports which store is active.
 - colima, the documented Testcontainers alternative: start colima with `--network-address`, export `DOCKER_HOST` with the
   colima socket (`unix://$HOME/.colima/default/docker.sock`), `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock`
   and `TESTCONTAINERS_HOST_OVERRIDE` with the address from `colima ls -j`.

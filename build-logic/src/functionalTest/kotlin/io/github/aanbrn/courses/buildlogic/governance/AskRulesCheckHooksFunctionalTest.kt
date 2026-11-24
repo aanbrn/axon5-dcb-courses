@@ -123,11 +123,11 @@ class AskRulesCheckHooksFunctionalTest {
 
     @Test
     fun `a hook run another way than bash with the script under the project directory fails`() {
-        val shellForm = mapOf("type" to "command", "command" to "\"\${CLAUDE_PROJECT_DIR}\"/$MERGE_HOOK")
+        val shellForm = mapOf("type" to "command", "command" to $$"\"${CLAUDE_PROJECT_DIR}\"/$$MERGE_HOOK")
         val relative = hookHandler(MERGE_HOOK) + ("args" to listOf(MERGE_HOOK))
 
         fixture(withMergeHandler(shellForm + ("onFailure" to "block"))).runAndFail(TASK).output shouldContain
-            "hook $MERGE_HOOK: must run as command bash with args [\${CLAUDE_PROJECT_DIR}/$MERGE_HOOK]"
+            $$"hook $$MERGE_HOOK: must run as command bash with args [${CLAUDE_PROJECT_DIR}/$$MERGE_HOOK]"
         fixture(withMergeHandler(relative)).runAndFail(TASK).output shouldContain
             "hook $MERGE_HOOK: must run as command bash"
     }

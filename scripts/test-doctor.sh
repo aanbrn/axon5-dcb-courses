@@ -340,6 +340,21 @@ assert_out "no mise.toml" "^      fix: restore it: git restore mise\\.toml"
 assert_out "no mise.toml" "^ok  tools: "
 assert_out "no mise.toml" "^summary: "
 
+# A mise.toml that exists but cannot be read needs a different fix than a missing one: restoring would overwrite it.
+fresh
+if make_unreadable "$ENV/repo/mise.toml"; then
+  run_doctor "$ENV"
+  chmod 644 "$ENV/repo/mise.toml"
+  assert_code "unreadable mise.toml" 1
+  assert_out "unreadable mise.toml" "^fail  mise: mise\\.toml cannot be read"
+  assert_out "unreadable mise.toml" "^      fix: chmod u\\+r mise\\.toml"
+  assert_no_out "unreadable mise.toml" "git restore mise\\.toml"
+  assert_out "unreadable mise.toml" "^ok  tools: "
+  assert_out "unreadable mise.toml" "^summary: "
+else
+  skip_unreadable "unreadable mise.toml"
+fi
+
 # --- the local-only checks of a healthy tree ----------------------------------------------------------
 
 fresh
@@ -474,6 +489,49 @@ assert_code "unresolved MCP binary" 0
 assert_out "unresolved MCP binary" "^warn  mcp: .*context7.*context7-mcp"
 assert_out "unresolved MCP binary" "^      fix: mise install"
 
+# A server without `command` (an HTTP or SSE server with a url) has no binary to resolve: it is no unresolved binary, and
+# its url, which can carry a credential, never reaches the output (WR-01 of the Phase 2 review).
+fresh
+printf '{"mcpServers": {"context7": {"command": "mise", "args": ["x", "--", "context7-mcp"]},
+  "playwright": {"command": "mise", "args": ["x", "--", "playwright-mcp"]},
+  "remote": {"type": "http", "url": "https://example.invalid/mcp?token=secret-value"}}}\n' >"$ENV/repo/.mcp.json"
+run_doctor "$ENV"
+assert_code "url-only MCP server with stdio servers" 0
+assert_out "url-only MCP server with stdio servers" "^ok  mcp: "
+assert_no_out "url-only MCP server with stdio servers" "^warn  mcp:"
+assert_no_out "url-only MCP server with stdio servers" "secret-value"
+
+fresh
+printf '{"mcpServers": {"remote": {"type": "sse", "url": "https://example.invalid/sse?token=secret-value"}}}\n' \
+  >"$ENV/repo/.mcp.json"
+run_doctor "$ENV"
+assert_code "only a url-only MCP server" 0
+assert_out "only a url-only MCP server" "^ok  mcp: "
+assert_no_out "only a url-only MCP server" "^warn  mcp:"
+assert_no_out "only a url-only MCP server" "secret-value|example\\.invalid"
+
+# A url-only server in front of an unresolved one must not shift the fields of the next line.
+fresh
+printf '{"mcpServers": {"remote": {"type": "http", "url": "https://example.invalid/mcp"},
+  "context7": {"command": "mise", "args": ["x", "--", "missing-mcp"]}}}\n' >"$ENV/repo/.mcp.json"
+run_doctor "$ENV"
+assert_out "url-only MCP server before an unresolved one" "^warn  mcp: .*context7 \\(missing-mcp\\)"
+assert_no_out "url-only MCP server before an unresolved one" "remote"
+
+# `mise x --` without a binary argument resolves `mise` itself.
+fresh
+printf '{"mcpServers": {"bare": {"command": "mise", "args": ["x", "--"]}}}\n' >"$ENV/repo/.mcp.json"
+run_doctor "$ENV"
+assert_code "mise x -- without a binary" 0
+assert_out "mise x -- without a binary" "^ok  mcp: "
+assert_no_out "mise x -- without a binary" "^warn  mcp:"
+
+# A command that cannot be found keeps its real name in the warning.
+fresh
+printf '{"mcpServers": {"plain": {"command": "no-such-server-binary"}}}\n' >"$ENV/repo/.mcp.json"
+run_doctor "$ENV"
+assert_out "unresolved stdio binary" "^warn  mcp: .*plain \\(no-such-server-binary\\)"
+
 # A .mcp.json that is not JSON, or not an object of server objects, is a warning with a fix (the review's WR-01 class).
 for content in '{' '{"mcpServers": {"context7": 1}}' '{"mcpServers": []}'; do
   fresh
@@ -548,7 +606,9 @@ printf 'network:\n  dns:\n    - 8.8.8.8\ndocker:\n  features:\n    containerd-sn
   >"$ENV/home/.colima/default/colima.yaml"
 run_doctor "$ENV"
 assert_code "colima with the containerd snapshotter" 0
-assert_out "colima with the containerd snapshotter" "^warn  colima: .*containerd-snapshotter is not false"
+assert_out "colima with the containerd snapshotter" "^ok  colima: network\\.dns lists 1 servers"
+assert_no_out "colima with the containerd snapshotter" "^warn  colima:"
+assert_no_out "colima with the containerd snapshotter" "snapshotter"
 
 fresh
 if make_unreadable "$ENV/home/.colima/default/colima.yaml"; then
@@ -566,7 +626,8 @@ echo overlayfs >"$ENV/docker-driver"
 echo '[["driver-type","io.containerd.snapshotter.v1"]]' >"$ENV/docker-driver-status"
 run_doctor "$ENV"
 assert_code "containerd image store" 0
-assert_out "containerd image store" "^warn  image-store: the containerd image store is active"
+assert_out "containerd image store" "^ok  image-store: the containerd image store is active"
+assert_no_out "containerd image store" "^warn  image-store:"
 
 # Another engine than colima has no colima configuration to check.
 fresh

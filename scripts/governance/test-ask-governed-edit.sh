@@ -8,8 +8,11 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 HOOK="$SCRIPT_DIR/ask-governed-edit.sh"
 BASH_BIN=$(command -v bash)
 
-TMP=$(mktemp -d)
-trap 'rm -rf "$TMP"' EXIT
+# The temp root is resolved physically. The runner's /tmp has no symbolic link, while macOS's /var/folders is one, and
+# `git worktree list` reports resolved paths, so an unresolved root would test macOS and Linux on different path shapes.
+TMP_CREATED=$(mktemp -d)
+trap 'rm -rf "$TMP_CREATED"' EXIT
+TMP=$(cd -P -- "$TMP_CREATED" && pwd -P)
 
 passed=0
 failed=0
@@ -54,6 +57,7 @@ git_quiet -C "$REPO" worktree add "$REPO/.claude/worktrees/agent-s" -b worktree-
 rm -rf "$REPO/.claude/worktrees/agent-s"
 ln -s "$REPO" "$REPO/.claude/worktrees/agent-s"
 mkdir -p "$REPO/.claude/worktrees/agent-ghost"
+ln -s "$REPO" "$TMP/repo-link"
 ln -s governance "$REPO/linked-dir"
 ln -s ../mise.toml "$REPO/docs/alias.toml"
 AGENT="$REPO/.claude/worktrees/agent-a"
@@ -205,6 +209,16 @@ run_case "a leading \`**/\` entry under a different case spelling of an agent wo
   "$(edit_input Write "$REPO/.claude/worktrees/AGENT-A/docs/.editorconfig" "$REPO")"
 run_case "a symbolic link in an agent worktree to a \`**/\` entry in the main checkout asks" ask \
   "docs/\\.editorconfig.*\`\\*\\*/\\.editorconfig\`" "$(edit_input Write "$AGENT/sub/.editorconfig" "$AGENT")"
+# The session reaches the repository through a symbolic link, as macOS's /var/folders does for a temp directory; the
+# reason names the root as the path spells it.
+run_case "through a symbolic link to the repository, a different case spelling of an agent worktree asks" ask \
+  'mise\.toml in .*/repo-link/\.claude/worktrees/AGENT-A is a governed path' \
+  "$(edit_input Edit "$TMP/repo-link/.claude/worktrees/AGENT-A/mise.toml" "$REPO")" CLAUDE_PROJECT_DIR="$TMP/repo-link"
+run_case "through a symbolic link to the repository, a governed file in the main checkout asks" ask \
+  'mise\.toml in .*/repo-link is a governed path' \
+  "$(edit_input Edit "$TMP/repo-link/mise.toml" "$REPO")" CLAUDE_PROJECT_DIR="$TMP/repo-link"
+run_case "through a symbolic link to the repository, a governed file in an agent worktree stays silent" none '' \
+  "$(edit_input Edit "$TMP/repo-link/.claude/worktrees/agent-a/mise.toml" "$AGENT")" CLAUDE_PROJECT_DIR="$TMP/repo-link"
 
 # --- path spellings --------------------------------------------------------------------------------------------------
 

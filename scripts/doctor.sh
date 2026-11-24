@@ -101,11 +101,17 @@ check_mise() {
     return
   fi
   local minimum installed lowest
-  # The first sed fails on a missing or unreadable mise.toml, which pipefail turns into the end of the run.
+  # A missing mise.toml is restored from git; one that exists but cannot be read keeps its content and needs its mode
+  # changed. The first sed fails on either, which pipefail would turn into the end of the run.
+  if [[ ! -e $ROOT/mise.toml ]]; then
+    report fail mise "mise.toml cannot be read from the repository root, so its min_version cannot be checked" \
+      "restore it: git restore mise.toml"
+    return
+  fi
   if ! minimum=$(sed -nE 's/^min_version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$ROOT/mise.toml" 2>/dev/null |
     sed -n 1p); then
     report fail mise "mise.toml cannot be read from the repository root, so its min_version cannot be checked" \
-      "restore it: git restore mise.toml"
+      "chmod u+r mise.toml"
     return
   fi
   installed=$(mise --version 2>/dev/null | awk 'NR == 1 { print $1 }') || installed=''
@@ -221,9 +227,10 @@ check_docker() {
   report ok docker "$engine reachable through context ${context:-unknown}, server $version"
 }
 
-# UPSTREAM: UP-0012 `docker save --platform` fails on the Paketo noble run image with the containerd image store.
-# image-store: the classic image store, on which the Testcontainers and Paketo setup was verified. The containerd
-# image store reports the driver `overlayfs` and a snapshotter entry in the driver status.
+# image-store: which image store the engine uses. Both work: the classic store is the one on which the Testcontainers and
+# Paketo setup was verified, and the containerd store needs Docker 29.9.0 or newer, because older engines cannot export
+# the Paketo noble run image (docs/tooling.md, UP-0012). The containerd store reports the driver `overlayfs` and a
+# snapshotter entry in the driver status.
 check_image_store() {
   if [[ $DOCKER_OK != true ]]; then
     report skip image-store "the engine does not answer, see the docker check"
@@ -233,16 +240,14 @@ check_image_store() {
   driver=$(docker_field Driver)
   status=$(docker info --format '{{json .DriverStatus}}' 2>/dev/null || true)
   if [[ $driver == overlayfs || $status == *io.containerd.snapshotter* ]]; then
-    report warn image-store "the containerd image store is active (driver ${driver:-unknown}), not the classic one" \
-      "colima: colima start --edit, then set docker.features.containerd-snapshotter: false" \
-      "Docker Desktop: Settings > General, turn off 'Use containerd for pulling and storing images'"
+    report ok image-store "the containerd image store is active (driver ${driver:-unknown}; it needs Docker 29.9.0 or newer, see docs/tooling.md)"
   else
     report ok image-store "the classic image store is active (driver ${driver:-unknown})"
   fi
 }
 
 # The awk program that reads the facts of a colima.yaml that this check needs: the number of entries in
-# `network.dns` and the value of `docker.features.containerd-snapshotter`. A comment line is ignored.
+# `network.dns`. A comment line is ignored.
 read -r -d '' COLIMA_AWK <<'AWK' || true
 /^[[:space:]]*#/ { next }
 /^[^[:space:]]/ { top = $0; sub(/:.*/, "", top); in_dns = 0; next }
@@ -260,19 +265,13 @@ top == "network" && /^  dns:/ {
 }
 top == "network" && in_dns && /^    -/ { dns++; next }
 top == "network" && /^  [^[:space:]-]/ { in_dns = 0 }
-top == "docker" && /containerd-snapshotter:/ {
-  value = $0
-  sub(/.*containerd-snapshotter:[[:space:]]*/, "", value)
-  sub(/[[:space:]]*(#.*)?$/, "", value)
-  snapshotter = value
-}
-END { printf "%d %s\n", dns, (snapshotter == "" ? "unset" : snapshotter) }
+END { printf "%d\n", dns }
 AWK
 readonly COLIMA_AWK
 
 # UPSTREAM: UP-0011 the colima DNS forwarder never answers AAAA queries, which stalls Go tools for 10 s per lookup.
-# colima (local only): the two settings of the colima VM that the image pulls and the Testcontainers runs depend on:
-# an explicit DNS list (the default forwarder stalls on AAAA lookups) and the classic image store.
+# colima (local only): the setting of the colima VM that the image pulls and the Testcontainers runs depend on: an
+# explicit DNS list, because the default forwarder stalls on AAAA lookups. The image store is the image-store check's.
 check_colima() {
   local_only colima && return
   case $DOCKER_CONTEXT in
@@ -282,36 +281,21 @@ check_colima() {
     return
     ;;
   esac
-  local profile=${DOCKER_CONTEXT#colima} file facts dns snapshotter
+  local profile=${DOCKER_CONTEXT#colima} file dns
   profile=${profile#-}
   file=${HOME:-}/.colima/${profile:-default}/colima.yaml
   # A file that exists but cannot be read is the same finding as a missing one: awk would end the run under pipefail.
-  if [[ ! -f $file ]] || ! facts=$(awk "$COLIMA_AWK" "$file" 2>/dev/null); then
+  if [[ ! -f $file ]] || ! dns=$(awk "$COLIMA_AWK" "$file" 2>/dev/null); then
     report warn colima "cannot read the colima configuration ~/.colima/${profile:-default}/colima.yaml" \
       "colima start --edit"
     return
   fi
-  dns=${facts%% *}
-  snapshotter=${facts#* }
-  local -a problems=() fixes=()
   if [[ $dns -eq 0 ]]; then
-    problems+=("network.dns is empty, so the default DNS forwarder can stall image pulls")
-    fixes+=("colima stop && colima start --dns 8.8.8.8 --dns 1.1.1.1 (or list servers under network.dns with: colima start --edit)")
+    report warn colima "network.dns is empty, so the default DNS forwarder can stall image pulls" \
+      "colima stop && colima start --dns 8.8.8.8 --dns 1.1.1.1 (or list servers under network.dns with: colima start --edit)"
+  else
+    report ok colima "network.dns lists $dns servers"
   fi
-  # UPSTREAM: UP-0012 the classic image store is the workaround for the containerd export failure.
-  if [[ $snapshotter != false ]]; then
-    problems+=("docker.features.containerd-snapshotter is not false (found $snapshotter)")
-    fixes+=("colima stop && colima start --edit, then set docker.features.containerd-snapshotter: false")
-  fi
-  if [[ ${#problems[@]} -eq 0 ]]; then
-    report ok colima "network.dns lists $dns servers and the containerd snapshotter is off"
-    return
-  fi
-  local detail=${problems[0]} index
-  for ((index = 1; index < ${#problems[@]}; index++)); do
-    detail+="; ${problems[index]}"
-  done
-  report warn colima "$detail" "${fixes[@]}"
 }
 
 # testcontainers-config: how Testcontainers finds the engine and whether its Ryuk reaper runs. Only key names and the
@@ -494,10 +478,11 @@ check_gsd_defaults() {
 }
 
 # mcp (local only, AIDEV-04): the binary of every server in .mcp.json resolves. A server started through
-# `mise x -- <binary>` is resolved with `mise which`, any other command through PATH.
+# `mise x -- <binary>` is resolved with `mise which`, any other command through PATH. A server without a `command` (an
+# HTTP or SSE server that has a url) has no binary to resolve; its url can carry a credential and is never read.
 check_mcp() {
   local_only mcp && return
-  local file=$ROOT/.mcp.json jq servers name binary wrapped total=0 unresolved=''
+  local file=$ROOT/.mcp.json jq servers kind name binary total=0 remote=0 unresolved=''
   if [[ ! -f $file ]]; then
     report ok mcp "no .mcp.json, so no project MCP servers"
     return
@@ -508,30 +493,47 @@ check_mcp() {
   fi
   # The shape check: an object whose `mcpServers`, when present, is an object of server objects. Anything else would end
   # the run under set -e (or, for an array of servers, be counted as zero servers).
+  # Every server is one line of three tab-separated fields: its kind (mise, path or none), its name and the binary to
+  # resolve. No field is ever empty, because `read` with a tab as separator would drop an empty field and shift the
+  # ones behind it; a server that has nothing to resolve gets `-` as its binary, and the url never leaves jq.
   # shellcheck disable=SC2016 # a jq program, not shell
   if ! servers=$("$jq" -r '
+    def text: if type == "string" and . != "" then . else null end;
     if type == "object" and ((.mcpServers // {}) | type == "object" and all(.[]; type == "object")) then
-      .mcpServers // {} | to_entries[] | (.value.args // []) as $args
-      | if .value.command == "mise" and ($args[0] == "x" or $args[0] == "exec") and $args[1] == "--"
-        then [.key, $args[2], "mise"] else [.key, .value.command, "path"] end | @tsv
+      .mcpServers // {} | to_entries[]
+      | ((.value.args // []) | if type == "array" then . else [] end) as $args
+      | (.value.command | text) as $command
+      | (.key | text // "(unnamed)") as $name
+      | if $command == null then ["none", $name, "-"]
+        elif $command == "mise" and ($args[0] == "x" or $args[0] == "exec") and $args[1] == "--"
+             and ($args[2] | text) != null then ["mise", $name, $args[2]]
+        else ["path", $name, $command] end | @tsv
     else error("not MCP server configuration") end' "$file" 2>/dev/null); then
     report warn mcp ".mcp.json cannot be read as MCP server configuration (not JSON, or not an object of server objects)" \
       "repair .mcp.json, or restore the committed version: git restore .mcp.json"
     return
   fi
-  while IFS=$'\t' read -r name binary wrapped; do
-    [[ -n $name ]] || continue
+  while IFS=$'\t' read -r kind name binary; do
+    [[ -n $kind ]] || continue
     total=$((total + 1))
-    if [[ $wrapped == mise ]]; then
+    case $kind in
+    none) remote=$((remote + 1)) ;;
+    mise)
       if ! has mise || ! (cd "$ROOT" && mise which "$binary" >/dev/null 2>&1); then
         unresolved+="${unresolved:+, }$name ($binary)"
       fi
-    elif ! has "$binary"; then
-      unresolved+="${unresolved:+, }$name ($binary)"
-    fi
+      ;;
+    *)
+      if ! has "$binary"; then
+        unresolved+="${unresolved:+, }$name ($binary)"
+      fi
+      ;;
+    esac
   done <<<"$servers"
   if [[ -n $unresolved ]]; then
     report warn mcp "servers in .mcp.json whose binary cannot be resolved: $unresolved" "mise install"
+  elif [[ $remote -gt 0 ]]; then
+    report ok mcp "all $total servers in .mcp.json resolve through mise or PATH, or have no command to resolve ($remote)"
   else
     report ok mcp "all $total servers in .mcp.json resolve through mise or PATH"
   fi
