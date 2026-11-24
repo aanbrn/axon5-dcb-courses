@@ -860,7 +860,9 @@ boundary_case build-logic/src/main/kotlin/courses.governance.gradle.kts governed
 boundary_case \
   build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/governance/ConfigPolicyCheck.kt governed
 boundary_case scripts/apply-github-settings.sh governed
-boundary_case build-logic/src/main/kotlin/courses.kotlin-library.gradle.kts ungoverned
+# The module convention plugin that wires detekt, allWarningsAsErrors and the licence check into
+# every module is governed (author decision of 2026-11-24).
+boundary_case build-logic/src/main/kotlin/courses.kotlin-library.gradle.kts governed
 
 # The rest of the enforcement boundary: CODEOWNERS location, root build configuration, the plugin
 # build, the root and settings convention plugins and the launcher.
@@ -889,6 +891,9 @@ boundary_case gradle/libs.versions.toml ungoverned
 boundary_case gradlew.bat ungoverned
 boundary_case scripts/test-apply-github-settings.sh ungoverned
 boundary_case backend/contracts/kernel/build.gradle.kts ungoverned
+# The other module convention plugins stay outside the boundary.
+boundary_case build-logic/src/main/kotlin/courses.test-suites.gradle.kts ungoverned
+boundary_case build-logic/src/main/kotlin/courses.architecture-tests.gradle.kts ungoverned
 
 # Alternate Renovate config names and mise files (WR-07).
 boundary_case renovate.json governed

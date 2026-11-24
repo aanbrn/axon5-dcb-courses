@@ -18,7 +18,8 @@
 # governance check from running, or make one pass without evaluating. That covers the policy
 # files, the checks and their wiring, the root build configuration that applies and selects
 # them, the build that compiles them, the convention plugins applied to the root project and to
-# settings, and the launcher CI runs them with. The policy files include the tool pins and the
+# settings, the module convention plugin that wires the detekt, compiler and licence gates into
+# every Kotlin module, and the launcher CI runs them with. The policy files include the tool pins and the
 # Renovate update policy, under every file name mise and Renovate read them from. The boundary also
 # covers the configuration of every job that `ci-success` requires, under every file name and
 # directory level its tool reads, and the launchers those jobs run (author decision of
@@ -27,11 +28,16 @@
 #
 # Outside the boundary, on purpose:
 #   - module convention plugins: under isolated projects they cannot reach the root project's
-#     tasks, and checkBuildScripts rejects allprojects, subprojects and afterEvaluate. The one
-#     exception is courses.licences, which registers a per-module governance check
-#     (checkDependencyLicences) and is governed below. The line in courses.kotlin-library that
-#     applies it stays outside, like every module convention plugin, and CI names the task
-#     explicitly, so dropping that line fails CI instead of switching the gate off silently;
+#     tasks, and checkBuildScripts rejects allprojects, subprojects and afterEvaluate. Two are
+#     governed below, each for its own reason: courses.licences registers a per-module governance
+#     check (checkDependencyLicences); courses.kotlin-library is governed for its gate wiring
+#     rather than for reach (it applies detekt with the governed rule set, sets
+#     allWarningsAsErrors, applies courses.licences and sets Dokka's failOnWarning in every Kotlin
+#     module, so one edit there could switch two required gates off while CI stays green; author
+#     decision of 2026-11-24). The line that applies courses.licences therefore lives in a
+#     governed file, and CI still names checkDependencyLicences explicitly, so a build in which no
+#     module registers it fails. The other module convention plugins (courses.test-suites,
+#     courses.architecture-tests) stay outside;
 #   - functional tests: a deleted test cannot make a check pass;
 #   - the version catalog (gradle/libs.versions.toml): dependency integrity is CICD-05 in
 #     Phase 6, and the catalog carries the D-12 automerge updates;
@@ -78,7 +84,9 @@
 #
 # Accepted residual. Build code can always subvert in-build checks by other means, for example
 # through reflection or daemon-wide hooks. The list makes the direct routes visible changes, and
-# the maintainer's review covers the rest. Suppression markers inside the files they suppress
+# the maintainer's review covers the rest. A module's own build script can still switch off that
+# module's detekt task, licence task or compiler options, because module build scripts stay
+# outside the boundary; such a line shows in the reviewed diff. Suppression markers inside the files they suppress
 # (shellcheck directives, editorconfig-checker disable comments, `gitleaks:allow`, REUSE ignore
 # blocks, zizmor ignore comments) are not governed; they appear in the reviewed diff of the file
 # they suppress.
@@ -172,6 +180,13 @@ build-logic/src/main/kotlin/courses.settings.settings.gradle.kts
 
 # The detekt rule set: an edit to it alone can switch rules off, so detekt passes without evaluating them.
 config/detekt/**
+
+# The module convention plugin that wires required build-job gates into every Kotlin module. It applies detekt
+# with the rule set above, sets allWarningsAsErrors, applies courses.licences and sets Dokka's failOnWarning, so an
+# edit to it alone can switch detekt or the compiler gate off while CI stays green (author decision of
+# 2026-11-24). Renovate extracts it as a gradle package file without dependencies, so the renovate[bot]
+# version-only exemption never applies to it.
+build-logic/src/main/kotlin/courses.kotlin-library.gradle.kts
 
 # The configuration of the other jobs that ci-success requires, under every file name and directory level the tool reads
 # (author decision of 2026-11-24). No Renovate manager reads a version from any of these files
