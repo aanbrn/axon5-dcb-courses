@@ -122,8 +122,10 @@ level 1 (grep depth against the implementation, tests and configuration).
 
 *Accepted risks do not resurface in future audit runs.*
 
-Residuals named in `governance/governed-paths.txt` (a single module disabling its own licence task, dropping detekt from a
-module convention plugin) remain accepted there and are not repeated here.
+Residuals named in `governance/governed-paths.txt` (a single module's own build script switching off its licence task,
+its detekt task or its compiler options) remain accepted there and are not repeated here. The convention-plugin route is
+closed: `build-logic/src/main/kotlin/courses.kotlin-library.gradle.kts`, which applies detekt and the licence plugin and
+sets `allWarningsAsErrors` for every module, is governed since quick task 261124-hbh (author decision of 2026-11-24).
 
 ---
 

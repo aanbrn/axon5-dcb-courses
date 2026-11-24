@@ -103,6 +103,13 @@ Reasons:
   to one of them could otherwise relax a required gate while CI stays green. `governance/governed-paths.txt` names
   the paths and records the exclusions. No Renovate manager reads a version from these files, so the version-only
   exemption needs no new exception.
+- The module convention plugin `build-logic/src/main/kotlin/courses.kotlin-library.gradle.kts` is governed too, by
+  author decision of 2026-11-24, although module convention plugins otherwise stay outside because under isolated
+  projects they cannot reach the root project's governance tasks. It applies detekt with the governed rule set, sets
+  `allWarningsAsErrors` and applies `courses.licences` in every Kotlin module, so an unlabelled edit to it could
+  switch off two required gates while CI stays green. A module's own build script stays outside, and
+  `governance/governed-paths.txt` records that residual. No Renovate manager reads a version from the file, so the
+  version-only exemption needs no new exception.
 
 ## More Information
 
