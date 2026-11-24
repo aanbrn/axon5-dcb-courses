@@ -4,7 +4,9 @@
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: ["config:best-practices", "helpers:pinGitHubActionDigestsToSemver"],
   // Never propose a release younger than seven days. Set at the top level so it applies to every
-  // manager, including GitHub Actions digest updates (CICD-04).
+  // manager, including GitHub Actions digest updates (CICD-04). Package rules override it, and
+  // `config:best-practices` lowers npm packages to three days through one, so the first package rule
+  // below restores seven days for them.
   minimumReleaseAge: "7 days",
   // Do not let a pending minimum-release-age check create a branch or PR early.
   internalChecksFilter: "strict",
@@ -85,9 +87,23 @@
     },
   ],
 
-  // Rules apply in order and later rules win, so labels and groups come first, then automerge, then
-  // the JDK restrictions.
+  // Rules apply in order and later rules win, so the npm cooldown comes first, then labels and groups,
+  // then automerge, then the JDK restrictions.
   packageRules: [
+    // Cooldown (CICD-04). The package rules of extended presets come before these and later rules win,
+    // so this rule overrides the three days that `security:minimumReleaseAgeNpm` (part of
+    // `config:best-practices`) sets for the npm datasource. It is limited to major, minor and patch so the
+    // preset's opt-outs for pin, replacement, lock file maintenance, bump, lockfileUpdate and rollback stay
+    // intact: those update types carry no release timestamp and would wait forever. It covers the mise `npm:`
+    // tools, the GSD pin and any future package.json dependency. The npm datasource reports release
+    // timestamps, so the default timestamp-required behaviour applies.
+    {
+      description: "npm packages: restore the seven-day cooldown that security:minimumReleaseAgeNpm lowers to three days",
+      matchDatasources: ["npm"],
+      matchUpdateTypes: ["major", "minor", "patch"],
+      minimumReleaseAge: "7 days",
+    },
+
     // Generated sidecar lockfiles of the mise npm and pipx tools: their versions are managed through
     // mise.toml, so Renovate must not open PRs against the generated package.json and pyproject.toml.
     {
@@ -248,13 +264,9 @@
     // (scripts/governance/check-pr.sh). The flow is in docs/tooling.md (GSD updates). Like the rule above, it stays
     // after every automerge rule because later rules win.
     {
-      description: "GSD (agent commands, agents and hooks): never automerge, seven-day cooldown, with the review steps",
+      description: "GSD (agent commands, agents and hooks): never automerge, with the review steps",
       matchDepNames: ["@opengsd/gsd-core"],
       automerge: false,
-      // Restates the repository's standard cooldown: the `security:minimumReleaseAgeNpm` rule of
-      // `config:best-practices` lowers npm packages to three days, and package rules override the top-level value.
-      // The npm datasource reports release timestamps, so the default timestamp-required behaviour applies.
-      minimumReleaseAge: "7 days",
       prBodyNotes: [
         "This pull request changes only `governance/gsd-version`, because the GSD installation is not committed. Before merging, read the release notes, review the hook diff with `npm diff --ignore-scripts --diff=@opengsd/gsd-core@{{{currentVersion}}} --diff=@opengsd/gsd-core@{{{newVersion}}} hooks`, check out this branch, install the release with `npx -y @opengsd/gsd-core@{{{newVersion}}} --claude --local` and run `scripts/doctor.sh` until it is green. The pin never takes the governance exemption, so add the `governance-approved` label and merge by hand (docs/tooling.md, GSD updates).",
       ],

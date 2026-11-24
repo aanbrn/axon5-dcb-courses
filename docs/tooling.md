@@ -183,10 +183,11 @@ absent). It runs as many checks as it can instead of stopping at the first failu
 - Only the pin `governance/gsd-version` is committed. The installation under `.claude/` (commands, agents, hooks,
   `gsd-core`) is ignored. Doctor's `gsd` step (local only, skipped by `--ci`) checks that the installed version equals
   the pin and that every file matches the hashes of the release manifest.
-- Renovate is the signal. A regex custom manager reads the pin as the npm package `@opengsd/gsd-core`, with the
-  repository's seven-day minimum release age, restated on the GSD rule because `config:best-practices` lowers npm
-  packages to three days. The pull request comes from a `renovate/opengsd-gsd-core-*` branch, carries `deps` and
-  `deps:npm`, is never automerged, changes only the pin, and its body repeats the steps below.
+- Renovate is the signal. A regex custom manager reads the pin as the npm package `@opengsd/gsd-core`.
+  Like every npm update, the pin waits the repository's seven-day minimum release age, which a package rule restores
+  because `config:best-practices` lowers npm packages to three days. The pull request comes from a
+  `renovate/opengsd-gsd-core-*` branch, carries `deps` and `deps:npm`, is never automerged, changes only the pin, and
+  its body repeats the steps below.
 - The governance decision, stated plainly: `governance/**` is governed, and the renovate[bot] version-only exemption of
   `scripts/governance/check-pr.sh` deliberately does not cover the pin (`NEVER_EXEMPT_PATHS`,
   [ADR-0003](adr/0003-governance-gate-trust-boundary.md)). A GSD release replaces hooks that execute in the maintainer's
