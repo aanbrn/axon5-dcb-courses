@@ -140,6 +140,8 @@ Filled by the planner per task; the requirement-level map is in `02-RESEARCH.md`
 
 **Re-validated 2026-11-24, fourth pass** (after quick task 261124-s7w changed `scripts/doctor.sh`, `ImageReferenceCheck`, `JsonRoundTripTest` and their tests): every changed behaviour arrived with tests in the same task, so no gap; focused re-runs green (`test-doctor.sh` 246 checks, `JsonRoundTripTest` 16 tests, `ImageReferenceCheckFunctionalTest` 17 tests, 0 failures); full `./gradlew build` green (339 tests in the result reports, 0 failures, 0 errors); all seven shell test suites green (844 checks); real `scripts/doctor.sh` run exits 0 with 17 checks and no `fail` line; `docker compose config --quiet` clean
 
+**Re-validated 2026-11-25, fifth pass** (after quick task 261124-uwn changed the edit hook, `GovernanceHooks`, `ImageReferenceCheck`, `scripts/doctor.sh` and removed the UP-0012 workaround, and quick task 261124-wp3 gave every test JVM of `courses.test-suites` native access): every changed behaviour arrived with tests in the same task (`test-ask-governed-edit.sh`, `AskRulesCheckHooksFunctionalTest`, `ImageReferenceCheckFunctionalTest`, `test-doctor.sh`, and a restricted-method probe in `TestSuitesFunctionalTest` that failed before the change), so no gap; full `./gradlew build` green (48 test classes, 358 tests, 0 failures, 0 errors, no `WARNING: A restricted method` line); all seven shell test suites green (850 checks); real `scripts/doctor.sh` run exits 0 with 17 checks and no `fail` line; `docker compose config --quiet` clean; PR #21 CI green on `5d66ae4` with no restricted-method warning in any job
+
 ## Validation Audit 2026-11-23
 
 | Metric | Count |
