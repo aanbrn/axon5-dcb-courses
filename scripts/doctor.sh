@@ -8,9 +8,9 @@
 #   - This script runs only what must work before Gradle can start (mise and its tools, a Java runtime
 #     for the Gradle wrapper, the Docker engine and its image store) and what Gradle does not own: the
 #     Testcontainers settings, the pinned GSD installation (AIDEV-07), the global GSD defaults, the MCP
-#     servers, the Platform token, colima, the Claude Code version, the tracked `.claude` files, and the
-#     upstream-removal reminder (every docs/upstream record that is fixed upstream while its workaround
-#     markers remain, with its removal criteria).
+#     servers, the Platform token, colima, the Claude Code version, the git version the governance hooks
+#     need, the tracked `.claude` files, and the upstream-removal reminder (every docs/upstream record that
+#     is fixed upstream while its workaround markers remain, with its removal criteria).
 #   - Everything else runs as `./gradlew doctor`: the Node major (verifyNodeVersion), the formatter
 #     binaries (verifyShfmt, verifyTaplo), the daemon JVM criteria (checkDaemonJvm) and Testcontainers
 #     connectivity (testcontainersProbe). The last check below runs it, so each failure carries the
@@ -18,7 +18,7 @@
 #
 # Usage: doctor.sh [--ci] [--help]
 #   --ci    skip the checks that only make sense on a developer machine (gsd, gsd-defaults, mcp,
-#           platform-token, colima and claude-code); CI runs this mode
+#           platform-token, colima, claude-code and git); CI runs this mode
 #   --help  print this text
 # Environment (for the shell tests): DOCTOR_ROOT is the repository root (default: the parent of
 # this script's directory), DOCTOR_SKIP_GRADLE=1 skips the delegation to Gradle.
@@ -567,6 +567,37 @@ check_claude_code() {
   fi
 }
 
+# The only place the minimum git version lives. It is the git release the governance hooks need (ADR-0015):
+# scripts/governance/ask-governed-edit.sh calls `git worktree list --porcelain -z` (git 2.36) and
+# `git rev-parse --path-format=absolute` (git 2.31). On an older git the edit hook fails closed and asks for every
+# edit. docs/tooling.md points here instead of repeating the number.
+readonly GIT_MIN_VERSION=2.36.0
+
+# git (local only, AIDEV-08): the installed git supports the calls of the governance hooks. A missing git, an older
+# git and a version that cannot be read all fail, because the hooks then ask for every edit.
+check_git() {
+  local_only git && return
+  if ! has git; then
+    report fail git "the git CLI is not on PATH" \
+      "brew install git (or install git with your package manager), then check that it comes first on PATH"
+    return
+  fi
+  local installed lowest
+  installed=$(git --version 2>/dev/null | awk 'NR == 1 && $1 == "git" && $2 == "version" { print $3 }')
+  if [[ ! $installed =~ ^[0-9]+\.[0-9]+ ]]; then
+    report fail git "cannot read the version from 'git --version'" \
+      "brew install git (Homebrew's git must come before /usr/bin on PATH), or upgrade git with your package manager"
+    return
+  fi
+  lowest=$(printf '%s\n%s\n' "$GIT_MIN_VERSION" "$installed" | sort -V | sed -n 1p)
+  if [[ $lowest == "$GIT_MIN_VERSION" ]]; then
+    report ok git "$installed meets the minimum $GIT_MIN_VERSION that the governance hooks need"
+  else
+    report fail git "$installed is older than $GIT_MIN_VERSION, which the governance hooks need (ADR-0015)" \
+      "brew install git (Homebrew's git must come before /usr/bin on PATH), or upgrade git with your package manager"
+  fi
+}
+
 # claude-tracking (AIDEV-03, also in --ci): the only tracked content under .claude/ is the project-owned settings.json
 # and CLAUDE.md and the spike-findings skills (D-39). The GSD installation and local settings stay untracked.
 check_claude_tracking() {
@@ -721,6 +752,7 @@ main() {
   check_mcp
   check_platform_token
   check_claude_code
+  check_git
   check_claude_tracking
   check_upstream_removal
   check_gradle

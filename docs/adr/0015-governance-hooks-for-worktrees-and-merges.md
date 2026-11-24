@@ -180,6 +180,10 @@ only where the file lives.
 - Bad, because the merge prompt names the governed files but does not show their content, so the author reads the diff
   (for example `git diff HEAD...<branch>`) before confirming.
 - Bad, because an executor that rewrites a governed file it should not touch is noticed only at the merge.
+- Bad, because the hooks need git 2.36 or newer: the edit hook calls `git worktree list --porcelain -z` (2.36) and
+  `git rev-parse --path-format=absolute` (2.31). On an older git both calls fail, the hook fails closed and asks for
+  every edit with a reason that names git rather than the version, so `scripts/doctor.sh` checks the git version on
+  developer machines (its `git` check, skipped by `--ci`), and `docs/tooling.md` points to that check.
 
 ### Residual risks
 
@@ -237,6 +241,8 @@ only where the file lives.
   spelling of the directory and for a symbolic link into the main checkout. The merge hook's cases cover the shell
   option clusters, wrapper option clusters, `--attr-source`, the repository variables, brace expansion, the moved refs
   and the deduplicated reasons.
+- `scripts/test-doctor.sh` covers the `git` check of `scripts/doctor.sh` with an older version, the minimum and a
+  version that cannot be read, and the `--ci` skip.
 - Live check: with the hooks registered, a worktree subagent's Write to a governed path of its own worktree passes
   without a prompt, the `worktree.cleanup-wave` merge that brings it into the main checkout asks once and lists the
   file, and a Write to the same path in the main checkout asks.
