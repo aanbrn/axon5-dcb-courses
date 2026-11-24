@@ -30,12 +30,16 @@ import org.gradle.api.tasks.TaskAction
  *   upper-case key, another separator, a literal string, an inline table, a multi-line string, a registry port) is
  *   reported, because the manager would skip or misread it and never update the entry. Every entry the check accepts is
  *   read by the manager with its name, tag and digest. The check is stricter only where the manager would also read a
- *   reference that is not a valid pinned image. The functional test matches its samples against the regex it reads from
- *   `renovate.json5`, so a change on either side fails the build.
+ *   reference that is not a valid pinned image. The converse holds too: every other catalog line on which the manager
+ *   reads an image (a commented-out entry, an entry of another table, a key such as `old-image-x` whose `image-x` part
+ *   the manager's word boundary finds, or an entry in a trailing comment, also after an accepted entry) is reported
+ *   with its line, so the manager reads only entries that the check verifies. The functional test matches its samples
+ *   against the regex it reads from `renovate.json5`, so a change on either side fails the build.
  *
  * Compose files are read line by line instead of with a YAML library: only `image:` entries are needed, and an extra
  * parser dependency in `build-logic` is not worth that. Commented-out lines are skipped. Findings are written as
- * `path:line: message` (compose) or `path: message` (catalog), sorted, so the report is identical on every run.
+ * `path:line: message` for compose files and for the catalog lines that the manager reads outside the verified entries,
+ * and as `path: message` for the other catalog findings, sorted, so the report is identical on every run.
  */
 @CacheableTask
 abstract class ImageReferenceCheck @Inject constructor(private val layout: ProjectLayout) : DefaultTask() {
@@ -85,19 +89,40 @@ abstract class ImageReferenceCheck @Inject constructor(private val layout: Proje
             }
         }
 
-    /** The `image-*` entries of the `[versions]` table that are not a double-quoted tag-and-digest reference. */
+    /**
+     * The `image-*` entries of the `[versions]` table that are not a double-quoted tag-and-digest reference, and every
+     * other line (any table, comments included) on which the Renovate image manager reads an image.
+     */
     private fun catalogProblems(path: String, lines: List<String>): List<String> {
         val problems = mutableListOf<String>()
         var inVersions = false
-        for (line in lines.map { it.trim() }) {
-            if (line.startsWith("[")) {
+        for ((index, raw) in lines.withIndex()) {
+            val line = raw.trim()
+            val header = line.startsWith("[")
+            if (header) {
                 inVersions = VERSIONS_HEADER.matches(line)
             } else if (inVersions) {
                 catalogProblem(path, line)?.let { problems += it }
             }
+            problems += readOutsideEntries(path, index + 1, line, verified = inVersions && !header)
         }
         return problems
     }
+
+    /**
+     * The findings for the places of one trimmed catalog line that the Renovate image manager reads although
+     * [catalogProblem] never verifies them: every [MANAGER_READ] match, except the entry that starts a `[versions]`
+     * line (`verified`), which [catalogProblem] has checked.
+     */
+    private fun readOutsideEntries(path: String, number: Int, line: String, verified: Boolean): List<String> =
+        MANAGER_READ.findAll(line)
+            .filterNot { verified && it.range.first == 0 }
+            .map {
+                "$path:$number: the Renovate image manager reads ${it.value.substringBefore(" = ")} here, " +
+                    "outside the [versions] entries this check verifies; " +
+                    "delete it or make it an image-* entry of [versions]"
+            }
+            .toList()
 
     /** The first problem of one catalog line, in the order of the shared form; `null` for a line that is fine. */
     private fun catalogProblem(path: String, line: String): String? {
@@ -161,6 +186,16 @@ abstract class ImageReferenceCheck @Inject constructor(private val layout: Proje
 
         /** A key the Renovate image manager reads; the functional test matches the same class against its regex. */
         val MANAGED_KEY = Regex(KEY_FORM)
+
+        /**
+         * A superset of what the Renovate image manager matches on one line: its key class and separator (`image-` key,
+         * one space, `=`, one space), then a double-quoted value that reaches `@sha256:`. The leading word boundary is
+         * the manager's own, which also holds after `-`, `.` and `#`, so a comment (`# image-x = ...`) and a key such
+         * as `old-image-x` match too. Requiring the digest keeps aliases that the manager never reads silent, such as
+         * `image-lib = "org.example:lib:1.0"` in `[libraries]`. The functional test compares samples with the manager's
+         * regex from `renovate.json5`.
+         */
+        val MANAGER_READ = Regex("""\bimage-[a-z0-9-]+ = "[^"\s]*@sha256:""")
 
         /**
          * An `image-*` entry of a TOML table, whatever its spelling: the quote of the key (empty for a bare key, the

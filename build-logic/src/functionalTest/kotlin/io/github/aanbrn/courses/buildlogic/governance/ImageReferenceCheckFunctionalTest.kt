@@ -246,6 +246,41 @@ class ImageReferenceCheckFunctionalTest {
         port.groups["currentValue"]?.value shouldBe "5000/app:1.0"
     }
 
+    @Test
+    fun `a catalog line that Renovate reads outside the verified entries fails naming its line and key`() {
+        fixture.file(INFRA, services($$"    image: ${AXONSERVER_IMAGE}"))
+        val text =
+            catalog(
+                "image-axonserver = \"$AXONSERVER\"",
+                *READ_ELSEWHERE.dropLast(1).map { it.line }.toTypedArray(),
+            ) + "\n[libraries]\nimage-lib = \"org.example:lib:1.0\"\n${READ_ELSEWHERE.last().line}\n"
+        fixture.file(CATALOG, text)
+        val lines = text.lines()
+
+        val output = fixture.runAndFail(TASK).output
+
+        READ_ELSEWHERE.forEach {
+            output shouldContain
+                "gradle/libs.versions.toml:${lines.indexOf(it.line) + 1}: the Renovate image manager reads " +
+                    "${it.key} here, outside the [versions] entries this check verifies"
+        }
+        output shouldNotContain "image-postgres must"
+        output shouldNotContain "reads image-postgres here"
+        output shouldNotContain "image-axonserver must"
+        output shouldNotContain "reads image-lib here"
+    }
+
+    @Test
+    fun `the image regex of renovate json5 reads every line reported as read elsewhere and no silent control`() {
+        val regex = renovateImageRegex()
+
+        READ_ELSEWHERE.forEach { sample ->
+            val keys = regex.findAll(sample.line).map { it.value.substringBefore(" = ") }.toList()
+            withClue("keys that the manager reads from ${sample.line}") { keys shouldContain sample.key }
+        }
+        SILENT_CONTROLS.forEach { line -> withClue("silent control: $line") { regex.find(line) shouldBe null } }
+    }
+
     /** The image `matchStrings` entry of `renovate.json5`, unescaped from its JSON5 single-quoted form. */
     private fun renovateImageRegex(): Regex {
         fixture.copyFromRepo("renovate.json5")
@@ -320,5 +355,29 @@ class ImageReferenceCheckFunctionalTest {
             )
 
         val PORT_LINE = "image-port = \"localhost:5000/app:1.0@sha256:$DIGEST\""
+
+        /**
+         * Lines on which the Renovate image manager reads an image although they are not an `image-*` entry at the
+         * start of a `[versions]` line, with the key the finding must name: a commented-out older entry of a live key,
+         * a `[versions]` alias that ends in an image key, an entry in the trailing comment of an accepted entry, and a
+         * commented-out entry of another table (the last one is written under `[libraries]`).
+         */
+        val READ_ELSEWHERE =
+            listOf(
+                Rejected(
+                    "# image-axonserver = \"docker.axoniq.io/axoniq/axonserver:2026.1.7-nonroot@sha256:$DIGEST\"",
+                    "image-axonserver",
+                ),
+                Rejected("old-image-x = \"$POSTGRES\"", "image-x"),
+                Rejected(
+                    "image-postgres = \"$POSTGRES\" # was image-previous = \"postgres:18.6@sha256:$DIGEST\"",
+                    "image-previous",
+                ),
+                Rejected("# image-library = \"$POSTGRES\"", "image-library"),
+            )
+
+        /** Lines that the manager does not read, so the check keeps silent about them. */
+        val SILENT_CONTROLS =
+            listOf("image-lib = \"org.example:lib:1.0\"", "# image-* entries carry a tag and a digest")
     }
 }
