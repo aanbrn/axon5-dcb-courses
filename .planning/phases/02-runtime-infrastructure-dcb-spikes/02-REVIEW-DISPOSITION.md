@@ -5,15 +5,15 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`check_gsd` still dies silently under `set -e` when the GSD manifest is not valid JSON"
   - id: IN-01
     severity: info
-    disposition: open
+    disposition: fixed
     title: "The TypeID-key test asserts only `JacksonException`, which any failure satisfies"
   - id: IN-02
     severity: info
-    disposition: open
+    disposition: fixed
     title: "Renovate reads catalog lines that `checkImageReferences` never inspects"
   - id: WR-02
     severity: warning
@@ -79,7 +79,7 @@ findings:
     severity: info
     disposition: skipped
     title: "Necessity (judgment) - the empty `contracts-queries` module and its rule entries have no instantiation yet"
-open: 3
+open: 0
 total: 19
 recorded: 2026-11-24T12:32:54.468Z
 ---
@@ -88,9 +88,9 @@ recorded: 2026-11-24T12:32:54.468Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
-| IN-01 | info | open | - |
-| IN-02 | info | open | - |
+| WR-01 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-s7w in 0bafd34 (the manifest read is guarded with a shape check and a fail line; six sibling reads of the same class are guarded too, each with a test-doctor.sh case) |
+| IN-01 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-s7w in 7ba06d2 (the test asserts the InvalidFormatException value, target type UUID and message through invalidFormat()) |
+| IN-02 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-s7w in b6ea808 (every catalog line the Renovate manager reads outside the verified [versions] entries is reported with its line; parity test against the live regex) |
 | WR-02 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-oyk in 9392b29 (KDoc states the observed raw-UUID map key; JsonRoundTripTest pins it; key form left to an ADR when a contract first holds an ID-keyed map) (not in the current review) |
 | WR-03 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-oyk in b61e980 (check accepts exactly the form the Renovate image manager reads, rejects registry ports; parity test reads the regex from renovate.json5) (not in the current review) |
 | CR-01 | critical | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 9f8be86 (shell option clusters and value-taking long options parsed as bash does; unknown forms ask) (not in the current review) |

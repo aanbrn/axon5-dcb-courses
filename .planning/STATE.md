@@ -4,10 +4,10 @@ current_phase: 02
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: executing
 stopped_at: Phase 2 context gathered
-last_updated: "2026-11-24T11:37:33.360Z"
+last_updated: "2026-11-24T13:57:34.218Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 02 execution started
-state_head: b62ce4d097c950acc8532ab51a21ba4894bcecb6
+state_head: 8788e2b35aa959ddcec0b08daf3a409516515dad
 progress:
   total_phases: 13
   completed_phases: 1
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-11-22)
 Phase: 02 (Runtime Infrastructure & DCB Spikes) — VERIFYING
 Plan: 23 of 23 executed (all SUMMARYs present)
 Status: Phase 02 verification human_needed (5/5 success criteria verified, re-verified 2026-11-24 at 6d81294); 02-UAT.md has 6 pending human items; the phase PR is not open yet
-Last activity: 2026-11-24 - Completed quick task 261124-oyk: Phase 2 review findings WR-01..WR-03 and IN-01 closed
+Last activity: 2026-11-24 - Completed quick task 261124-s7w: Phase 2 review findings WR-01 (plus six sibling doctor reads), IN-01 and IN-02 closed; Phase 2 verification stale again until re-run
 
 Progress: [█░░░░░░░░░] 8%
 
@@ -172,6 +172,7 @@ Recent decisions affecting current work:
 | 261124-nlk | Close Phase 2 review findings IN-06 (false positive, guarded by tests), IN-07 (value-only KDoc) and IN-08 (doctor checks git >= 2.36) | 2026-11-24 | 54f0e53 | [261124-nlk-fix-phase-02-review-findings-in-06-and-i](./quick/261124-nlk-fix-phase-02-review-findings-in-06-and-i/) |
 | 24 | Record the 2026-11-24 maintainer reply on AxonFramework#5326 in UP-0001 (package, callback with logging default, assignment, target main) | 2026-11-24 | 2ad525f | — |
 | 261124-oyk | Fix Phase 2 review findings WR-01 (doctor survives a failing --version), WR-02 (KDoc states the raw-UUID map key), WR-03 (image check matches the Renovate form) and IN-01 | 2026-11-24 | b62ce4d | [261124-oyk-fix-phase-2-review-findings-wr-01-wr-02-](./quick/261124-oyk-fix-phase-2-review-findings-wr-01-wr-02-/) |
+| 261124-s7w | Fix Phase 2 review findings WR-01 (doctor survives a corrupt GSD manifest and six sibling reads), IN-01 and IN-02 | 2026-11-24 | 8788e2b | [261124-s7w-fix-phase-2-review-findings-wr-01-doctor](./quick/261124-s7w-fix-phase-2-review-findings-wr-01-doctor/) |
 
 ## Deferred Items
 
