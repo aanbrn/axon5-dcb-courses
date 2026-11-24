@@ -55,6 +55,8 @@
       "Edit(/build-logic/src/main/kotlin/courses.root.gradle.kts)",
       "Edit(/build-logic/src/main/kotlin/courses.settings.settings.gradle.kts)",
       "Edit(/config/detekt/**)",
+      "Edit(/.editorconfig)",
+      "Edit(/**/.editorconfig)",
       "Edit(/qodana.yaml)",
       "Edit(/scripts/qodana.sh)",
       "Edit(/gradlew)",

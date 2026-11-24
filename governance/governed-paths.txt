@@ -11,7 +11,8 @@
 # is literal. Blank lines and lines starting with `#` are ignored. Leading and trailing spaces,
 # tabs and carriage returns are stripped. Entries must be printable ASCII. A file without any
 # entry fails closed. The shell gate, the Claude Code hooks and the Gradle check read this file
-# with one grammar.
+# with one grammar. An entry that starts with `**/` matches the name in every subdirectory but not
+# at the repository root, so a root file needs an entry of its own.
 #
 # Boundary rule. A path is governed when a change to it alone can rewrite the policy, stop a
 # governance check from running, or make one pass without evaluating. That covers the policy
@@ -149,6 +150,12 @@ build-logic/src/main/kotlin/courses.settings.settings.gradle.kts
 
 # The detekt rule set: an edit to it alone can switch rules off, so detekt passes without evaluating them.
 config/detekt/**
+
+# The lint job's linters. editorconfig-checker reads `.editorconfig-checker.json` at the root and every `.editorconfig`
+# from a file's directory up to the one with `root = true`, and shfmt in the build job reads the same files, so a nested
+# `.editorconfig` can relax a subtree.
+.editorconfig
+**/.editorconfig
 
 # The Qodana gate, which the required `qodana` job of ci-success runs: its configuration (the digest-pinned image, the
 # inspection profile, the exclusions and the fail threshold) and the launcher that CI and developers run it with. An

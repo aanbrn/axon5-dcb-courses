@@ -34,6 +34,7 @@ mise.toml
 mise/**
 .claude/settings.json
 CODEOWNERS
+**/.editorconfig
 EOF
 echo 'tools' >"$REPO/mise.toml"
 echo 'docs' >"$REPO/docs/readme.md"
@@ -122,6 +123,12 @@ run_case "a file that is not governed passes silently" none '' "$(edit_input Edi
 run_case "a file outside every worktree passes silently" none '' "$(edit_input Write "$TMP/outside/mise.toml")"
 run_case "a governed name in a subdirectory is not governed" none '' \
   "$(edit_input Write "$REPO/docs/mise.toml")"
+run_case "a file matched by a leading \`**/\` entry in a subdirectory asks" ask \
+  "docs/\\.editorconfig.*\`\\*\\*/\\.editorconfig\`" "$(edit_input Write "$REPO/docs/.editorconfig")"
+run_case "a near-miss of a leading \`**/\` entry passes silently" none '' \
+  "$(edit_input Write "$REPO/docs/x.editorconfig")"
+run_case "a leading \`**/\` entry does not cover the root file" none '' \
+  "$(edit_input Write "$REPO/.editorconfig")"
 
 # --- agent worktrees: the merge hook asks, the edit hook stays silent ---------------------------------------------
 

@@ -924,6 +924,13 @@ boundary_case mise.local.lock ungoverned
 boundary_case backend/contracts/kernel/mise.toml ungoverned
 boundary_case frontend/package.json ungoverned
 
+# Required CI gate configuration (author decision of 2026-11-24).
+boundary_case .editorconfig governed
+boundary_case docs/.editorconfig governed
+boundary_case backend/command-service/.editorconfig governed
+# A `**/` entry needs the slash: a name that merely ends in `.editorconfig` is not governed.
+boundary_case docs/x.editorconfig ungoverned
+
 # A root renovate.json beats the governed renovate.json5, and the file does not exist yet: adding it
 # must still need the label.
 run_case "a pull request adding renovate.json without the label fails" 1 "renovate\.json" \
