@@ -7,7 +7,8 @@
 #      carries the tool version counts as modified, not renamed, when its old and new paths differ
 #      only in that version. A list at the files API limit (3000 entries) may hide a governed
 #      file, so it needs the label and is never exempt. A list that cannot be read completely fails,
-#      with or without the label.
+#      with or without the label. The paths in NEVER_EXEMPT_PATHS (the GSD version pin) never take the
+#      exemption, because a new GSD release changes hooks that execute in the maintainer's session.
 #   2. A PR from a branch of this repository must come from a GSD phase branch or a bot branch.
 # All inputs arrive through environment variables, never arguments:
 #   PR_FILES_JSON        path to the JSON array returned by the pull request files API
@@ -29,6 +30,10 @@ source "$(dirname -- "${BASH_SOURCE[0]}")/governed-paths.sh"
 
 readonly APPROVAL_LABEL="governance-approved"
 readonly BOT_AUTHOR="renovate[bot]"
+# Governed paths that never take the renovate[bot] exemption, compared byte for byte as whole paths. The GSD pin
+# selects the release whose hooks and agents run in the maintainer's Claude Code session, so its bump is reviewed like
+# code (docs/tooling.md, GSD updates; ADR-0003).
+readonly NEVER_EXEMPT_PATHS=(governance/gsd-version)
 readonly PHASE_BRANCH_PATTERN='^gsd/phase-[0-9]+(\.[0-9]+)?-[a-z0-9][a-z0-9-]*$'
 readonly RENOVATE_BRANCH_PATTERN='^renovate/.+$'
 readonly RELEASE_BRANCH_PATTERN='^release-please--.+$'
@@ -79,6 +84,16 @@ validate_inputs() {
 
 has_label() {
   printf '%s' "$PR_LABELS_JSON" | jq -e --arg label "$1" 'index($label) != null' >/dev/null
+}
+
+# Succeeds when the path equals an entry of NEVER_EXEMPT_PATHS exactly (no glob matching); fails for an empty path.
+is_never_exempt() {
+  local entry
+  [[ -n ${1:-} ]] || return 1
+  for entry in "${NEVER_EXEMPT_PATHS[@]}"; do
+    [[ $1 == "$entry" ]] && return 0
+  done
+  return 1
 }
 
 # Reads a diff on standard input and writes each line as a version-independent token stream: commit
@@ -206,8 +221,8 @@ check_governed_files() {
     return 1
   fi
 
-  local -a touched=() blocked=() exempt=()
-  local filename previous status has_patch patch is_touched is_exempt mode seen=0
+  local -a touched=() blocked=() exempt=() never_exempt=()
+  local filename previous status has_patch patch is_touched is_exempt mode seen=0 hit
   while IFS= read -r -d '' filename &&
     IFS= read -r -d '' previous &&
     IFS= read -r -d '' status &&
@@ -225,8 +240,20 @@ check_governed_files() {
     fi
     [[ $is_touched -eq 1 ]] || continue
 
+    hit=0
+    if [[ ${PR_AUTHOR:-} == "$BOT_AUTHOR" ]]; then
+      if is_never_exempt "$filename"; then
+        never_exempt+=("$filename")
+        hit=1
+      fi
+      if is_never_exempt "$previous"; then
+        never_exempt+=("$previous")
+        hit=1
+      fi
+    fi
+
     is_exempt=0
-    if [[ ${PR_AUTHOR:-} == "$BOT_AUTHOR" && $has_patch == 1 ]] &&
+    if [[ $hit -eq 0 && ${PR_AUTHOR:-} == "$BOT_AUTHOR" && $has_patch == 1 ]] &&
       { [[ $status == modified && -z $previous ]] ||
         { [[ $status == renamed ]] && is_sidecar_version_move "$previous" "$filename"; }; }; then
       mode=plain
@@ -267,6 +294,13 @@ check_governed_files() {
   {
     echo "governance: this pull request touches governed files:"
     printf '  %s\n' "${blocked[@]}"
+    if [[ ${#never_exempt[@]} -gt 0 ]]; then
+      local path
+      for path in "${never_exempt[@]}"; do
+        echo "governance: never exempt: $path" \
+          "(a GSD release replaces the hooks that run in the maintainer's Claude Code session)"
+      done
+    fi
     echo "governance: ask a maintainer to add the '$APPROVAL_LABEL' label, then this check re-runs."
   } >&2
   return 1
