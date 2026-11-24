@@ -91,6 +91,11 @@ Reasons:
   applies to changes in `.github/**`.
 - The approval label is not bound to a commit (review finding WR-02). That is a separate residual, deferred by
   the author.
+- The renovate[bot] version-only exemption of `scripts/governance/check-pr.sh` deliberately excludes
+  `governance/gsd-version` (`NEVER_EXEMPT_PATHS`, author decision of 2026-11-24). The pin selects the GSD release
+  whose hooks and agents run in the maintainer's Claude Code session, so a Renovate bump of it always needs
+  `governance-approved`, after the review described in `docs/tooling.md` (GSD updates). Every other governed file
+  keeps the exemption for version-only diffs.
 
 ## More Information
 

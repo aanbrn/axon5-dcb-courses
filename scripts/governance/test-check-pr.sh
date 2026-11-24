@@ -352,6 +352,36 @@ run_case "renovate with the label passes even for a non-version change" 0 \
   PR_FILES_JSON="$new_tool_files" PR_LABELS_JSON="$LABEL_APPROVED" \
   PR_AUTHOR="$BOT" PR_HEAD_REF=renovate/mise
 
+# The GSD pin selects the hooks that run in the maintainer's Claude Code session, so a Renovate bump of it always
+# needs the label, even when the diff is version-only (versions chosen so the fixture is clearly synthetic).
+gsd_bump=$(
+  patch_file gsd-bump <<'EOF'
+@@ -1 +1 @@
+-1.4.0
++1.5.0
+EOF
+)
+gsd_bump_files=$(files_of gsd-bump "$(entry governance/gsd-version modified "$gsd_bump")")
+gsd_mixed_files=$(files_of gsd-mixed \
+  "$(entry mise.toml modified "$mise_bump")" "$(entry governance/gsd-version modified "$gsd_bump")")
+GSD_BRANCH=renovate/opengsd-gsd-core-1.x
+
+run_case "renovate bumping the GSD pin fails without the label and names the file" 1 \
+  "governance/gsd-version" \
+  PR_FILES_JSON="$gsd_bump_files" PR_LABELS_JSON="$LABEL_NONE" \
+  PR_AUTHOR="$BOT" PR_HEAD_REF="$GSD_BRANCH"
+run_case "renovate bumping the GSD pin is told the pin is never exempt" 1 \
+  "never exempt: governance/gsd-version" \
+  PR_FILES_JSON="$gsd_bump_files" PR_LABELS_JSON="$LABEL_NONE" \
+  PR_AUTHOR="$BOT" PR_HEAD_REF="$GSD_BRANCH"
+run_case "renovate bumping the GSD pin passes with the label" 0 "carries 'governance-approved'" \
+  PR_FILES_JSON="$gsd_bump_files" PR_LABELS_JSON="$LABEL_APPROVED" \
+  PR_AUTHOR="$BOT" PR_HEAD_REF="$GSD_BRANCH"
+run_case "an otherwise exempt mise.toml bump does not carry the GSD pin through without the label" 1 \
+  "governance/gsd-version" \
+  PR_FILES_JSON="$gsd_mixed_files" PR_LABELS_JSON="$LABEL_NONE" \
+  PR_AUTHOR="$BOT" PR_HEAD_REF="$GSD_BRANCH"
+
 # --- fixtures for mise sidecar lockfiles ---------------------------------------------------------
 
 # mise keeps the dependency lock of an npm or pipx tool under .mise/locks/<tool>/<version>~<hash>/,

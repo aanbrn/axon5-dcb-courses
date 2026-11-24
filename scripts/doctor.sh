@@ -378,7 +378,7 @@ check_gsd() {
   installed=$("$jq" -r '.version // empty' "$manifest")
   if [[ $installed != "$pinned" ]]; then
     report fail gsd "installed GSD ${installed:-unknown} differs from governance/gsd-version $pinned" \
-      "run /gsd-update deliberately, then update governance/gsd-version"
+      "$install_fix"
   fi
 
   # `hash  path` lines of what the manifest expects and of what is on disk.
