@@ -17,7 +17,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.w3c.dom.Element
 
-/** Proves that `courses.test-suites` gives a module three suites that `check` runs, under the configuration cache. */
+/**
+ * Proves that `courses.test-suites` gives a module three suites that `check` runs, under the configuration cache, and
+ * that the JVM of every suite has native access for the classpath, so JDK 25 prints no restricted-method warning.
+ */
 class TestSuitesFunctionalTest {
     @TempDir lateinit var projectDir: Path
 
@@ -131,6 +134,27 @@ class TestSuitesFunctionalTest {
             executed.indexOf(":lib:test") shouldBeGreaterThan -1
             executed.indexOf(":lib:componentTest") shouldBeGreaterThan executed.indexOf(":lib:test")
             executed.indexOf(":lib:integrationTest") shouldBeGreaterThan executed.indexOf(":lib:componentTest")
+        }
+    }
+
+    @Test
+    fun `every suite grants native access to the classpath, so a restricted method call prints no warning`() {
+        val fixture = GradleFixture.testSuites(projectDir)
+        SUITES.forEach { suite ->
+            fixture.addTest(
+                suite,
+                "${suite.replaceFirstChar(Char::uppercase)}NativeAccessTest",
+                "the suite calls a restricted method",
+                RESTRICTED_CALL_PROBE,
+            )
+        }
+
+        // The JVMs must really run, so the build cache may not answer for them.
+        val result = fixture.run(*SUITE_TASKS.toTypedArray(), "--no-build-cache")
+
+        withClue(result.output) {
+            SUITE_TASKS.forEach { task -> outcome(result, task) shouldBe TaskOutcome.SUCCESS }
+            result.output shouldNotContain RESTRICTED_METHOD_WARNING
         }
     }
 
@@ -304,5 +328,15 @@ class TestSuitesFunctionalTest {
         val SUITE_TASKS = SUITES.map { ":lib:$it" }
         val LIBRARIES = listOf("kotest-property", "kotest-assertions-core", "junit-jupiter")
         const val KOVER_REPORT = "lib/build/reports/kover/report.xml"
+
+        /**
+         * A call of a restricted method (JEP 472) from the unnamed module, for a library that cannot exist. A JVM with
+         * native access gets as far as the library lookup and fails with [UnsatisfiedLinkError]; a JVM without it
+         * prints [RESTRICTED_METHOD_WARNING] first.
+         */
+        const val RESTRICTED_CALL_PROBE =
+            "check(runCatching { System.loadLibrary(\"courses-native-access-probe\") }.exceptionOrNull() is " +
+                "UnsatisfiedLinkError)"
+        const val RESTRICTED_METHOD_WARNING = "WARNING: A restricted method"
     }
 }
