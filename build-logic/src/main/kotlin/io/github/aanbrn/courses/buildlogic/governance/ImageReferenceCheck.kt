@@ -22,12 +22,16 @@ import org.gradle.api.tasks.TaskAction
  * Two rules keep the version catalog the one source of every image:
  * - every `image:` value in the [composeFiles] is a `${VARIABLE}` interpolation, optionally with a `:?message` default
  *   check, so the reference comes from the generated `compose/versions.env` and never from a literal;
- * - every `image-*` key of the `[versions]` table of the [catalog] is a double-quoted string of the form
- *   `<name>:<tag>@sha256:<64 hex digits>`, so the tag names the version for readers and Renovate, and the digest fixes
- *   the content. Every such key is matched, bare or quoted and at any indentation, because `catalogProblems` trims each
- *   catalog line before it is matched, and a value of any other shape (a literal string, an inline table, a multi-line
- *   string) is reported, because the Renovate custom manager reads only the double-quoted form and such an entry would
- *   never be updated.
+ * - every `image-*` key of the `[versions]` table of the [catalog] is detected, bare or quoted and at any indentation
+ *   (`catalogProblems` trims each line), and must be written exactly as the Renovate custom manager for images in
+ *   `renovate.json5` reads it: a bare key `image-[a-z0-9-]+`, one space on each side of `=`, and a double-quoted
+ *   `<name>:<tag>@sha256:<64 hex digits>` whose name holds no registry port; a trailing comment is allowed. The tag
+ *   names the version for readers and Renovate, and the digest fixes the content. Any other form (a quoted or
+ *   upper-case key, another separator, a literal string, an inline table, a multi-line string, a registry port) is
+ *   reported, because the manager would skip or misread it and never update the entry. Every entry the check accepts is
+ *   read by the manager with its name, tag and digest. The check is stricter only where the manager would also read a
+ *   reference that is not a valid pinned image. The functional test matches its samples against the regex it reads from
+ *   `renovate.json5`, so a change on either side fails the build.
  *
  * Compose files are read line by line instead of with a YAML library: only `image:` entries are needed, and an extra
  * parser dependency in `build-logic` is not worth that. Commented-out lines are skipped. Findings are written as
@@ -95,15 +99,28 @@ abstract class ImageReferenceCheck @Inject constructor(private val layout: Proje
         return problems
     }
 
+    /** The first problem of one catalog line, in the order of the shared form; `null` for a line that is fine. */
     private fun catalogProblem(path: String, line: String): String? {
-        val (_, key, value) = CATALOG_ENTRY.matchEntire(line)?.destructured ?: return null
+        val entry = CATALOG_ENTRY.matchEntire(line) ?: return null
+        val key = entry.group("key")
+        val value = entry.group("value")
         val reference = DOUBLE_QUOTED_VALUE.matchEntire(value)?.groupValues?.get(1)
         return when {
+            entry.group("quote").isNotEmpty() || !MANAGED_KEY.matches(key) ->
+                "$path: $key must be a bare key of the form $KEY_FORM, the only key the Renovate image manager reads"
+            entry.group("before") != " " || entry.group("after") != " " ->
+                "$path: $key must have exactly one space on each side of '=', " +
+                    "the only separator the Renovate image manager reads"
             reference == null -> "$path: $key must be a double-quoted $PINNED_FORM, but is '$value'"
+            REGISTRY_PORT.containsMatchIn(reference) ->
+                "$path: $key must not name a registry port, which the Renovate image manager reads as part of the " +
+                    "tag, but is '$reference'"
             PINNED_REFERENCE.matches(reference) -> null
             else -> "$path: $key must be $PINNED_FORM, but is '$reference'"
         }
     }
+
+    private fun MatchResult.group(name: String): String = groups[name]?.value.orEmpty()
 
     private fun unquote(value: String): String =
         value.substringBefore(" #").trim().let { text ->
@@ -121,7 +138,7 @@ abstract class ImageReferenceCheck @Inject constructor(private val layout: Proje
         append(
             $$"Compose files reference images only as ${VARIABLE}, which ./gradlew generateComposeVersions writes " +
                 "from the image-* entries of gradle/libs.versions.toml, and each entry is pinned by tag and " +
-                "digest (INFRA-09).",
+                "digest and written in the form the Renovate image manager reads (INFRA-09).",
         )
     }
 
@@ -139,22 +156,36 @@ abstract class ImageReferenceCheck @Inject constructor(private val layout: Proje
         /** The shape of a pinned image reference, as the problems name it. */
         const val PINNED_FORM = "<name>:<tag>@sha256:<64 hex digits>"
 
+        /** The key class of the Renovate image manager in `renovate.json5`, as the problems name it. */
+        const val KEY_FORM = "image-[a-z0-9-]+"
+
+        /** A key the Renovate image manager reads; the functional test matches the same class against its regex. */
+        val MANAGED_KEY = Regex(KEY_FORM)
+
         /**
-         * An `image-*` entry of a TOML table, whatever its value: the quote of the key (empty for a bare key, the same
-         * quote on both sides otherwise), the key, and the rest of the line after the equals sign. It is matched
-         * against a catalog line whose leading and trailing blanks `catalogProblems` has already removed, so the `^`
-         * anchor does not skip an indented entry.
+         * An `image-*` entry of a TOML table, whatever its spelling: the quote of the key (empty for a bare key, the
+         * same quote on both sides otherwise), the key (every character up to the closing quote, a blank or `=`), the
+         * blanks before the equals sign, the blanks after it, and the rest of the line. It is matched against a catalog
+         * line whose leading and trailing blanks `catalogProblems` has already removed, so the `^` anchor does not skip
+         * an indented entry.
          */
-        val CATALOG_ENTRY = Regex("""^(["']?)(image-[A-Za-z0-9_.-]+)\1\s*=\s*(.*)$""")
+        val CATALOG_ENTRY =
+            Regex("""^(?<quote>["']?)(?<key>image-[^"'\s=]*)\k<quote>(?<before>\s*)=(?<after>\s*)(?<value>.*)$""")
 
         /** A double-quoted string with an optional trailing comment: the capture is the text between the quotes. */
         val DOUBLE_QUOTED_VALUE = Regex("""^"([^"]*)"\s*(?:#.*)?$""")
 
         /**
-         * `[registry[:port]/][path/]name:tag@sha256:digest`. A colon followed by digits before the first slash is a
-         * registry port, not a tag, so `registry:5000/app@sha256:...` has no tag and fails.
+         * A colon followed by digits in the first segment before a slash: a registry port. The Renovate image manager
+         * ends the image name at the first colon, so it would read `localhost:5000/app:1.0` as the image `localhost`
+         * with the tag `5000/app:1.0`, and never update the right image.
          */
-        val PINNED_REFERENCE =
-            Regex("""^(?:[^@\s/:]+(?::[0-9]+)?/)?(?:[^@\s/:]+/)*[^@\s/:]+:[^@\s/:]+@sha256:[0-9a-f]{64}$""")
+        val REGISTRY_PORT = Regex("""^[^@\s/:]+:[0-9]+/""")
+
+        /**
+         * `[registry/][path/]name:tag@sha256:digest`. The name holds no colon, as in the `depName` group of the
+         * Renovate image manager, which ends the name at the first colon.
+         */
+        val PINNED_REFERENCE = Regex("""^(?:[^@\s/:]+/)*[^@\s/:]+:[^@\s/:]+@sha256:[0-9a-f]{64}$""")
     }
 }
