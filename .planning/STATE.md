@@ -124,6 +124,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
+- [Phase 2 ship, after 261124-c1g]: Author decided (2026-11-24): inside an agent worktree the governance edit hook stops asking on each Edit/Write of a governed path; the merge hook asks once when the worktree's changes reach the main checkout. The main checkout keeps the per-edit ask. Change `scripts/governance/ask-governed-edit.sh`, its tests and ADR-0015 as a quick task once 261124-c1g (which edits the same files) is merged.
 - [Phase 4 discuss]: Choose the documentation-site tool. Docusaurus 3.10.2 with Mermaid is only a research recommendation (`.planning/research/STACK.md`, SUMMARY.md); PROJECT.md Key Decisions fixes only "docs site as a Gradle subproject" (Pending), and no ADR exists. Needed by INFRA-08 (docs-site skeleton as a Gradle subproject, Phase 4/5), GH-04 (GitHub Pages publication, Phase 8, with Storybook per UI-08), UPS-02's index on the site (Phase 5) and DOC-02 (final docs phase). Record the choice in an ADR and PROJECT.md.
 
 ### Blockers/Concerns
