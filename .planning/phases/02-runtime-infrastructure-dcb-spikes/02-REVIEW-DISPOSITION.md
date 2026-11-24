@@ -5,16 +5,20 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: fixed
-    title: "An `.mcp.json` server without `command` is reported as an unresolved binary named `path`"
+    disposition: open
+    title: "`doctor` reports `ok` for the containerd image store on an engine older than 29.9.0, the combination UP-0012 still documents as failing"
   - id: IN-01
     severity: info
-    disposition: fixed
-    title: "The \"mise.toml cannot be read\" fix suggests `git restore` for what may be a permissions problem"
+    disposition: open
+    title: "A server without a usable `command` is counted as resolved, so a broken stdio server is reported `ok`"
   - id: IN-02
     severity: info
-    disposition: fixed
-    title: "Catalog findings sort lexicographically, so line 10 comes before line 2"
+    disposition: open
+    title: "The UP-0012 removal evidence cannot tell a fixed engine from a broken one, and part of the record's own verification list was not run"
+  - id: IN-03
+    severity: info
+    disposition: open
+    title: "The numeric-order test covers only catalog findings, not compose findings"
   - id: WR-02
     severity: warning
     disposition: fixed
@@ -67,10 +71,6 @@ findings:
     severity: info
     disposition: fixed
     title: "The hooks need git 2.36 or newer, and `doctor` does not check it"
-  - id: IN-03
-    severity: info
-    disposition: fixed
-    title: "Duplicated outline scanner in two governance checks, with a fence toggle that mixes fence types"
   - id: IN-04
     severity: info
     disposition: fixed
@@ -79,18 +79,19 @@ findings:
     severity: info
     disposition: skipped
     title: "Necessity (judgment) - the empty `contracts-queries` module and its rule entries have no instantiation yet"
-open: 3
+open: 4
 total: 19
-recorded: 2026-11-24T14:30:55.384Z
+recorded: 2026-11-24T23:39:39.145Z
 ---
 
 # Phase 02: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-uwn in 53dac4e (jq emits three never-empty tab fields per server; a url-only server has no binary to resolve and its url is never read; tests cover url-only and credential-bearing url servers) |
-| IN-01 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-uwn in 0e67cf3 (a missing mise.toml gets `git restore`, an unreadable one gets `chmod u+r`, with tests) |
-| IN-02 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-uwn in ab720cc and e2ec662 (findings sorted by path, then numeric line number; functional test puts line 3 before line 12) |
+| WR-01 | warning | open | - |
+| IN-01 | info | open | - |
+| IN-02 | info | open | - |
+| IN-03 | info | open | - |
 | WR-02 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-oyk in 9392b29 (KDoc states the observed raw-UUID map key; JsonRoundTripTest pins it; key form left to an ADR when a contract first holds an ID-keyed map) (not in the current review) |
 | WR-03 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-oyk in b61e980 (check accepts exactly the form the Renovate image manager reads, rejects registry ports; parity test reads the regex from renovate.json5) (not in the current review) |
 | CR-01 | critical | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 9f8be86 (shell option clusters and value-taking long options parsed as bash does; unknown forms ask) (not in the current review) |
@@ -104,7 +105,6 @@ recorded: 2026-11-24T14:30:55.384Z
 | IN-06 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-nlk in 474c1fc (false positive: catalogProblems trims each line before matching; two TestKit cases now guard indented entries, KDoc states it) (not in the current review) |
 | IN-07 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-nlk in 3f9da9c (KDoc states the ID types are registered as values only; the first ID-keyed map adds addKeyDeserializer) (not in the current review) |
 | IN-08 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-nlk in 04a892d and 3f9da9c (doctor fails on a missing, unparsable or pre-2.36 git; ADR-0015 and docs/tooling.md record the minimum) (not in the current review) |
-| IN-03 | info | fixed | 02-REVIEW.md — fixed by quick task 261123-rzt in 57fc03f (one shared outline scanner that closes a fence only on its own fence string) (not in the current review) |
 | IN-04 | info | fixed | 02-REVIEW.md — fixed by quick task 261123-rzt in 123680f (doctor lists fixed-upstream records whose markers remain, with their removal criteria) (not in the current review) |
 | IN-05 | info | skipped | deliberate scaffolding per D-02; architecture test requires exactly four contracts modules; first query slice is Phase 4 (not in the current review) |
 
