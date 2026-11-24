@@ -20,6 +20,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import tools.jackson.core.JacksonException
 import tools.jackson.databind.exc.InvalidFormatException
+import tools.jackson.module.kotlin.readValue
 
 /**
  * Round trips of the contract messages through the shared Jackson mapper (INFRA-06).
@@ -153,6 +154,26 @@ class JsonRoundTripTest {
         invalid.value shouldBe "course_not-a-typeid"
         invalid.targetType shouldBe CourseId::class.java
         invalid.cause.shouldBeInstanceOf<IllegalArgumentException>()
+    }
+
+    // The module registers IDs as values only. These two tests pin what jackson-module-kotlin does for an ID used as a
+    // map key, so that the open key-form decision in the CoursesJsonModule KDoc stays visible: a change fails here.
+    @Test
+    fun `an ID map key is written as its raw UUID and read back from it`() {
+        val id = TestIds.courseId(1)
+
+        val json = mapper.writeValueAsString(mapOf(id to 1))
+
+        json shouldBe """{"${id.uuid}":1}"""
+        json shouldNotContain "course_"
+        mapper.readValue<Map<CourseId, Int>>(json) shouldBe mapOf(id to 1)
+    }
+
+    @Test
+    fun `an ID map key in the TypeID form fails deserialisation`() {
+        val json = """{"${TestIds.courseId(1)}":1}"""
+
+        shouldThrow<JacksonException> { mapper.readValue<Map<CourseId, Int>>(json) }
     }
 
     private fun Throwable.invalidFormat(): InvalidFormatException =
