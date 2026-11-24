@@ -4,10 +4,10 @@ current_phase: 02
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: executing
 stopped_at: Phase 2 context gathered
-last_updated: "2026-11-24T16:09:44.166Z"
+last_updated: "2026-11-24T22:55:42.516Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 02 execution started
-state_head: 1aa0bee6e600bf199edccadc1d6b8f2e2e6caae0
+state_head: 5379af2d8a5c92e5322854aedd6eb85e3781c2c6
 progress:
   total_phases: 13
   completed_phases: 1
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-11-22)
 
 Phase: 02 (Runtime Infrastructure & DCB Spikes) — VERIFYING
 Plan: 23 of 23 executed (all SUMMARYs present)
-Status: Phase 02 verification human_needed (5/5 success criteria verified, re-verified 2026-11-24 at 6d81294); 02-UAT.md has 6 pending human items; the phase PR is not open yet
-Last activity: 2026-11-24 - Completed quick task 261124-uwn: PR #21 CI failures (edit-hook reason, 5 Qodana findings) and review findings WR-01, IN-01, IN-02 fixed; UP-0012 workaround removed; Phase 2 verification stale again until re-run
+Status: Phase 02 verification human_needed (5/5 success criteria verified, re-verified 2026-11-24 at 6d81294); 02-UAT.md has 6 pending human items; phase PR #21 is open as a draft
+Last activity: 2026-11-25 - Completed quick task 261124-wp3: test JVMs of courses.test-suites run with --enable-native-access=ALL-UNNAMED (JEP 472); Doctor JavaExec probe warning left as governed follow-up; Phase 2 verification stale until re-run
 
 Progress: [█░░░░░░░░░] 8%
 
@@ -174,6 +174,7 @@ Recent decisions affecting current work:
 | 261124-oyk | Fix Phase 2 review findings WR-01 (doctor survives a failing --version), WR-02 (KDoc states the raw-UUID map key), WR-03 (image check matches the Renovate form) and IN-01 | 2026-11-24 | b62ce4d | [261124-oyk-fix-phase-2-review-findings-wr-01-wr-02-](./quick/261124-oyk-fix-phase-2-review-findings-wr-01-wr-02-/) |
 | 261124-s7w | Fix Phase 2 review findings WR-01 (doctor survives a corrupt GSD manifest and six sibling reads), IN-01 and IN-02 | 2026-11-24 | 8788e2b | [261124-s7w-fix-phase-2-review-findings-wr-01-doctor](./quick/261124-s7w-fix-phase-2-review-findings-wr-01-doctor/) |
 | 261124-uwn | Fix PR #21 CI failures (edit-hook reason on Linux, 5 Qodana findings), close review findings WR-01, IN-01, IN-02 and remove the UP-0012 workaround | 2026-11-24 | 1aa0bee | [261124-uwn-fix-the-phase-2-pr-21-ci-failures-linux-](./quick/261124-uwn-fix-the-phase-2-pr-21-ci-failures-linux-/) |
+| 261124-wp3 | Enable native access (JEP 472) for every test JVM of the courses.test-suites convention, pinned by a TestSuitesFunctionalTest probe | 2026-11-25 | 5379af2 | [261124-wp3-enable-native-access-for-test-jvms-in-th](./quick/261124-wp3-enable-native-access-for-test-jvms-in-th/) |
 
 ## Deferred Items
 
