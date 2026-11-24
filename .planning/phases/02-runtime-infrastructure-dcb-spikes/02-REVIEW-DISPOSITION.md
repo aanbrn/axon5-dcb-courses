@@ -5,8 +5,16 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: fixed
-    title: "`check_git` aborts the whole doctor run, with no report, when `git --version` exits non-zero"
+    disposition: open
+    title: "`check_gsd` still dies silently under `set -e` when the GSD manifest is not valid JSON"
+  - id: IN-01
+    severity: info
+    disposition: open
+    title: "The TypeID-key test asserts only `JacksonException`, which any failure satisfies"
+  - id: IN-02
+    severity: info
+    disposition: open
+    title: "Renovate reads catalog lines that `checkImageReferences` never inspects"
   - id: WR-02
     severity: warning
     disposition: fixed
@@ -15,10 +23,6 @@ findings:
     severity: warning
     disposition: fixed
     title: "`ImageReferenceCheck` accepts catalog entries that the Renovate manager never matches, though its KDoc says the check exists to catch them"
-  - id: IN-01
-    severity: info
-    disposition: fixed
-    title: "A shell whose operand comes from an expansion now asks with a misleading reason"
   - id: CR-01
     severity: critical
     disposition: fixed
@@ -63,10 +67,6 @@ findings:
     severity: info
     disposition: fixed
     title: "The hooks need git 2.36 or newer, and `doctor` does not check it"
-  - id: IN-02
-    severity: info
-    disposition: fixed
-    title: "Duplicated helpers in build logic and in tests"
   - id: IN-03
     severity: info
     disposition: fixed
@@ -79,19 +79,20 @@ findings:
     severity: info
     disposition: skipped
     title: "Necessity (judgment) - the empty `contracts-queries` module and its rule entries have no instantiation yet"
-open: 4
+open: 3
 total: 19
-recorded: 2026-11-24T10:49:07.687Z
+recorded: 2026-11-24T12:32:54.468Z
 ---
 
 # Phase 02: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-oyk in 5781180 (empty-string fallback on the git, mise and claude version reads; doctor reports `fail  git:` and finishes) |
-| WR-02 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-oyk in 9392b29 (KDoc states the observed raw-UUID map key; JsonRoundTripTest pins it; key form left to an ADR when a contract first holds an ID-keyed map) |
-| WR-03 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-oyk in b61e980 (check accepts exactly the form the Renovate image manager reads, rejects registry ports; parity test reads the regex from renovate.json5) |
-| IN-01 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-oyk in 58ccbb2 (reason names the shell expansion; still asks) |
+| WR-01 | warning | open | - |
+| IN-01 | info | open | - |
+| IN-02 | info | open | - |
+| WR-02 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-oyk in 9392b29 (KDoc states the observed raw-UUID map key; JsonRoundTripTest pins it; key form left to an ADR when a contract first holds an ID-keyed map) (not in the current review) |
+| WR-03 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-oyk in b61e980 (check accepts exactly the form the Renovate image manager reads, rejects registry ports; parity test reads the regex from renovate.json5) (not in the current review) |
 | CR-01 | critical | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 9f8be86 (shell option clusters and value-taking long options parsed as bash does; unknown forms ask) (not in the current review) |
 | WR-04 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 996829c (a `**/` match inside an agent worktree is exempt; the five `Edit(/**/...)` ask rules recorded as an ADR-0015 residual risk) (not in the current review) |
 | WR-05 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in dd73bcf (the pin must match a plain version before the fix command is built) (not in the current review) |
@@ -103,7 +104,6 @@ recorded: 2026-11-24T10:49:07.687Z
 | IN-06 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-nlk in 474c1fc (false positive: catalogProblems trims each line before matching; two TestKit cases now guard indented entries, KDoc states it) (not in the current review) |
 | IN-07 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-nlk in 3f9da9c (KDoc states the ID types are registered as values only; the first ID-keyed map adds addKeyDeserializer) (not in the current review) |
 | IN-08 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-nlk in 04a892d and 3f9da9c (doctor fails on a missing, unparsable or pre-2.36 git; ADR-0015 and docs/tooling.md record the minimum) (not in the current review) |
-| IN-02 | info | fixed | 02-REVIEW.md — fixed by quick task 261123-rzt in f4fa65f (shared fixture barrier and submitDecision in the tests) and 71a11d1 (one .java-version parser in build-logic) (not in the current review) |
 | IN-03 | info | fixed | 02-REVIEW.md — fixed by quick task 261123-rzt in 57fc03f (one shared outline scanner that closes a fence only on its own fence string) (not in the current review) |
 | IN-04 | info | fixed | 02-REVIEW.md — fixed by quick task 261123-rzt in 123680f (doctor lists fixed-upstream records whose markers remain, with their removal criteria) (not in the current review) |
 | IN-05 | info | skipped | deliberate scaffolding per D-02; architecture test requires exactly four contracts modules; first query slice is Phase 4 (not in the current review) |
