@@ -276,6 +276,30 @@ class ImageReferenceCheckFunctionalTest {
     }
 
     @Test
+    fun `findings of one file are listed by numeric line number, not as text`() {
+        fixture.file(INFRA, services($$"    image: ${AXONSERVER_IMAGE}"))
+        val padding = (1..8).map { "padding-$it = \"1.$it\"" }
+        fixture.file(
+            CATALOG,
+            catalog(
+                "# image-early = \"$POSTGRES\"",
+                *padding.toTypedArray(),
+                "# image-late = \"$POSTGRES\"",
+            ),
+        )
+        val early = "gradle/libs.versions.toml:3: the Renovate image manager reads image-early here"
+        val late = "gradle/libs.versions.toml:12: the Renovate image manager reads image-late here"
+
+        val output = fixture.runAndFail(TASK).output
+
+        output shouldContain early
+        output shouldContain late
+        withClue("the finding on line 3 comes before the one on line 12") {
+            (output.indexOf(early) < output.indexOf(late)) shouldBe true
+        }
+    }
+
+    @Test
     fun `the image regex of renovate json5 reads every line reported as read elsewhere and no silent control`() {
         val regex = renovateImageRegex()
 
