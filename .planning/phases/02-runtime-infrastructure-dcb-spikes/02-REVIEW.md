@@ -2,224 +2,111 @@
 phase: 02-runtime-infrastructure-dcb-spikes
 reviewed: 2026-11-24T00:00:00Z
 depth: standard
-files_reviewed: 23
+files_reviewed: 13
 files_reviewed_list:
-  - .claude/CLAUDE.md
-  - .claude/settings.json
-  - build-logic/src/functionalTest/kotlin/io/github/aanbrn/courses/buildlogic/ComposeVersionsFunctionalTest.kt
-  - build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/governance/GovernanceHooks.kt
-  - docs/adr/0003-governance-gate-trust-boundary.md
-  - docs/adr/0004-gsd-configuration.md
+  - backend/serialization-jackson/src/main/kotlin/io/github/aanbrn/courses/serialization/CoursesJsonModule.kt
+  - build-logic/src/functionalTest/kotlin/io/github/aanbrn/courses/buildlogic/governance/ImageReferenceCheckFunctionalTest.kt
+  - build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/governance/ImageReferenceCheck.kt
   - docs/adr/0015-governance-hooks-for-worktrees-and-merges.md
   - docs/tooling.md
   - docs/upstream/0001-decision-capture-extension-point.md
-  - docs/upstream/0002-conflict-diagnosis-completion-exception.md
-  - docs/upstream/0003-remote-conflict-classification.md
   - docs/upstream/0004-tag-resolver-value-classes.md
-  - docs/upstream/0007-shared-testcontainer-latest-image.md
-  - governance/governed-paths.txt
-  - renovate.json5
   - scripts/doctor.sh
   - scripts/governance/ask-governed-edit.sh
   - scripts/governance/ask-governed-merge.sh
-  - scripts/governance/check-pr.sh
   - scripts/governance/test-ask-governed-edit.sh
   - scripts/governance/test-ask-governed-merge.sh
-  - scripts/governance/test-check-pr.sh
   - scripts/test-doctor.sh
 findings:
-  critical: 1
-  warning: 6
-  info: 0
-  total: 7
+  critical: 0
+  warning: 3
+  info: 1
+  total: 4
   necessity: 0
 status: issues_found
 ---
 
-# Phase 2: Code Review Report (incremental re-review, second pass)
+# Phase 2: Code Review Report (incremental re-review)
 
 **Reviewed:** 2026-11-24
 **Depth:** standard
-**Files Reviewed:** 23
+**Files Reviewed:** 13
 **Status:** issues_found
 
 ## Summary
 
-This pass covers the changes since 03358fd: the fixes for WR-07..WR-10 (quick task 261124-c1g), the agent-worktree
-exemption of the edit hook (261124-dvp), the Renovate manager and never-exempt rule for the GSD pin (261124-eum), and the
-widened governed list (261124-gju, 261124-hbh). No structural findings block was provided, and the necessity reference was
-not applied (no finding qualified).
+This re-review covers the diff `d49aa53..HEAD` for the files changed by quick tasks 261124-kh6 and 261124-nlk, read in the context of the whole files. I also ran the merge hook against about 50 commands, replayed the new `check_git` against a failing `git`, and ran a throwaway probe of the Jackson module in a scratch copy of the repository (`git archive HEAD`). The repository itself was not modified.
 
-The WR-07..WR-10 fixes hold for the exact forms they name: I re-ran `git mer''ge`, `git m\erge`, a heredoc whose delimiter
-never comes, `x=$((1<<2))` and `echo ... | bash` against the real hook, and each asks. The `check-pr.sh` never-exempt
-logic, the Renovate cooldown and GSD rules, and the rewritten `ComposeVersionsFunctionalTest` (it now owns its image set,
-so a real catalog entry cannot break it) have no defect that I could demonstrate. IN-06, IN-07 and IN-08 of the previous
-review stay open per `02-REVIEW-DISPOSITION.md` and are not repeated.
+The earlier findings are fixed correctly:
+- The merge hook now reads shell option clusters, wrapper options, `GIT_*` repository variables, brace expansion and moved refs as the ADR describes, and I found no bypass among the cases I tried.
+- `below_agent_root` in the edit hook exempts only byte-for-byte agent-root paths, so the `..`, symlink and case-spelling cases still ask.
+- `ImageReferenceCheck` now trims lines, so indented entries are matched.
+- The gsd pin is validated before it reaches a command.
 
-The weaknesses are in the merge hook, and they matter more than before. Since 261124-dvp the edit hook is silent inside
-an agent worktree, and ADR-0015 calls the merge hook "the single confirmation point" for that work. I ran the real
-`ask-governed-merge.sh` against a throwaway repository in which branch `feat` changes `.github/workflows/ci.yml`. Several
-merge commands that fall inside the forms the header says it analyses print nothing, one of them a very common idiom.
-
-## Critical Issues
-
-### CR-01: `bash -euo pipefail -c '...'` hides the script from the merge hook
-
-**File:** `scripts/governance/ask-governed-merge.sh:811-849`
-**Issue:** `analyze_shell` skips the value of an option only when the word is exactly `-o`, `+o`, `-O` or `+O`
-(line 820). In a cluster such as `-eo`, `-euo` or `-xeuo`, `o` is the last flag and takes the next word (`pipefail`) as
-its value, but the hook reads `pipefail` as the script operand, stops the option loop before it reaches `-c`, and never
-analyses the script. Long options that take a value (`--rcfile <file>`, `--init-file <file>`) have the same defect,
-because every `--*` word advances by one. I ran the hook with `branch feat` changing a governed file:
-```
-bash -euo pipefail -c 'git merge feat'      -> no output (bash runs the merge)
-bash -eo pipefail -c 'git merge feat'       -> no output
-bash --rcfile /dev/null -c 'git merge feat' -> no output
-bash -o pipefail -c 'git merge feat'        -> asks (only the exact `-o` is understood)
-```
-`bash -euo pipefail -c` is the usual strict-mode spelling, so this is not an exotic form. The same function serves `sudo`,
-`env -S`, `mise x --` and heredoc bodies, so every route to a shell inherits it. The hook is the only prompt for
-agent-worktree work since the 2026-11-24 amendment, and its header lists `bash -c` among the forms it covers.
-`test-ask-governed-merge.sh` has no case for a cluster ending in `o`.
-**Fix:** Parse the shell options the way bash does. A short-option cluster that contains `o` or `O` takes the next word
-as a value (and a cluster that contains `c` still marks a script); `--rcfile` and `--init-file` take a value in both
-spellings:
-```bash
-    --rcfile | --init-file) index=$((index + 2)) ;;
-    --*) index=$((index + 1)) ;;
-    -* | +*)
-      [[ $word == -*c* ]] && has_script=1
-      [[ $word == -*s* ]] && has_stdin_option=1
-      if [[ $word == -*[oO]* || $word == +*[oO]* ]]; then
-        index=$((index + 2))
-      else
-        index=$((index + 1))
-      fi
-      ;;
-```
-Handle `-c` before the `o` test, because the loop must still find `-c` after the value. Add `bash -euo pipefail -c`,
-`bash -eo pipefail -c`, `sh -eu -c`, `bash --rcfile x -c` and `bash --init-file x -c` to the test file. When a word cannot
-be classified, ask when the command mentions a merge instead of dropping the shell.
+No new Critical issues. Three Warnings remain, and one of them (WR-01) is a regression introduced by the new `check_git`. WR-02 is a factual error in the new KDoc, which I confirmed by running the code. WR-03 is a gap between the image check and the Renovate manager, which the amended doc comment overstates.
 
 ## Warnings
 
-### WR-01: Option forms of `git`, `sudo`, `env` and a `GIT_DIR` prefix make the hook read the wrong repository or none
+### WR-01: `check_git` aborts the whole doctor run, with no report, when `git --version` exits non-zero
 
-**File:** `scripts/governance/ask-governed-merge.sh:668-694` (git options), `948-1000` (`env` and `sudo`)
-**Issue:** The merge is checked in `cwd` plus the directory changes the hook understands. Several spellings that move
-the repository, or hide the subcommand, are not understood, and none of them asks. With the session in a repository where
-the merge is clean (`repo2`), and the governed change in `repo`:
-```
-git --attr-source HEAD merge feat                   -> no output  (real git accepts the separate-word form)
-sudo --chdir=/path/to/repo git merge feat           -> no output  (only the exact `--chdir` clears cwd)
-sudo -D/path/to/repo git merge feat                 -> no output
-env --chdir=/path/to/repo git merge feat            -> no output
-env -C/path/to/repo git merge feat                  -> no output
-GIT_DIR=/path/to/repo/.git GIT_WORK_TREE=/path/to/repo git merge feat -> no output
-```
-For `--attr-source` the hook takes `HEAD` as the git subcommand and returns. For the others it analyses the merge in the
-session's repository and finds nothing, although the command merges in another one. The spelled-out variants
-`sudo -D <dir>` and `env -C <dir>` do ask ("cannot tell which repository"), so the forms that were handled prove the
-intent. ADR-0015 lists none of these as residual risks.
-**Fix:** In `analyze_git` add `--attr-source` to the options that take a value (`-c | --namespace | --config-env |
---super-prefix | --attr-source`). In the `env` and `sudo` loops clear `cwd` for `-C*`, `--chdir=*`, `-D*` and
-`--chdir=*` as well, with the glob patterns rather than the exact words. In `analyze_words`, treat an assignment to
-`GIT_DIR`, `GIT_WORK_TREE`, `GIT_COMMON_DIR` or `GIT_CEILING_DIRECTORIES` in front of git as an unknown repository
-(`repository_known=0` or `cwd=''`), so a command that mentions a merge asks. Add each form to
-`test-ask-governed-merge.sh`.
+**File:** `scripts/doctor.sh:586-594`
+**Issue:** `doctor.sh` runs under `set -euo pipefail`. The new check reads the version with:
 
-### WR-02: Brace expansion assembles a merge command without a trace
-
-**File:** `scripts/governance/ask-governed-merge.sh:55-69` (early probe), `1034-1041` (command dispatch)
-**Issue:** `git {merge,feat}` and `{git,merge,feat}` expand to `git merge feat` in bash and zsh. The hook reads the first
-as a program `git` with the subcommand word `{merge,feat}`, which is neither `merge` nor dynamic, and the second as an
-unknown program; neither asks. I ran both and the hook printed nothing, while `bash -c 'echo {git,merge,feat}'` prints
-`git merge feat`. The words appear literally in the command text, so the early probe does not hide them; the lexer simply
-does not model brace expansion. ADR-0015 residual risks name parameter expansion and ANSI-C escapes as assembling forms
-and do not name this one.
-**Fix:** Mark a word that holds an unquoted `{...,...}` (a brace and a comma between them) as dynamic in `lex_command`,
-so that `analyze_git` ("git runs a subcommand given by a shell expansion") and the program check ask when the command
-mentions a merge:
 ```bash
-'{') [[ $text == *'{'*','*'}'* ]] && dynamic=1; word+=$c; in_word=1; i=$((i + 1)) ;;
+installed=$(git --version 2>/dev/null | awk 'NR == 1 && $1 == "git" && $2 == "version" { print $3 }')
 ```
-(or test `$word =~ \{[^}]*,[^}]*\}` in `lex_end_word`). Add `git {merge,feat}` and `{git,merge,feat}` to the tests, or
-list brace expansion in ADR-0015's residual risks.
 
-### WR-03: Refs that an earlier part of the same command moves are read before the command runs
+If `git --version` exits non-zero, `pipefail` makes the pipeline fail, and `set -e` terminates the script at that assignment. The `[[ ! $installed =~ ... ]]` branch that is meant to report "cannot read the version" is never reached.
 
-**File:** `scripts/governance/ask-governed-merge.sh:567-598` (`check_merge`), `1130-1133`
-**Issue:** `check_merge` resolves the ref and `HEAD` in the repository as it is when the hook runs. A command that moves a
-ref or `HEAD` first and then merges is judged against the old state. I ran, with a branch `tmp` that pointed at `main`:
-```
-git branch -f tmp feat && git merge tmp                       -> no output
-git checkout -B tmp feat && git checkout main && git merge tmp -> no output
-```
-Both merge a governed change. The same holds for `git fetch origin && git merge origin/main` once `origin/main` exists
-(it names the pre-fetch commit), and for `reset`, `update-ref` and `switch -C` before a merge. The executor flow that
-the ADR expects ("an executor that merges the base branch into its own worktree") is the `fetch` case. Pre-execution
-analysis cannot know the new state, and ADR-0015 does not say so.
-**Fix:** When one command holds a merge and also a git subcommand that moves refs or `HEAD` (`fetch`, `pull`, `branch`
-with `-f`/`-M`/`-C`, `update-ref`, `checkout`/`switch` with `-b`/`-B`/`-c`/`-C`, `reset`, `symbolic-ref`, `tag -f`), add a
-problem ("a ref the merge uses may change before it runs") so that the hook asks, or record the limit in ADR-0015's
-residual risks next to `pull` and `rebase`.
+The common real case is a fresh macOS machine without the Xcode Command Line Tools. `/usr/bin/git` is a shim there: `has git` succeeds, and the shim exits 1 with `xcode-select: note: no developer tools were found`. I replayed `check_git` with a fake `git` that prints that note and exits 1. The script exited with status 1 and printed nothing. There was no `fail  git:` line, no `fix:` line and no summary, so the machine-health tool is silent exactly where it is meant to help. `test-doctor.sh` only covers a fake `git` that exits 0 with an unparsable line (the "git version unknown" case), so it did not catch this.
 
-### WR-04: The agent worktree exemption does not hold for the `**/` governed entries
+**Fix:**
 
-**File:** `scripts/governance/ask-governed-edit.sh:228-238`, with `governance/governed-paths.txt` (new entries
-`**/.editorconfig`, `**/.gitattributes`, `**/REUSE.toml`, `**/.shellcheckrc`, `**/shellcheckrc`) and
-`.claude/settings.json:58-71`
-**Issue:** `check_candidate` matches the path against every root in `ROOTS`, including the main checkout, and skips a root
-only when that root is itself the agent root. A file inside an agent worktree is also below the main root, and relative
-to it the path is `.claude/worktrees/agent-x/<file>`, which a `**/<name>` entry matches. I created an agent worktree and
-ran the hook:
-```
-<main>/.claude/worktrees/agent-abc/.github/workflows/ci.yml  -> silent
-<main>/.claude/worktrees/agent-abc/.editorconfig             -> ask (entry `**/.editorconfig`)
-<main>/.claude/worktrees/agent-abc/sub/.gitattributes        -> ask (entry `**/.gitattributes`)
-<main>/.claude/worktrees/agent-abc/REUSE.toml                -> ask (entry `**/REUSE.toml`)
-```
-The `Edit(/**/.editorconfig)` style ask rules anchor at the session root and reach the worktree the same way, so the
-rules prompt even when the hook is silent. The entries date from the same day as the exemption (dead089 and 2a4927f against
-7b332d0), and `test-ask-governed-edit.sh` has a `**/.editorconfig` entry but no case that places it in an agent worktree.
-This contradicts ADR-0015 ("no per-edit ask inside an agent worktree"), the ADR's live check, ADR-0004's statement that
-"the edit rule does not match" there, and `.claude/CLAUDE.md`. The prompts are harmless for safety, but they are the
-per-edit prompts the author asked to remove.
-**Fix:** In the hook, skip a root in the first loop when the candidate lies below an agent root (reuse `is_agent_root`
-over `AGENT_ROOTS` for the candidate, not for the root). The ask rules cannot be narrowed without breaking the
-one-rule-per-entry check, so state that residual in ADR-0015 and ADR-0004 (the four `**/` names still prompt in an agent
-worktree), or move those names to root and explicit-directory entries. Add the missing hook case.
-
-### WR-05: `doctor` builds a copy-paste install command from the unvalidated pin
-
-**File:** `scripts/doctor.sh:358-361, 379-381, 429`
-**Issue:** `pinned` is the first line of `governance/gsd-version` with whitespace removed, and `install_fix` embeds it as
-`npx -y @opengsd/gsd-core@$pinned --claude --local`, which doctor prints as the fix for four failures. The value is never
-checked against a version pattern (the Renovate manager only matches `\d+.\d+.\d+`, but the file can hold anything). An
-empty or blank pin yields `npx -y @opengsd/gsd-core@ --claude --local`, an install with no version at all, which is the
-opposite of what the pin is for. Any other text is pasted into a shell command the maintainer is told to run. The file is
-governed, and the output is only a suggestion, so the damage needs a reviewer to miss the file; the unpinned command is
-the more likely failure.
-**Fix:** Validate right after reading the file and fail with its own message when the pin is not a bare version:
 ```bash
-if [[ ! $pinned =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  report fail gsd "governance/gsd-version must hold one version such as 1.2.3, not '$pinned'" \
-    "write the version of the installed GSD into governance/gsd-version"
-  return
-fi
+installed=$(git --version 2>/dev/null | awk 'NR == 1 && $1 == "git" && $2 == "version" { print $3 }') || installed=''
 ```
-Add a case with an empty file and one with `1.0.0; echo x` to `test-doctor.sh`.
 
-### WR-06: UP-0001 and UP-0004 still say the contribution is undecided
+Add a test in `scripts/test-doctor.sh` where the fake `git --version` prints to stderr and exits 1. It should assert `^fail  git: cannot read the version`, a non-empty summary and exit code 1.
 
-**File:** `docs/upstream/0001-decision-capture-extension-point.md:114`, `docs/upstream/0004-tag-resolver-value-classes.md:99`
-**Issue:** The records are the repository's public source of truth. Both end with "Open decision for the author ... This repository has not decided whether to
-contribute". Commit 6169e7d (after the records were edited in c0db516) records in `STATE.md` that the author decided on
-2026-11-24 to contribute both pull requests, #5326 first as an opt-in decorator definition, then #5328. The records now
-state the opposite of the project's decision, and UP-0001 adds that "the 5.5.0 milestone may move" until the repository
-decides.
-**Fix:** Replace both paragraphs with the decision: the author will contribute after the Phase 2 pull request, in the
-order STATE.md gives, and the record is updated when a pull request merges. Keep the `updated:` date current.
+### WR-02: The new KDoc on `CoursesJsonModule` states a wrong map-key behaviour and a remedy that would not round-trip
+
+**File:** `backend/serialization-jackson/src/main/kotlin/io/github/aanbrn/courses/serialization/CoursesJsonModule.kt:27-30`
+**Issue:** The added paragraph says a map keyed by an ID "would be written with the ID's `toString()` as the key". It is not. `CourseId` is a `@JvmInline value class` over `UUID`, and jackson-module-kotlin serialises value-class keys by unboxing them.
+
+I ran `coursesJsonMapper().writeValueAsString(mapOf(courseId to 1))` in a scratch copy of the repository:
+- It wrote `{"01a20d2a-468f-7579-adc8-b838667c40d5":1}`, the raw UUID, while `courseId.toString()` is `course_01m86jmhmfenwtvj5r71k7rg6n`.
+- Reading that JSON back into `Map<CourseId, Int>` succeeds, because the Kotlin module deserialises the key as a UUID.
+- Reading the TypeID form `{"course_01m8...":1}` fails with `Cannot deserialize Map key of type java.util.UUID ... Invalid UUID string`.
+
+So ID-keyed maps already round-trip today, but their key wire form differs from the TypeID wire form used for every value. The KDoc claims "no key deserializer to read it back", which is false. The plan it proposes (add only `addKeyDeserializer` that parses through `TypedIdCompanion.parse`) would make the module read TypeID keys while the Kotlin module keeps writing UUID keys. That breaks the round trip. Whoever follows this note later will be misled.
+
+**Fix:** Correct the paragraph to the observed behaviour. For example: "These types are registered as values only. As map keys, the Kotlin module writes a value-class ID as its unboxed UUID, not as the TypeID text, and reads it back as a UUID. The first contract with an ID-keyed map must decide the wire form: to use the TypeID form, add both `addKeySerializer` (`ToStringSerializer`) and `addKeyDeserializer`, with the latter parsing through `TypedIdCompanion.parse` and reporting rejection through `weirdKeyException`." Optionally pin the current behaviour with a test in `JsonRoundTripTest` so the decision is visible.
+
+### WR-03: `ImageReferenceCheck` accepts catalog entries that the Renovate manager never matches, though its KDoc says the check exists to catch them
+
+**File:** `build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/governance/ImageReferenceCheck.kt:27-30, 148, 158`
+**Issue:** The class KDoc says the double-quoted-value rule exists "because the Renovate custom manager reads only the double-quoted form and such an entry would never be updated". The check and the manager disagree on more than the value quoting. The manager regex (`renovate.json5:83`) is:
+
+`\bimage-[a-z0-9-]+ = "(?<depName>[^:"@\s]+):(?<currentValue>[^@"\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"`
+
+The check passes, and Renovate silently never updates, each of these entries:
+- A quoted key: `"image-x" = "name:1@sha256:..."`. `CATALOG_ENTRY` accepts it, but the regex needs `image-x = "` with no quote between key and ` =`.
+- A key with an uppercase letter, `_` or `.`, such as `image-Foo` or `image-a_b`. `CATALOG_ENTRY` allows `[A-Za-z0-9_.-]+`; the manager allows only `[a-z0-9-]+`.
+- No spaces around `=`, or more than one space (`image-x="..."`, `image-x  = "..."`). `CATALOG_ENTRY` uses `\s*=\s*`; the manager needs exactly one space on each side.
+- A registry with a port, `localhost:5000/app:1.0@sha256:...`. `PINNED_REFERENCE` explicitly allows the port prefix, but the manager's `depName` group excludes `:`.
+
+The indentation fix in this round widened the matched shapes further without narrowing this gap. This is a robustness defect in a guard whose purpose is "every image is updated by Renovate". It pre-exists, but the amended KDoc now presents the parity as complete.
+
+**Fix:** Either tighten the check to the manager's shape (bare lower-case key `image-[a-z0-9-]+`, single-space `=`, no registry port) and report anything else, or loosen the manager regex to the shapes the check accepts. Add a functional test for a quoted key and for a key written without spaces. Whichever way, update the KDoc to say what the two share.
+
+## Info
+
+### IN-01: A shell whose operand comes from an expansion now asks with a misleading reason
+
+**File:** `scripts/governance/ask-governed-merge.sh:898-910`
+**Issue:** The new dynamic-word check in `analyze_shell` runs for the first word after the shell name. For `bash $SCRIPT; git merge docs-only` I verified that the hook now asks with "cannot tell where the options of bash end: they come from a shell expansion". There `$SCRIPT` is a script path, not an option. It is a legitimate fail-closed outcome (the hook cannot read the script). But the ADR lists "script files that a shell runs" as outside the hook's view, and the message points the maintainer at options that are not there. The ordinary command `bash "$HOME/run.sh" && git merge x` now prompts.
+
+**Fix:** When the dynamic word is the first operand after the shell's options (nothing before it started with `-`), report "cannot read the script of bash: it comes from a shell expansion". Alternatively, treat a dynamic first operand as a script file and stay silent, as for a literal script file. If the prompt is kept on purpose, add a sentence to the ADR.
 
 ---
 
