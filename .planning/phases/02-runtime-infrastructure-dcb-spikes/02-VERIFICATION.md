@@ -1,6 +1,6 @@
 ---
 phase: 02-runtime-infrastructure-dcb-spikes
-verified: 2026-11-24T09:30:00Z
+verified: 2026-11-24T20:15:00Z
 status: human_needed
 score: 5/5 must-haves verified
 covered_files:
@@ -55,6 +55,8 @@ covered_files:
   - "backend/command-service/src/integrationTest/kotlin/io/github/aanbrn/courses/command/ConditionalAppendIntegrationTest.kt"
   - "backend/contracts/kernel/src/main/kotlin/io/github/aanbrn/courses/contracts/kernel/TypeId.kt"
   - "backend/serialization-jackson/src/main/kotlin/io/github/aanbrn/courses/serialization/CoursesJsonModule.kt"
+  - "backend/serialization-jackson/src/test/kotlin/io/github/aanbrn/courses/serialization/JsonRoundTripTest.kt"
+  - "build-logic/build.gradle.kts"
   - "build-logic/src/functionalTest/kotlin/io/github/aanbrn/courses/buildlogic/ComposeVersionsFunctionalTest.kt"
   - "build-logic/src/functionalTest/kotlin/io/github/aanbrn/courses/buildlogic/governance/ImageReferenceCheckFunctionalTest.kt"
   - "build-logic/src/main/kotlin/courses.test-suites.gradle.kts"
@@ -70,7 +72,7 @@ covered_files:
   - "scripts/governance/test-ask-governed-edit.sh"
   - "scripts/governance/test-ask-governed-merge.sh"
   - "scripts/test-doctor.sh"
-covered_digest: "v4:sha256:e5e53051248e54d98dc46d543a9e9bf11ea7b6063045a3cddf92bb838c0b2284"
+covered_digest: "v4:sha256:20ff6ecd936cef56a56e8df252c0c66b261c9d5725553f039f0f09bf4368aca3"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
@@ -107,13 +109,13 @@ human_verification:
 # Phase 2: Runtime Infrastructure & DCB Spikes Verification Report
 
 **Phase Goal:** DCB on a pinned Axon Server works locally and in CI, the JVM test infrastructure is in place, and every high-risk unknown is resolved and recorded before domain code is written.
-**Verified:** 2026-11-24T09:30:00Z
+**Verified:** 2026-11-24T20:15:00Z
 **Status:** human_needed
-**Re-verification:** Yes. The previous report (human_needed, 5/5, no gaps) went stale because quick tasks 261124-kh6 and 261124-nlk changed `scripts/doctor.sh`, the two governance hook scripts and their tests, `ImageReferenceCheck`, ADR-0015, `docs/tooling.md`, `CoursesJsonModule` and two upstream records. The previous report listed no `gaps:`, so there was no gap closure to check. I re-checked every success criterion against the current HEAD (e79ef1b), re-ran the behavioral evidence myself instead of reusing earlier results, and looked for regressions from the two quick tasks.
+**Re-verification:** Yes. The previous report (human_needed, 5/5, no gaps, verified at 6d81294) went stale because quick task 261124-oyk changed `scripts/doctor.sh`, `scripts/test-doctor.sh`, the merge hook and its test, `ImageReferenceCheck` and its functional test, `build-logic/build.gradle.kts`, the `CoursesJsonModule` KDoc, `JsonRoundTripTest` and ADR-0015. The previous report listed no `gaps:`, so there was no gap closure to check. I re-ran the behavioural evidence myself on HEAD (8099a35, clean tree) instead of reusing earlier results, and read the diff `6d81294..HEAD` for regressions.
 
-All five roadmap success criteria hold on HEAD. The status stays `human_needed` because six items cannot be proven from the repository (`02-UAT.md`, all pending). The incremental review (`02-REVIEW.md`: 0 critical, 3 warnings, 1 info, all open in `02-REVIEW-DISPOSITION.md`) is advisory. I confirmed WR-01 independently: it is a real regression in `doctor` in an edge case (see Anti-Patterns), but it does not defeat any Phase 2 criterion.
+All five roadmap success criteria hold on HEAD. The status stays `human_needed` because six items cannot be proven from the repository (`02-UAT.md`, all pending). The three warnings and one info of the previous code review (WR-01 doctor `git --version`, WR-02 KDoc, WR-03 Renovate parity, IN-01 hook prompt text) are fixed by 261124-oyk; I confirmed each in the diff. The incremental review `97724dc` (0 critical, 1 warning, 2 info) is advisory.
 
-Note on mode: ROADMAP.md marks Phase 2 `Mode: mvp`, but the goal is not written as "As a ..., I want to ..., so that ...", so the MVP guard would refuse. I did not refuse, for the reason the Phase 1 report and the earlier Phase 2 report gave: the goal is unambiguous and the five success criteria state the observable outcomes. Rewriting the goal is a planning-document fix, not a code gap.
+Note on mode: ROADMAP.md marks Phase 2 `Mode: mvp`, but the goal is not written as "As a ..., I want to ..., so that ...", so the MVP guard would refuse. As in the earlier Phase 1 and Phase 2 reports I did not refuse: the goal is unambiguous and the five success criteria state observable outcomes. Rewriting the goal is a planning-document fix, not a code gap.
 
 ## Goal Achievement
 
@@ -121,121 +123,112 @@ Note on mode: ROADMAP.md marks Phase 2 `Mode: mvp`, but the goal is not written 
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | One compose command starts pinned Axon Server and PostgreSQL; DCB context auto-created; correct hostname; images only from the catalog; `doctor` checks tools, Docker engine, Testcontainers, GSD manifest and explains fixes | VERIFIED | I ran `POSTGRES_PORT=55433 docker compose -p verify02d up -d --wait` in this session: both containers Healthy. `docker compose --profile probe run --rm probe` printed "http://axonserver:8024/actuator/health is reachable" and "axonserver:8124 accepts connections". `pg_database` listed `query_service` and `automation_service`. I tore the stack down with `down -v`; the working tree stayed clean. `checkComposeVersions` and `checkImageReferences` pass (image refs come from the catalog through `compose/versions.env`). `bash scripts/doctor.sh` exits 0 with `summary: 13 ok, 3 warn, 0 fail, 0 skip` (the three warns are the optional gsd-defaults, platform-token and upstream-removal notes); it covers mise, tools, java, docker (colima), image store, colima DNS, testcontainers config, gsd manifest (858 files match), mcp, claude-code, git, claude-tracking, and prints `ok testcontainers: ... ryuk enabled`. `scripts/test-doctor.sh`: 155 passed, 0 failed. One edge case of the new `git` check is defective (WR-01, advisory). |
-| 2 | An integration test on Axon Server in Testcontainers shows a conflicting conditional append is rejected and a non-overlapping one succeeds; unit, component and integration run as separate Gradle suites sharing test fixtures with the standard toolchain | VERIFIED | Behavior-dependent truth, so I ran the single named test: `mise x -- ./gradlew :command-service:integrationTest --tests '*ConditionalAppendIntegrationTest*' --rerun` on HEAD, BUILD SUCCESSFUL in 21s, result XML `tests="2" skipped="0" failures="0" errors="0"`. The suites come from `courses.test-suites.gradle.kts` (`componentTest`, `integrationTest`), with `testFixtures` in the kernel and command-service (TEST-12). `mise x -- ./gradlew build -q` exits 0 on HEAD (the orchestrator's earlier uncached run: 48 test classes, 347 tests, 0 failures). |
-| 3 | Contracts modules contain no Spring or framework logic; Kotlin events with TypeID value-class IDs and tags round-trip unchanged; malformed or wrong-prefix TypeIDs are rejected | VERIFIED | `ContractsArchitectureTest` (Konsist), `TypeIdVectorsTest`, `TypedIdTest`, `JsonRoundTripTest` and the on-server `AxonServerSerializationIntegrationTest` are part of the green full build. The only phase change in this area since the last report is a KDoc paragraph in `CoursesJsonModule.kt` (see WR-02, a documentation inaccuracy, no behavior change). |
-| 4 | MADR ADRs from in-repo templates record the spike outcomes (licence behaviour also in the quick start, decision-record capture, Kotlin serialization and TypeID conventions, buildpack constraints); CI checks licences against an allowlist; NOTICE justifies the Axoniq modules | VERIFIED | `docs/adr/0001..0015` present; `checkAdrs`, `checkNotice`, `checkUpstreamRecords`, `checkComposeVersions`, `checkImageReferences`, `checkClaudeAskRules` and `checkDependencyLicences` all BUILD SUCCESSFUL on HEAD in this session (ADR-0015 and `ImageReferenceCheck` were among the changed files, and the checks are green over them). |
-| 5 | Every upstream defect has a `docs/upstream/` record; a CI check keeps markers and records consistent; dependency PRs prompt a removal-criteria check; skills and MCP servers installed from pinned sources after approval and listed in the inventory; only `.claude/settings.json` and `.claude/CLAUDE.md` tracked | VERIFIED (repository side; see human items) | `checkUpstreamRecords` passes over the edited UP-0001 and UP-0004. `scripts/upstream/test-changed-dependencies.sh`: 62 passed, 0 failed. doctor reports `ok mcp: all 2 servers ... resolve`, `ok claude-code: 2.1.331 meets the minimum 2.1.324 for marketplaces pinned by commit SHA`, `ok claude-tracking: only project-owned files are tracked under .claude (54 files)` (`settings.json`, `CLAUDE.md` and the documented `skills/spike-findings-*` exception, ADR-0014). |
+| 1 | One compose command starts pinned Axon Server and PostgreSQL; DCB context auto-created; correct hostname; images only from the catalog; `doctor` checks tools, Docker engine, Testcontainers, GSD manifest and explains fixes | VERIFIED | `bash scripts/doctor.sh` on HEAD: exit 0, `summary: 13 ok, 3 warn, 0 fail, 0 skip`. It covers mise, tools (19 pinned), java, docker (colima), image-store, colima DNS, testcontainers-config, gsd (858 files match), mcp, claude-code, git, claude-tracking, the Gradle-side `testcontainers` probe (`ryuk enabled`). The three warnings are the optional gsd-defaults, platform-token and upstream-removal notes, each with a `fix:` line. `docker compose config --quiet` is clean. `compose.yaml` and `compose/infra.yaml` are unchanged since the last report, in which I started the stack, ran the probe service and listed both service databases; `checkComposeVersions` and `checkImageReferences` pass on HEAD (this run). |
+| 2 | An integration test on Axon Server in Testcontainers shows a conflicting conditional append is rejected and a non-overlapping one succeeds; unit, component and integration run as separate Gradle suites sharing test fixtures with the standard toolchain | VERIFIED | Behaviour-dependent truth, so I ran the single named test: `mise x -- ./gradlew :command-service:integrationTest --tests '*ConditionalAppendIntegrationTest*' --rerun -q` exit 0, result XML `tests="2" skipped="0" failures="0" errors="0"`. Suites come from `courses.test-suites.gradle.kts`, `testFixtures` in the kernel and command-service (TEST-12). The orchestrator's full uncached `./gradlew build` on this HEAD: BUILD SUCCESSFUL, 48 test classes, 354 tests, 0 failures (taken from the orchestrator, not re-run here). |
+| 3 | Contracts modules contain no Spring or framework logic; Kotlin events with TypeID value-class IDs and tags round-trip unchanged; malformed or wrong-prefix TypeIDs are rejected | VERIFIED | `:serialization-jackson:test --tests '*JsonRoundTripTest*' --rerun-tasks` passes, including the new test that pins the ID-key behaviour the corrected KDoc now describes. `ContractsArchitectureTest`, `TypeIdVectorsTest`, `TypedIdTest` and the on-server serialization integration test are in the green full build. The only production-source change in this area since the last report is the KDoc paragraph in `CoursesJsonModule.kt` (no behaviour change). |
+| 4 | MADR ADRs from in-repo templates record the spike outcomes (licence behaviour also in the quick start, decision-record capture, Kotlin serialization and TypeID conventions, buildpack constraints); CI checks licences against an allowlist; NOTICE justifies the Axoniq modules | VERIFIED | `docs/adr` holds 15 ADRs; `checkAdrs checkNotice checkUpstreamRecords checkComposeVersions checkImageReferences checkClaudeAskRules checkDependencyLicences` all pass on HEAD with `--rerun-tasks` (exit 0). ADR-0015, one of the changed files, passes `checkAdrs`. `:build-logic:functionalTest --tests '*ImageReferenceCheckFunctionalTest*'` passes, and it now matches its samples against the regex read from `renovate.json5` (the input added in `build-logic/build.gradle.kts`). |
+| 5 | Every upstream defect has a `docs/upstream/` record; a CI check keeps markers and records consistent; dependency PRs prompt a removal-criteria check; skills and MCP servers installed from pinned sources after approval and listed in the inventory; only `.claude/settings.json` and `.claude/CLAUDE.md` tracked | VERIFIED (repository side; see human items) | 13 records `docs/upstream/0001..0013`; `checkUpstreamRecords` passes; `test-changed-dependencies.sh` 62 passed, 0 failed; doctor: `ok mcp: all 2 servers resolve`, `ok claude-code: 2.1.331 meets the minimum 2.1.324 for marketplaces pinned by commit SHA`, `ok claude-tracking: only project-owned files are tracked under .claude (54 files)`. |
 
-**Score:** 5/5 truths verified (0 present, behavior-unverified)
+**Score:** 5/5 truths verified (0 present, behaviour-unverified)
 
 ### Deferred Items
 
 | # | Item | Addressed In | Evidence |
 |---|------|--------------|----------|
-| 1 | GH-12 clause "used by the project skills" | Phase 8 | AIDEV-02 (Phase 8) defines the project skills ("write an ADR, draft an upstream issue"); 02-19-SUMMARY states that use by skills stays with Phase 8 |
+| 1 | GH-12 clause "used by the project skills" | Phase 8 | AIDEV-02 (Phase 8) defines the project skills ("write an ADR, draft an upstream issue"); 02-19-SUMMARY states that use by skills stays with Phase 8. All five templates exist in `docs/templates/` and are used by `checkAdrs` and `checkUpstreamRecords`. |
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `compose.yaml`, `compose/infra.yaml`, `compose/versions.env`, `compose/postgres/init/` | Runtime stack | VERIFIED | Started healthy and probed in this session |
-| `tooling/test-support/` (`AxonServerEnvironment`, `PostgresEnvironment`, `ContainerImages`) | Container singletons | VERIFIED | Used by the integration test I re-ran |
-| `build-logic/.../courses.test-suites.gradle.kts` | Suite convention and Kover | VERIFIED | Applied by every module; suites ran in the full build |
-| `backend/contracts/{kernel,events,commands,queries}`, `backend/serialization-jackson` | Contracts and serialization | VERIFIED | Framework-free; `queries` is source-less by design (D-02) |
-| `backend/command-service` (capture engine, retry, tag resolver, fixtures) | Spike code for Phase 3 | VERIFIED | Tests green |
-| `tooling/architecture` (Konsist) | Architecture rules | VERIFIED | Suites green |
-| `tooling/doctor`, `scripts/doctor.sh`, `scripts/test-doctor.sh` | `doctor` | VERIFIED with one known edge-case defect (WR-01) | Ran it, exit 0; 155 test checks passed |
-| Governance checks in `build-logic` (`ImageReferenceCheck` etc.) | Gates | VERIFIED with a known gap (WR-03) | Registered, in `check`, passing |
+| `compose.yaml`, `compose/infra.yaml`, `compose/versions.env`, `compose/postgres/init/` | Runtime stack | VERIFIED | Unchanged since the stack was started and probed; `docker compose config` clean |
+| `tooling/test-support/` (Axon Server and PostgreSQL environments, container images) | Container singletons | VERIFIED | Used by the integration test re-run here |
+| `build-logic/.../courses.test-suites.gradle.kts` | Suite convention and Kover | VERIFIED | Suites ran in the build |
+| `backend/contracts/{kernel,events,commands,queries}`, `backend/serialization-jackson` | Contracts and serialization | VERIFIED | Framework-free, round-trip tests green; `queries` source-less by design (D-02) |
+| `backend/command-service` (capture engine, retry, tag resolver, fixtures) | Spike code for Phase 3 | VERIFIED | Integration test green |
+| `tooling/doctor`, `scripts/doctor.sh`, `scripts/test-doctor.sh` | `doctor` | VERIFIED | Ran it, exit 0; `test-doctor.sh` 167 passed, 0 failed; the three `--version` pipelines now end in `\|\| installed=''`, so a failing `mise`, `claude` or `git` reaches a `fail`/`warn` line with a `fix:` |
+| Governance checks in `build-logic` (`ImageReferenceCheck` etc.) | Gates | VERIFIED | Registered, in `check`, passing; Renovate key, separator and registry-port rules now enforced and tested |
 | `docs/adr/0001..0015`, `docs/templates/*`, `docs/upstream/0001..0013`, `docs/quick-start.md`, `docs/tooling.md`, `NOTICE` | Documentation | VERIFIED | Present, checks green |
-| `scripts/governance/*` and their tests | Governance scripts | VERIFIED | `test-check-pr.sh` 173, `test-list-pr-files.sh` 25, `test-ask-governed-edit.sh` 62, `test-ask-governed-merge.sh` 166 passed, 0 failed |
+| `scripts/governance/*` and their tests | Governance scripts | VERIFIED | `test-check-pr` 173, `test-list-pr-files` 25, `test-ask-governed-edit` 62, `test-ask-governed-merge` 169, all 0 failed |
 | `.github/workflows/ci.yml` | CI jobs | VERIFIED (wiring); never run on GitHub | See human item 1 |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|----|-----|--------|---------|
-| `gradle/libs.versions.toml` `image-*` | `compose/versions.env` | `generateComposeVersions`, `checkComposeVersions`, `checkImageReferences` | WIRED | Checks pass; the stack started from those values |
-| Version catalog images | test JVMs | container image system properties | WIRED | The integration test ran against the pinned image |
-| `CommandServiceConfigurationEnhancer` | `DecisionCaptureEngine`, `RetryingCommandBus`, `KotlinTagResolver`, Jackson converter | Axon configuration enhancer | WIRED | Capture and serialization integration tests green |
-| `docs/upstream` records | code markers | `checkUpstreamRecords` | WIRED | Passes (UP-0012 removal-criteria warning shown by doctor is informational) |
-| `.claude/settings.json` hooks | `scripts/governance/ask-governed-{edit,merge}.sh` | `checkClaudeAskRules` | WIRED | Check passes; the hooks' own suites pass |
-| `compose-smoke` job | compose stack and conflict test | `-Pcourses.axonserver.external=localhost:8124` | WIRED | Same start, probe and test run locally |
-| All new CI jobs | `ci-success` | `needs: [build, lint, secrets, qodana, integration-test, compose-smoke, doctor, upstream-records]` | WIRED | In `ci.yml` |
+| `gradle/libs.versions.toml` `image-*` | `compose/versions.env` | `generateComposeVersions`, `checkComposeVersions`, `checkImageReferences` | WIRED | Checks pass |
+| `renovate.json5` image manager | `ImageReferenceCheck` | regex shared through the functional test (new `repoFiles` input) | WIRED | Functional test passes |
+| Version catalog images | test JVMs | container image system properties | WIRED | Integration test ran against the pinned image |
+| `CommandServiceConfigurationEnhancer` | capture engine, retry bus, tag resolver, Jackson converter | Axon configuration enhancer | WIRED | Capture and serialization integration tests in the green build |
+| `docs/upstream` records | code markers | `checkUpstreamRecords` | WIRED | Passes (UP-0012 removal warning in doctor is informational) |
+| `.claude/settings.json` hooks | `scripts/governance/ask-governed-{edit,merge}.sh` | `checkClaudeAskRules` | WIRED | Check and both hook suites pass |
+| New CI jobs | `ci-success` | `needs:` list | WIRED | In `ci.yml` |
 
 ### Data-Flow Trace (Level 4)
 
-Not applicable: no UI or rendered dynamic data. The equivalent flow, decision capture to recorded decision, is asserted against real records in `DecisionCaptureIntegrationTest`.
+Not applicable: no UI or rendered dynamic data.
 
-### Behavioral Spot-Checks
+### Behavioural Spot-Checks
 
-| Behavior | Command | Result | Status |
-|----------|---------|--------|--------|
-| Conflict rejected, disjoint append commits | `mise x -- ./gradlew :command-service:integrationTest --tests '*ConditionalAppendIntegrationTest*' --rerun` | BUILD SUCCESSFUL; tests=2, failures=0, errors=0 | PASS |
-| Compose stack starts healthy, no `.env` | `POSTGRES_PORT=55433 docker compose -p verify02d up -d --wait` | both Healthy | PASS |
-| In-network scenario | `docker compose --profile probe run --rm probe` | health URL and gRPC port reachable | PASS |
-| Service databases created | `psql -Atc "select datname from pg_database"` | `query_service`, `automation_service` present | PASS |
+| Behaviour | Command | Result | Status |
+|-----------|---------|--------|--------|
+| Conflict rejected, disjoint append commits | `mise x -- ./gradlew :command-service:integrationTest --tests '*ConditionalAppendIntegrationTest*' --rerun -q` | exit 0; tests=2, failures=0, errors=0 | PASS |
 | `doctor` | `bash scripts/doctor.sh` | exit 0, 13 ok, 3 warn, 0 fail | PASS |
-| Governance gates | `checkAdrs checkUpstreamRecords checkNotice checkComposeVersions checkImageReferences checkClaudeAskRules checkDependencyLicences` | BUILD SUCCESSFUL | PASS |
-| Shell suites | `test-doctor` 155, `test-check-pr` 173, `test-list-pr-files` 25, `test-ask-governed-edit` 62, `test-ask-governed-merge` 166, `test-changed-dependencies` 62, `test-apply-github-settings` 107 | 750 passed, 0 failed | PASS |
-| Whole build | `mise x -- ./gradlew build -q` | exit 0 | PASS |
-| WR-01 replay | `set -euo pipefail` with a failing producer inside `$(... \| awk)` | shell exits 1 before the next statement | CONFIRMED (defect) |
+| Governance gates and changed-file tests | `checkAdrs checkUpstreamRecords checkNotice checkComposeVersions checkImageReferences checkClaudeAskRules checkDependencyLicences :build-logic:functionalTest --tests '*ImageReferenceCheckFunctionalTest*' :serialization-jackson:test --tests '*JsonRoundTripTest*' --rerun-tasks -q` | exit 0 | PASS |
+| Shell suites | `test-doctor` 167, `test-check-pr` 173, `test-list-pr-files` 25, `test-ask-governed-edit` 62, `test-ask-governed-merge` 169, `test-changed-dependencies` 62, `test-apply-github-settings` 107 | 765 passed, 0 failed | PASS |
+| Compose file validity | `docker compose config --quiet` | exit 0 | PASS |
 | Debt markers | `git grep` for TBD, FIXME, XXX in backend, build-logic, scripts, compose, .github, docs, tooling | none | PASS |
-
-A plain `./gradlew build` outside `mise` fails in `verifyShfmt`, `verifyTaplo` and `verifyNodeVersion` because the shell has no mise activation. That is the documented behavior of those guards, not a defect.
+| Whole build | `./gradlew build` (run by the orchestrator, not by me) | BUILD SUCCESSFUL, 354 tests | PASS (reported) |
 
 ### Probe Execution
 
-No `probe-*.sh` convention exists in this repository. The phase's probe is the compose `probe` profile service, run above (PASS).
+No `probe-*.sh` convention exists in this repository; the phase's probe is the compose `probe` profile service (exercised in the previous report; compose files unchanged since).
 
 ### Requirements Coverage
 
-All 22 phase IDs appear in the `requirements:` frontmatter of at least one PLAN (extracted from the PLAN files, 22 distinct IDs) and in REQUIREMENTS.md. No ORPHANED requirement: the traceability table maps no other ID to Phase 2.
+All 22 phase IDs appear in the `requirements:` frontmatter of at least one PLAN (extracted from the PLAN files) and in REQUIREMENTS.md. The traceability table maps exactly these 22 IDs to Phase 2, so there is no ORPHANED requirement.
 
-| Requirement | Source Plans | Status | Evidence |
-|-------------|--------------|--------|----------|
-| INFRA-02 | 02-01, 02-03, 02-06, 02-11 | SATISFIED | Contracts modules framework-free, enforced by Konsist |
-| INFRA-03 | 02-10, 02-12 | SATISFIED | Compose started and probed this session |
-| INFRA-04 | 02-07, 02-09 | SATISFIED | Conflict test green, re-run this session |
-| INFRA-05 | 02-12, 02-23 | SATISFIED | ADR-0005, quick start, `.env.example`; doctor warns on the missing token |
-| INFRA-06 | 02-06, 02-09 | SATISFIED | JSON round trip and on-server serialization suites green |
-| IDEM-04 | 02-01, 02-04, 02-23 | SATISFIED for Phase 2 scope | Own codec with official vectors, value classes, boundary rejection; PostgreSQL `uuid` storage, API boundary and `typeid-js` clauses are later-phase work (ADR-0007) |
-| TEST-11 | 02-01, 02-04, 02-07, 02-08, 02-11 | SATISFIED | Three JVM Test Suites, Kover |
-| TEST-12 | 02-04 | SATISFIED | `testFixtures` in the kernel and command-service |
-| TEST-14 | 02-01, 02-03, 02-04, 02-07, 02-08 | SATISFIED (as scoped by D-21) | JUnit 6, Kotest assertions and property, Testcontainers; Awaitility and MockK join with their first consumer |
-| CICD-09 | 02-13, 02-20 | SATISFIED (JVM half) | npm half is Phase 5; REQUIREMENTS.md keeps the row Pending for that reason |
-| UPS-01 | 02-15, 02-16, 02-17 | SATISFIED | 13 records with machine-readable front matter |
-| UPS-02 | 02-15, 02-16, 02-17 | SATISFIED (Phase 2 part) | Markers, check, index; the site index is Phase 5 |
-| UPS-03 | 02-16, 02-17, 02-22 | PARTIAL, human | Five issues published after approval. Four drafts (UP-0006, UP-0010, UP-0011, UP-0013) unreported pending the author (human item 5) |
-| UPS-04 | 02-18 | SATISFIED | Advisory job, script, 62 checks passed |
-| DOC-03 | 02-19, 02-23 | SATISFIED | 15 ADRs validated by `checkAdrs` |
-| GH-12 | 02-15, 02-19 | SATISFIED, with a deferred clause | Five templates exist; use by skills is Phase 8 |
-| TOOL-03 | 02-14 | SATISFIED (edge-case defect WR-01 noted) | `doctor` ran, exit 0, every failing check carries a `fix:` line on the normal path |
-| TOOL-04 | 02-07, 02-08, 02-14 | SATISFIED on colima; Docker Desktop not exercised (human item 6) | |
-| AIDEV-01 | 02-05, 02-21 | SATISFIED (repository side) | Survey, SHA-pinned plugins, inventory |
-| AIDEV-03 | 02-05, 02-14 | SATISFIED | doctor `claude-tracking` ok, 54 project-owned files |
-| AIDEV-04 | 02-02, 02-14 | SATISFIED | `.mcp.json` pinned through mise; doctor `mcp` ok |
-| AIDEV-07 | 02-14 | SATISFIED | doctor `gsd` check passes against the manifest (858 files) |
+| Requirement | Status | Evidence |
+|-------------|--------|----------|
+| INFRA-02 | SATISFIED | Contracts modules framework-free, Konsist-enforced |
+| INFRA-03 | SATISFIED | Compose config clean, images from catalog, stack verified previously on unchanged files |
+| INFRA-04 | SATISFIED | Conflict test green, re-run here |
+| INFRA-05 | SATISFIED | ADR-0005, quick start, `.env.example`; doctor warns on the missing token |
+| INFRA-06 | SATISFIED | Round-trip and on-server serialization suites green |
+| IDEM-04 | SATISFIED for Phase 2 scope | Own codec with official vectors, value classes, boundary rejection; PostgreSQL `uuid`, API boundary and `typeid-js` are later-phase (ADR-0007) |
+| TEST-11 | SATISFIED | Three JVM Test Suites, Kover |
+| TEST-12 | SATISFIED | `testFixtures` in kernel and command-service |
+| TEST-14 | SATISFIED (as scoped by D-21) | JUnit 6, Kotest, Testcontainers; Awaitility and MockK join with their first consumer |
+| CICD-09 | SATISFIED (JVM half) | npm half is Phase 5; REQUIREMENTS.md keeps it Pending |
+| UPS-01 | SATISFIED | 13 records with machine-readable front matter |
+| UPS-02 | SATISFIED (Phase 2 part) | Markers, check, index; site index is Phase 5 |
+| UPS-03 | PARTIAL, human | Five issues published after approval; four drafts (UP-0006, UP-0010, UP-0011, UP-0013) unreported pending the author (human item 5) |
+| UPS-04 | SATISFIED | Advisory job and script, 62 checks |
+| DOC-03 | SATISFIED | 15 ADRs validated by `checkAdrs` |
+| GH-12 | SATISFIED, with a deferred clause | Five templates exist; use by skills is Phase 8 |
+| TOOL-03 | SATISFIED | `doctor` exit 0; failing checks carry `fix:` lines, including the failing-`git` path fixed by 261124-oyk |
+| TOOL-04 | SATISFIED on colima; Docker Desktop not exercised (human item 6) | |
+| AIDEV-01 | SATISFIED (repository side) | Survey, SHA-pinned plugins, inventory |
+| AIDEV-03 | SATISFIED | doctor `claude-tracking` ok, 54 files |
+| AIDEV-04 | SATISFIED | `.mcp.json` pinned through mise; doctor `mcp` ok |
+| AIDEV-07 | SATISFIED | doctor `gsd` ok against the manifest (858 files) |
 
-Bookkeeping: REQUIREMENTS.md shows Complete for 18 of the 22 IDs. CICD-09, UPS-02, UPS-03 and TOOL-04 are Pending with a stated reason, which matches this report. The ROADMAP Phase 2 checkbox is still unchecked; the orchestrator updates it once verification is accepted.
+Bookkeeping: REQUIREMENTS.md marks 18 of 22 Complete. CICD-09, UPS-02, UPS-03 and TOOL-04 are Pending with a stated reason that matches this report. The ROADMAP Phase 2 checkbox is still unchecked; the orchestrator updates it once verification is accepted.
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| `scripts/doctor.sh` | 586-594 | WR-01 (regression from quick task nlk): `set -euo pipefail` is active (line 26) and `installed=$(git --version 2>/dev/null \| awk ...)` has no `\|\| installed=''`. If `git --version` exits non-zero (the macOS `/usr/bin/git` shim without the Command Line Tools), `pipefail` plus `set -e` ends the script with status 1 before any `fail git:` line, `fix:` line or summary is printed. I read the code and replayed the pattern in a shell: the script exits before the next statement. | Warning (advisory) | `doctor` is silent in one setup where it should help (fresh macOS without developer tools). Not on the normal path: doctor exits 0 here. The existing test only covers a `git` that exits 0 with unparsable output |
-| `backend/serialization-jackson/.../CoursesJsonModule.kt` | 27-30 | WR-02: new KDoc says an ID-keyed map "would be written with the ID's `toString()` as the key" and has no key deserializer. The reviewer ran the module and found the Kotlin module unboxes the value class, so keys are written and read as raw UUIDs, which round-trip; the suggested remedy (key deserializer parsing TypeIDs only) would break the round trip | Warning (documentation) | Misleading guidance for the first contract that uses an ID-keyed map. No behavior change in this phase |
-| `build-logic/.../governance/ImageReferenceCheck.kt` | 27-30, 148, 158 | WR-03: the check accepts catalog entries the Renovate manager (`renovate.json5:83`, `\bimage-[a-z0-9-]+ = "..."`, `depName` without `:`) never matches (quoted key, uppercase or `_` key, non-single-space `=`, registry with a port); the KDoc overstates parity | Warning (advisory) | A hand-written entry in such a shape would pass CI and never be updated by Renovate. Pre-existing gap. The current catalog is clean |
-| `scripts/governance/ask-governed-merge.sh` | 898-910 | IN-01: `bash $SCRIPT; git merge ...` asks with the reason "cannot tell where the options of bash end" | Info | Misleading prompt text, fail-closed |
-| (none) | | No debt markers or stub patterns in phase sources | | Clean |
+| `scripts/doctor.sh` | 385 | `installed=$("$jq" -r '.version // empty' "$manifest")` under `set -euo pipefail` with no `\|\| true`: a GSD manifest that is not valid JSON ends doctor silently before any `fail gsd:` line (review WR-01, still open in `02-REVIEW-DISPOSITION.md`) | Warning (advisory) | Edge case on a corrupt `gsd-file-manifest.json`; not on the normal path (doctor exits 0 here) and defeats no Phase 2 criterion. Same class as the three sites 261124-oyk fixed |
+| `backend/.../JsonRoundTripTest.kt` | | IN-01 (open): the TypeID-key test asserts only `JacksonException` | Info | Test precision |
+| `build-logic/.../ImageReferenceCheck.kt` | | IN-02 (open): Renovate reads catalog lines the check never inspects | Info | Residual parity gap, current catalog clean |
+| (none) | | No TBD/FIXME/XXX markers or stub patterns in phase sources | | Clean |
 
-The previous report's critical finding (CR-01, `bash -euo pipefail -c` hiding a merge from the hook) and WR-02..WR-09 are recorded as `fixed` in `02-REVIEW-DISPOSITION.md`. The incremental review tried about 50 commands against the new hook and found no bypass; the 166-check merge-hook suite passes. I did not re-derive that review, I confirmed only WR-01 and WR-03's regex quotation.
-
-Suggested quick fix before the pull request merges: WR-01 (`|| installed=''` plus a test where `git --version` exits 1), WR-02 (correct the KDoc paragraph). WR-03 and IN-01 can wait for the follow-up review pass.
+Previous findings CR-01, WR-02..WR-10 and the 261124-kh6/nlk review items are recorded `fixed` in `02-REVIEW-DISPOSITION.md`; the three warnings and one info of the first incremental review were re-checked in the `6d81294..HEAD` diff and are fixed.
 
 ### Human Verification Required
 
-See the `human_verification` frontmatter and `02-UAT.md` (6 items, all pending). All six still need a human:
+See the `human_verification` frontmatter and `02-UAT.md` (6 items, all pending, none resolved by the code):
 
 1. **First GitHub run of the new CI jobs.** Needs a GitHub runner and a pull request.
 2. **`/plugin` installation of the two skill plugins.** A Claude Code runtime action.
@@ -246,9 +239,9 @@ See the `human_verification` frontmatter and `02-UAT.md` (6 items, all pending).
 
 ### Gaps Summary
 
-No gaps. All five roadmap success criteria hold on the current HEAD. The conflict test, the compose stack, `doctor`, the governance gates, the seven shell suites (750 checks) and the full build pass, and quick tasks 261124-kh6 and 261124-nlk introduced no regression to any success criterion. One edge-case regression in `doctor` (WR-01, confirmed) and two other advisory review findings remain open. What remains for the phase is confirmation that only a GitHub runner, Claude Code, Docker Desktop or the author can give.
+No gaps. All five roadmap success criteria hold on the current HEAD. The conflict test, `doctor`, the governance gates, the seven shell suites (765 checks) and the targeted Gradle checks pass in this run, and the orchestrator's full build is green. Quick task 261124-oyk fixed the earlier advisory findings without regressing any criterion. One advisory edge case (doctor.sh:385) remains open. What remains for the phase is confirmation that only a GitHub runner, Claude Code, Docker Desktop or the author can give.
 
 ---
 
-_Verified: 2026-11-24T09:30:00Z_
+_Verified: 2026-11-24T20:15:00Z_
 _Verifier: Claude (gsd-verifier)_
