@@ -24,10 +24,13 @@ import tools.jackson.module.kotlin.KotlinModule
  * target type and keeps the original `IllegalArgumentException` as its cause. The module knows the kernel only:
  * polymorphic results carry their own `@JsonTypeInfo` on the contract type.
  *
- * These types are registered as values only, not as map keys: a map keyed by an ID would be written with the ID's
- * `toString()` as the key, but the module has no key deserializer to read it back. The first contract with an ID-keyed
- * map adds one with `addKeyDeserializer` for the ID type, parsing through the same [TypedIdCompanion.parse] and
- * reporting a rejected key through the context's `weirdKeyException`.
+ * These types are registered as values, not as map keys. As a map key, jackson-module-kotlin unboxes a value class, so
+ * an entity ID key is written as its raw UUID, not as its TypeID, and is read back from that UUID; a key in the TypeID
+ * form is rejected. `JsonRoundTripTest` pins this behaviour. The wire form of an ID key is an open decision, taken with
+ * an ADR in the phase whose contract first holds an ID-keyed map. The TypeID form needs both directions:
+ * `addKeySerializer` through `toString()` and `addKeyDeserializer` through [TypedIdCompanion.parse], reporting a
+ * rejected key through the context's `weirdKeyException`. A key deserializer alone would read TypeID keys while the
+ * Kotlin module still writes UUID keys.
  */
 class CoursesJsonModule : SimpleModule("courses") {
     init {

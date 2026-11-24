@@ -69,6 +69,7 @@ testing {
                             "../.taplo.toml",
                             "../.editorconfig",
                             "../.nvmrc",
+                            "../renovate.json5",
                         )
                         .withPropertyName("repoFiles")
                         .withPathSensitivity(PathSensitivity.RELATIVE)

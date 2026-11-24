@@ -898,12 +898,15 @@ analyze_shell() {
   while ((index < count)); do
     word=${WORDS[index]}
     if [[ ${WORD_DYNAMIC[index]} -eq 1 ]]; then
-      # A word from an expansion may be an option, an option value or the script, so the hook cannot tell the script.
+      # Before -c, the word from an expansion may be an option (`-c` itself turns the next word into a script), an
+      # option value or the script file, and the hook cannot tell which, so it asks. A literal script file is not
+      # analysed (ADR-0015), but a word the hook cannot read could also be an option that runs a script, so it stays
+      # fail-closed.
       if [[ $COMMAND_MENTIONS_MERGE -eq 1 ]]; then
         if [[ $has_script -eq 1 ]]; then
           PROBLEMS+=("cannot read a shell script that holds a shell expansion: $word")
         else
-          PROBLEMS+=("cannot tell where the options of ${WORDS[$1]} end: they come from a shell expansion")
+          PROBLEMS+=("the script or the options of ${WORDS[$1]} come from a shell expansion: $word")
         fi
       fi
       return 0

@@ -343,7 +343,15 @@ run_case "a script behind strict-mode options is analysed, not blanket-asked" no
   "bash -euo pipefail -c 'git merge docs-only'"
 run_case "an unknown long option of a shell asks" ask 'unknown option' \
   "bash --unknown-option -c 'git merge docs-only'"
-run_case "an option word from a shell expansion asks" ask 'shell expansion' "bash \$OPTS -c 'git merge docs-only'"
+DYNAMIC_SHELL_WORD='the script or the options of bash come from a shell expansion'
+run_case "an option word from a shell expansion asks and names the word" ask \
+  "$DYNAMIC_SHELL_WORD: [\$]OPTS" "bash \$OPTS -c 'git merge docs-only'"
+run_case "a script file from a shell variable asks and names the word" ask \
+  "$DYNAMIC_SHELL_WORD: [\$]SCRIPT" "bash \$SCRIPT; git merge docs-only"
+run_case "a script file from a quoted expansion asks, whatever follows it" ask \
+  "$DYNAMIC_SHELL_WORD" "bash \"\$HOME/run.sh\" && git merge docs-only"
+run_case "a literal script file next to a docs-only merge passes silently" none '' \
+  'bash run.sh && git merge docs-only'
 
 # --- wrappers that run another command ----------------------------------------------------------------------------
 

@@ -43,10 +43,14 @@ make_env() {
   printf 'min_version = "2026.11.11"\n\n[tools]\njq = "1.8.2"\nshfmt = "3.14.1"\n' >"$dir/repo/mise.toml"
   printf '%s\n' "$HEALTHY_TOOLS" >"$dir/mise-tools.json"
 
+  # `mise-version-fails` makes `mise --version` exit 1 without a word.
   cat >"$dir/bin/mise" <<'FAKE'
 #!/usr/bin/env bash
 case "$*" in
---version) echo "2026.11.12 macos-arm64 (2026-11-21)" ;;
+--version)
+  [[ -e $FAKE_DIR/mise-version-fails ]] && exit 1
+  echo "2026.11.12 macos-arm64 (2026-11-21)"
+  ;;
 "ls --current --json") cat "$FAKE_DIR/mise-tools.json" ;;
 "which jq") command -v jq ;;
 "which "*)
@@ -81,18 +85,24 @@ FAKE
   echo overlay2 >"$dir/docker-driver"
   echo '[["Backing Filesystem","extfs"]]' >"$dir/docker-driver-status"
 
-  # `claude --version` prints the version in `claude-version`.
+  # `claude --version` prints the version in `claude-version`; `claude-fails` makes every call exit 1.
   echo "2.1.330" >"$dir/claude-version"
   cat >"$dir/bin/claude" <<'FAKE'
 #!/usr/bin/env bash
+[[ -e $FAKE_DIR/claude-fails ]] && exit 1
 echo "$(cat "$FAKE_DIR/claude-version") (Claude Code)"
 FAKE
   # `git --version` prints the line in `git-version`; every other call goes to the real git (the tracking and
-  # upstream-removal checks run `git -C ...`), whose path is kept in `real-git`.
+  # upstream-removal checks run `git -C ...`), whose path is kept in `real-git`. `git-broken` makes every call
+  # fail like the macOS `/usr/bin/git` shim when the Xcode Command Line Tools are missing.
   echo "git version 2.47.1 (Apple Git-154)" >"$dir/git-version"
   echo "$REAL_GIT" >"$dir/real-git"
   cat >"$dir/bin/git" <<'FAKE'
 #!/usr/bin/env bash
+if [[ -e $FAKE_DIR/git-broken ]]; then
+  echo "xcode-select: note: No developer tools were found, requesting install." >&2
+  exit 1
+fi
 if [[ ${1:-} == --version ]]; then
   cat "$FAKE_DIR/git-version"
   exit 0
@@ -283,6 +293,13 @@ run_doctor "$ENV"
 assert_code "tool not installed" 1
 assert_out "tool not installed" "^fail  tools: not installed or not active: taplo@0\\.10\\.0"
 assert_out "tool not installed" "^      fix: mise install"
+
+fresh
+touch "$ENV/mise-version-fails"
+run_doctor "$ENV"
+assert_code "mise --version fails" 1
+assert_out "mise --version fails" "^fail  mise: cannot read the installed version from 'mise --version'"
+assert_out "mise --version fails" "^summary: "
 
 # --- the local-only checks of a healthy tree ----------------------------------------------------------
 
@@ -484,6 +501,13 @@ rm "$ENV/bin/claude"
 run_doctor "$ENV"
 assert_out "Claude Code missing" "^warn  claude-code: the claude CLI is not on PATH"
 
+fresh
+touch "$ENV/claude-fails"
+run_doctor "$ENV"
+assert_code "claude --version fails" 0
+assert_out "claude --version fails" "^warn  claude-code: cannot read the version from 'claude --version'"
+assert_out "claude --version fails" "^summary: "
+
 # --- the git version the governance hooks need (ADR-0015) ---------------------------------------------
 
 fresh
@@ -505,6 +529,18 @@ run_doctor "$ENV"
 assert_code "git version unreadable" 1
 assert_out "git version unreadable" "^fail  git: cannot read the version from 'git --version'"
 assert_out "git version unreadable" "^      fix: brew install git"
+
+# The macOS /usr/bin/git shim without the Command Line Tools fails every call. Doctor reports it and still runs
+# the later checks and prints the summary instead of dying silently under `set -e`.
+fresh
+touch "$ENV/git-broken"
+run_doctor "$ENV"
+assert_code "git shim fails" 1
+assert_out "git shim fails" "^fail  git: cannot read the version from 'git --version'"
+assert_out "git shim fails" "^      fix: brew install git"
+assert_out "git shim fails" "^      fix: xcode-select --install"
+assert_out "git shim fails" "^skip  claude-tracking: "
+assert_out "git shim fails" "^summary: "
 
 # --- tracked .claude files (AIDEV-03) --------------------------------------------------------------
 

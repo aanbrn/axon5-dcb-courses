@@ -214,7 +214,9 @@ only where the file lives.
   Explicit directory entries would drop coverage of nested configs that these tools read from any directory, so the
   prompts stay. That is safe, only extra.
 - A script file that a shell or `source` runs counts with the programs that run git themselves: the hook does not read
-  the file.
+  the file. A script file named by a shell expansion (`bash "$HOME/run.sh"`) is different: it asks when the command
+  mentions a merge, because the expanded word may also be an option such as `-c` that turns the next word into a
+  script.
 - A shell that reads standard input behind a program the hook does not know as a wrapper (for example
   `echo ... | stdbuf bash`) is not asked about.
 - A shell write by the main session into a governed path of its own tree is not prompted. That is unchanged since
