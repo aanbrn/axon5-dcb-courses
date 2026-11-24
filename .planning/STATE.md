@@ -124,6 +124,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
+- [Renovate, from 2026-11-27]: Merge open Renovate PRs by hand (automerge is off for them). #19 `npm:renovate` 44.252.8 → 44.257.5 was released 2026-11-20, so it meets the 7-day npm cooldown (CICD-04) only from 2026-11-27. #20 lock file maintenance waits until its `renovate/stability-days` check is green. Both touch `mise.lock` and the renovate sidecar lock, as does the Phase 2 branch: expect a rebase of whichever lands later.
 - [Phase 4 discuss]: Choose the documentation-site tool. Docusaurus 3.10.2 with Mermaid is only a research recommendation (`.planning/research/STACK.md`, SUMMARY.md); PROJECT.md Key Decisions fixes only "docs site as a Gradle subproject" (Pending), and no ADR exists. Needed by INFRA-08 (docs-site skeleton as a Gradle subproject, Phase 4/5), GH-04 (GitHub Pages publication, Phase 8, with Storybook per UI-08), UPS-02's index on the site (Phase 5) and DOC-02 (final docs phase). Record the choice in an ADR and PROJECT.md.
 
 ### Blockers/Concerns
