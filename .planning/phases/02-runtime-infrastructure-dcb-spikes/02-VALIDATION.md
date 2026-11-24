@@ -138,6 +138,8 @@ Filled by the planner per task; the requirement-level map is in `02-RESEARCH.md`
 
 **Re-validated 2026-11-24, third pass** (after quick task 261124-oyk changed `scripts/doctor.sh`, the merge hook, `ImageReferenceCheck`, the `CoursesJsonModule` KDoc and their tests): every changed behaviour arrived with tests in the same commit (`test-doctor.sh`, `test-ask-governed-merge.sh`, `ImageReferenceCheckFunctionalTest`, `JsonRoundTripTest`), so no gap; full `./gradlew build` green (48 test classes, 354 tests, 0 failures); all seven shell test suites green (765 checks); real `scripts/doctor.sh` run exits 0 with 17 checks and no `fail` line; `docker compose config --quiet` clean
 
+**Re-validated 2026-11-24, fourth pass** (after quick task 261124-s7w changed `scripts/doctor.sh`, `ImageReferenceCheck`, `JsonRoundTripTest` and their tests): every changed behaviour arrived with tests in the same task, so no gap; focused re-runs green (`test-doctor.sh` 246 checks, `JsonRoundTripTest` 16 tests, `ImageReferenceCheckFunctionalTest` 17 tests, 0 failures); full `./gradlew build` green (339 tests in the result reports, 0 failures, 0 errors); all seven shell test suites green (844 checks); real `scripts/doctor.sh` run exits 0 with 17 checks and no `fail` line; `docker compose config --quiet` clean
+
 ## Validation Audit 2026-11-23
 
 | Metric | Count |
