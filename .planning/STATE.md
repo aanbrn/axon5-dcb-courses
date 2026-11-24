@@ -4,10 +4,10 @@ current_phase: 02
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: executing
 stopped_at: Phase 2 context gathered
-last_updated: "2026-11-24T01:11:48.561Z"
+last_updated: "2026-11-24T02:20:21.740Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 02 execution started
-state_head: 0ee1e672c60d8effd46f35c0751e518ecf280bd0
+state_head: 614baa7b29541856260110c01e030b963790fac2
 progress:
   total_phases: 13
   completed_phases: 1
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-11-22)
 Phase: 02 (Runtime Infrastructure & DCB Spikes) — VERIFYING
 Plan: 23 of 23 executed (all SUMMARYs present)
 Status: Phase 02 verification human_needed (5/5 success criteria verified); 02-UAT.md has 6 pending human items; the phase PR is not open yet
-Last activity: 2026-11-23 - Completed quick task 261123-rzt: Phase 2 review findings resolved, Qodana 0 problems
+Last activity: 2026-11-24 - Completed quick task 261124-cm1: Record the AxonIQ maintainer responses in upstream records
 
 Progress: [█░░░░░░░░░] 8%
 
@@ -129,12 +129,13 @@ Recent decisions affecting current work:
 ### Blockers/Concerns
 
 - [Phase 2]: Unlicensed Axon Server behaviour (12-hour shutdown vs 14-day limit, restart effect) may affect the `docker compose up` quick start and CI
-- [Phase 2/3]: Decision-record capture relies on an `@Internal` Axon SPI; fallback is explicit per-slice stamping plus an architecture rule
+- [Phase 2/3]: Decision-record capture relies on an `@Internal` Axon SPI; fallback is explicit per-slice stamping plus an architecture rule. The AxonFramework maintainer (#5326, UP-0001) states `@Internal` means "may change", not experimental, and `EventStorageEngine` stays in Axon Framework 5
 - [Phase 8/10]: `EventCriteria` expressiveness for schedule overlap and the waiting-list head is unverified; fallback is passing candidates in the command and re-validating in the decision
 - [Phases 2, 13]: Third-party skills/MCP servers and upstream issue publication need explicit author approval at execution time (Phase 1 repository settings and the `main` ruleset are applied)
-- [Phase 3]: Review WR-01 deferred: conflict retry is fixed at 10 attempts with uncapped, unjittered back-off, so >~11 contenders on one open course end in raw `AppendEventsTransactionRejectedException`. Phase 3 SC2 must make the bound configurable, add capped full-jitter back-off and a 40-way concurrent subscription test
+- [Phase 3]: Review WR-01 deferred: conflict retry is fixed at 10 attempts with uncapped, unjittered back-off, so >~11 contenders on one open course end in raw `AppendEventsTransactionRejectedException`. Phase 3 SC2 must make the bound configurable, add capped full-jitter back-off and a 40-way concurrent subscription test. Upstream input (UP-0003, axoniq-framework#811): a dispatch-side `RetryPolicy` can match `AppendEventsTransactionRejectedException` in the `CommandExecutionException` message; the rejection is non-transient on purpose and only re-dispatching the command is retryable; weigh this against the handling-side decorator when the retry becomes configurable
 - [Phase 3]: Qodana `UnusedSymbol` (profile Default, threshold 0) will likely flag production `@CommandHandler`/`@EventSourcingHandler` methods reached only through annotation scanning; choose the approach (explicit registration, entry-point configuration, or other) before the first slice, without suppressions
 - [Phase 2 ship]: Open author decision (raised by the 261123-mub planner, see `261123-mub-SUMMARY.md`): govern the configs of the other required gates (`.editorconfig-checker.json`, `.editorconfig`, `REUSE.toml`, `.prettierrc.yaml`, `.taplo.toml`, `config/spotless/**`, `scripts/doctor.sh`, `.gitattributes`)? Decide before opening the Phase 2 PR, or defer to Phase 3
+- [Upstream]: Open author decision whether to contribute pull requests for AxonIQ/AxonFramework#5326 (UP-0001: a `debug` log statement in the `EventStorageEngine` or an opt-in decorator definition; the 5.5.0 milestone assumes a pull request from this repository) and #5328 (UP-0004: Kotlin-aware tag resolver; otherwise upstream targets 5.7.0)
 - [Tooling]: GSD hooks fail in Claude Code sessions started inside a git worktree (hooks resolve under `$CLAUDE_PROJECT_DIR`, the worktree has no `.claude/hooks/`); deferred follow-up from UAT test 3
 
 ### Quick Tasks Completed
@@ -156,6 +157,7 @@ Recent decisions affecting current work:
 | 261123-p1u | Fix all 45 Qodana findings on the Phase 2 branch without suppressions or baseline (Qodana confirmed 0 after 261123-rzt) | 2026-11-23 | 32bf6fa | [261123-p1u-fix-all-45-qodana-findings-on-the-phase-](./quick/261123-p1u-fix-all-45-qodana-findings-on-the-phase-/) |
 | 261123-rzt | Fix Phase 2 review findings WR-02/03/04/06, IN-01..04 and the 4 remaining Qodana findings (Qodana: 0 problems) | 2026-11-23 | d2fdd91 | [261123-rzt-fix-phase-2-review-findings-wr-02-wr-03-](./quick/261123-rzt-fix-phase-2-review-findings-wr-02-wr-03-/) |
 | 15 | Record the open decision on governing the other gate configs in STATE.md Blockers/Concerns | 2026-11-24 | 0ee1e67 | — |
+| 261124-cm1 | Record the AxonIQ maintainer responses (2026-11-23) in upstream records UP-0001, -0002, -0003, -0004 and -0007 | 2026-11-24 | 614baa7 | [261124-cm1-record-the-axoniq-maintainer-responses-2](./quick/261124-cm1-record-the-axoniq-maintainer-responses-2/) |
 
 ## Deferred Items
 
