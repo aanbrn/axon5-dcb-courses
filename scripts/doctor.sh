@@ -506,7 +506,7 @@ check_mcp() {
       | (.key | text // "(unnamed)") as $name
       | if $command == null then ["none", $name, "-"]
         elif $command == "mise" and ($args[0] == "x" or $args[0] == "exec") and $args[1] == "--"
-             and ($args[2] | text) != null then ["mise", $name, $args[2]]
+            and ($args[2] | text) != null then ["mise", $name, $args[2]]
         else ["path", $name, $command] end | @tsv
     else error("not MCP server configuration") end' "$file" 2>/dev/null); then
     report warn mcp ".mcp.json cannot be read as MCP server configuration (not JSON, or not an object of server objects)" \
