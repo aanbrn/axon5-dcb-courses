@@ -70,8 +70,7 @@ abstract class ImageReferenceCheck @Inject constructor(private val layout: Proje
                 layout.projectDirectory.asFile.toPath().relativize(catalog.get().asFile.toPath()).joinToString("/")
             addAll(catalogProblems(catalogPath, catalog.get().asFile.readLines()))
         }
-        val problems =
-            findings.sortedWith(compareBy<Finding>({ it.path }, { it.line }, { it.message })).map { it.message }
+        val problems = findings.sortedWith(compareBy({ it.path }, { it.line }, { it.message })).map { it.message }
         report.get().asFile.apply {
             parentFile.mkdirs()
             writeText(problems.joinToString(separator = "") { "$it\n" })
