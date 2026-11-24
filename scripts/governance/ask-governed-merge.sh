@@ -75,6 +75,8 @@ readonly MAX_DEPTH=3
 readonly MAX_LISTED=20
 readonly ASSIGNMENT_PATTERN='^[A-Za-z_][A-Za-z0-9_]*='
 readonly DIGITS_PATTERN='^[0-9]+$'
+# The first word of a simple command after which `((` starts an arithmetic command (or none: `((i++))`, `for ((...))`).
+readonly ARITHMETIC_COMMAND_PATTERN='^(if|while|until|elif|then|do|else|for|!|\{)?$'
 
 # What the analysis found: governed files a merge brings in, and merges it could not check.
 HITS=()
@@ -89,9 +91,15 @@ PROBLEMS=()
 #   TOKEN_REDIRECT  1 when the word is the target of a redirection or a here-string;
 #   TOKEN_DEPTH     how many command substitutions enclose the word;
 #   NESTED_SCRIPTS  the bodies of heredocs fed to a shell, to be analysed like the command;
-#   LEX_INCOMPLETE  1 when quoting or a substitution is left open;
+#   LEX_INCOMPLETE  1 when quoting, a substitution or an arithmetic is left open, an arithmetic closes with a single `)`,
+#                   or a heredoc does not get its delimiter line;
 #   LEX_HEREDOC_SUBSTITUTION  1 when the body of a heredoc with an unquoted delimiter, which the shell expands, holds a
 #                   command substitution and mentions a merge.
+# An unquoted `<<` is a heredoc except in arithmetic: inside `$((...))`, and inside `((...))` at the start of a command
+# (also after `if`, `while`, `for` and the like), `<` and `>` are operators, so the text there registers no redirect or
+# heredoc and is dropped when the arithmetic closes; only a command substitution inside it is read as a command. A
+# heredoc whose delimiter line never comes makes the lexing incomplete, as does an arithmetic that closes with a single
+# `)` (bash reads it as a subshell in a subshell) or that never closes.
 # The text of a command substitution is a simple command of its own; the word that holds it continues afterwards as a
 # dynamic word. The words of one simple command are contiguous among the words of the same TOKEN_DEPTH. The helpers
 # lex_* share the state of lex_command through bash's dynamic scoping. Runs of ordinary characters are taken in one
@@ -145,6 +153,42 @@ lex_close_substitution() {
   unset 'saved_words[saved]' 'saved_segments[saved]' 'saved_commands[saved]'
   in_word=1
   dynamic=1
+}
+
+# lex_open_dollar_paren: starts what `$(` at i opens: an arithmetic expansion for `$((`, whose text `<` and `>` are
+# operators in, or a command substitution. Moves i past the opening.
+lex_open_dollar_paren() {
+  if [[ ${text:i+2:1} == '(' ]]; then
+    lex_open_substitution A
+    i=$((i + 3))
+  else
+    lex_open_substitution S
+    i=$((i + 2))
+  fi
+}
+
+# lex_close_arithmetic: ends an arithmetic expansion or command at the closing parenthesis at i. Bash closes it with
+# `))`; a single `)` at its outer level means the text was a subshell in a subshell, which the lexer did not read as
+# commands, so the lexing is incomplete. The text of the arithmetic is dropped; a command substitution inside it was
+# opened as one and is analysed. An arithmetic expansion continues the word that holds it as a dynamic part, and an
+# arithmetic command leaves no word.
+lex_close_arithmetic() {
+  local kind=${contexts[${#contexts[@]} - 1]}
+  if [[ ${text:i+1:1} == ')' ]]; then
+    i=$((i + 2))
+  else
+    LEX_INCOMPLETE=1
+    i=$((i + 1))
+  fi
+  word=''
+  in_word=0
+  dynamic=0
+  lex_close_substitution
+  if [[ $kind == C ]]; then
+    word=''
+    in_word=0
+    dynamic=0
+  fi
 }
 
 # lex_quoted <ansi>: reads a single-quoted string that starts at i; with ansi=1 a backslash escapes the next character,
@@ -259,9 +303,10 @@ lex_redirect() {
 # lex_heredoc_bodies: after a newline, skips the bodies of the heredocs registered on the line before and keeps those
 # fed to a shell in NESTED_SCRIPTS.
 lex_heredoc_bodies() {
-  local index line body rest candidate
+  local index line body rest candidate found
   for ((index = 0; index < ${#heredoc_delimiters[@]}; index++)); do
     body=''
+    found=0
     while ((i < length)); do
       rest=${text:i}
       line=${rest%%$'\n'*}
@@ -272,9 +317,17 @@ lex_heredoc_bodies() {
           candidate=${candidate#?}
         done
       fi
-      [[ $candidate != "${heredoc_delimiters[index]}" ]] || break
+      if [[ $candidate == "${heredoc_delimiters[index]}" ]]; then
+        found=1
+        break
+      fi
       body+=$line$'\n'
     done
+    # The text ended before the delimiter line. Bash would take the rest as the body, but a `<<` that never gets its
+    # delimiter is more likely one the lexer misread, and then the rest holds commands it did not see.
+    if [[ $found -eq 0 ]]; then
+      LEX_INCOMPLETE=1
+    fi
     if [[ ${heredoc_shells[index]} -eq 1 ]]; then
       NESTED_SCRIPTS+=("$body")
     elif [[ ${heredoc_quoted[index]} -eq 0 && ($body == *"\$("* || $body == *"\`"*) ]] && mentions_merge "$body"; then
@@ -321,8 +374,7 @@ lex_command() {
         ;;
       '$')
         if [[ ${text:i+1:1} == '(' ]]; then
-          lex_open_substitution S
-          i=$((i + 2))
+          lex_open_dollar_paren
         else
           word+='$'
           dynamic=1
@@ -337,6 +389,42 @@ lex_command() {
         rest=${text:i}
         chunk=${rest%%[\"\$\`\\]*}
         word+=$chunk
+        i=$((i + ${#chunk}))
+        ;;
+      esac
+      continue
+    fi
+    if [[ $context == A || $context == C ]]; then
+      # Arithmetic: `<` and `>` are operators, so nothing here is a redirection or a heredoc. Only a command
+      # substitution, which runs, is opened; the rest is dropped when the arithmetic closes.
+      case $c in
+      '(')
+        depths[top]=$((depths[top] + 1))
+        i=$((i + 1))
+        ;;
+      ')')
+        if [[ ${depths[top]} -gt 0 ]]; then
+          depths[top]=$((depths[top] - 1))
+          i=$((i + 1))
+        else
+          lex_close_arithmetic
+        fi
+        ;;
+      '$')
+        if [[ ${text:i+1:1} == '(' ]]; then
+          lex_open_dollar_paren
+        else
+          i=$((i + 1))
+        fi
+        ;;
+      '`')
+        lex_open_substitution B
+        i=$((i + 1))
+        ;;
+      "\\") i=$((i + 2)) ;;
+      *)
+        rest=${text:i}
+        chunk=${rest%%[\(\)\$\`\\]*}
         i=$((i + ${#chunk}))
         ;;
       esac
@@ -367,11 +455,16 @@ lex_command() {
       fi
       ;;
     '(')
-      if [[ $context == S ]]; then
-        depths[top]=$((depths[top] + 1))
+      if [[ $in_word -eq 0 && ${text:i+1:1} == '(' && $segment_command =~ $ARITHMETIC_COMMAND_PATTERN ]]; then
+        lex_open_substitution C
+        i=$((i + 2))
+      else
+        if [[ $context == S ]]; then
+          depths[top]=$((depths[top] + 1))
+        fi
+        lex_end_segment
+        i=$((i + 1))
       fi
-      lex_end_segment
-      i=$((i + 1))
       ;;
     ')')
       if [[ $context == S && ${depths[top]} -eq 0 ]]; then
@@ -411,8 +504,7 @@ lex_command() {
     '$')
       next=${text:i+1:1}
       if [[ $next == '(' ]]; then
-        lex_open_substitution S
-        i=$((i + 2))
+        lex_open_dollar_paren
       elif [[ $next == "'" ]]; then
         i=$((i + 1))
         dynamic=1
@@ -446,7 +538,8 @@ lex_command() {
     esac
   done
   lex_end_segment
-  if [[ ${#contexts[@]} -ne 1 ]]; then
+  # A heredoc registered on the last line has no body and no delimiter line.
+  if [[ ${#contexts[@]} -ne 1 || ${#heredoc_delimiters[@]} -gt 0 ]]; then
     LEX_INCOMPLETE=1
   fi
 }

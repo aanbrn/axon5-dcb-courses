@@ -160,6 +160,11 @@ run_case "a comment that names a merge is not a merge" none '' $'ls # git merge 
 run_case "grep for cleanup-wave is not a merge" none '' 'grep -n cleanup-wave worktree-safety.cjs'
 run_case "cleanup-wave without --manifest merges nothing" none '' 'gsd-tools query worktree.cleanup-wave'
 run_case "a merge word that quotes split in a commit message is not a merge" none '' "git commit -m \"mer''ge\""
+run_case "a left shift and a right shift in arithmetic expansion are not heredocs" none '' \
+  $'echo $((1<<2)) $((8>>1))'
+run_case "a heredoc without a merge is not an open heredoc" none '' $'cat <<NEVER\ntext'
+run_case "an arithmetic expansion next to merge-base is not a merge" none '' \
+  $'x=$((1<<2))\ngit merge-base HEAD governed'
 
 # --- git merge ------------------------------------------------------------------------------------------------------
 
@@ -229,6 +234,25 @@ run_case "double quotes inside the merge word ask" ask "$ONLY_MISE" 'git "mer"ge
 run_case "a line continuation inside the merge word asks" ask "$ONLY_MISE" $'git mer\\\nge governed'
 run_case "an ANSI-C quote inside the merge word asks" ask 'subcommand given by a shell expansion' \
   "git m\$'e'rge governed"
+
+# --- arithmetic is not a heredoc ----------------------------------------------------------------------------------
+
+run_case "a left shift in an arithmetic expansion does not swallow the next line" ask "$ONLY_MISE" \
+  $'x=$((1<<2))\ngit merge governed'
+run_case "a left shift in an arithmetic command does not swallow the next line" ask "$ONLY_MISE" \
+  $'((x = 1<<2))\ngit merge governed'
+run_case "a later line equal to the would-be delimiter does not hide the merge" ask "$ONLY_MISE" \
+  $'x=$((1<<true))\ngit merge governed\ntrue'
+run_case "a left shift in a C-style for loop does not swallow the next line" ask "$ONLY_MISE" \
+  $'for ((i = 1<<2; i < 9; i++)); do :; done\ngit merge governed'
+run_case "a left shift in arithmetic inside double quotes does not swallow the next line" ask "$ONLY_MISE" \
+  $'echo "$((1<<2))"\ngit merge governed'
+run_case "a heredoc whose delimiter never comes leaves the lexing incomplete" ask \
+  'leaves quoting, a substitution or a heredoc open' $'cat <<NEVER\ngit merge governed'
+run_case "a command substitution inside arithmetic is still analysed" ask "$ONLY_MISE" \
+  $'echo $(( $(git merge governed) ))'
+run_case "a subshell that looks like an arithmetic expansion leaves the lexing incomplete" ask \
+  'leaves quoting, a substitution or a heredoc open' $'echo $((git merge governed); true)'
 
 # --- GSD cleanup-wave ---------------------------------------------------------------------------------------------
 
