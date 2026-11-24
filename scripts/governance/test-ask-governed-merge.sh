@@ -200,7 +200,9 @@ run_case "an assignment in front of git asks" ask "$ONLY_MISE" 'GIT_MERGE_AUTOED
 run_case "command and timeout in front of git ask" ask "$ONLY_MISE" 'command timeout 30 git merge governed'
 run_case "git under if asks" ask "$ONLY_MISE" 'if git merge governed; then echo ok; fi'
 run_case "a negated git merge asks" ask "$ONLY_MISE" '! git merge governed'
-run_case "git after && in a list asks" ask "$ONLY_MISE" 'git fetch -q . && git merge governed'
+run_case "git after && in a list asks" ask "$ONLY_MISE" 'git status && git merge governed'
+run_case "git fetch before a merge asks about the files and about the moved ref" ask \
+  'mise\.toml \(from governed\).*git fetch .*may move a ref' 'git fetch -q . && git merge governed'
 run_case "a command substitution inside double quotes asks" ask "$ONLY_MISE" "echo \"\$(git merge governed)\""
 run_case "bash -c asks" ask "$ONLY_MISE" "bash -lc 'git merge governed'"
 run_case "eval asks" ask "$ONLY_MISE" 'eval "git merge governed"'
@@ -234,6 +236,39 @@ run_case "double quotes inside the merge word ask" ask "$ONLY_MISE" 'git "mer"ge
 run_case "a line continuation inside the merge word asks" ask "$ONLY_MISE" $'git mer\\\nge governed'
 run_case "an ANSI-C quote inside the merge word asks" ask 'subcommand given by a shell expansion' \
   "git m\$'e'rge governed"
+
+# --- a ref that an earlier part of the same command moves -----------------------------------------------------------
+# The hook checks the refs as they are now, so a command that merges and also moves a ref or HEAD asks, in either order.
+
+run_case "git branch -f before a merge asks" ask 'may move a ref' \
+  'git branch -f merged-already governed && git merge merged-already'
+run_case "git checkout -B and checkout before a merge ask" ask 'may move a ref' \
+  'git checkout -B merged-already governed && git checkout main && git merge merged-already'
+run_case "git switch before a merge asks" ask 'may move a ref' 'git switch main && git merge docs-only'
+run_case "git pull before a merge asks" ask 'may move a ref' 'git pull && git merge docs-only'
+run_case "git fetch behind mise x -- before a merge asks" ask 'may move a ref' \
+  'mise x -- git fetch && git merge docs-only'
+run_case "git branch -d after a merge passes silently" none '' 'git merge docs-only && git branch -d docs-only'
+run_case "git stash around a merge passes silently" none '' 'git stash && git merge docs-only && git stash pop'
+run_case "git commit before a merge passes silently" none '' 'git commit -m wip && git merge docs-only'
+run_case "a ref mover without a merge passes silently" none '' 'git fetch -q . && git merge-base HEAD governed'
+
+# --- the reason lists every problem and file once -------------------------------------------------------------------
+
+REPEATED=''
+for n in $(seq 1 30); do
+  REPEATED+="\$R merge x; "
+done
+ONE_PROBLEM='^Governance hook: the hook could not check every merge in this command '
+ONE_PROBLEM+="\\(the command runs a program named by a shell expansion: \\\$R\\), so it asks\\. "
+ONE_PROBLEM+='Confirm that the command merges no governed path\.$'
+run_case "thirty identical problems are one problem" ask "$ONE_PROBLEM" "$REPEATED"
+DISTINCT=''
+for n in $(seq 1 12); do
+  DISTINCT+="\$R$n merge x; "
+done
+run_case "problems are capped at ten with a count of the rest" ask "\\\$R10; and 2 more\\), so it asks\\." "$DISTINCT"
+run_case "a governed file merged twice is listed once" ask "$ONLY_MISE" 'git merge governed; git merge governed'
 
 # --- arithmetic is not a heredoc ----------------------------------------------------------------------------------
 

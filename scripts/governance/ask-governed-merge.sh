@@ -85,6 +85,8 @@ install_fail_closed
 readonly MAX_DEPTH=3
 # How many governed files a reason lists before it says how many more there are.
 readonly MAX_LISTED=20
+# How many distinct problems a reason lists before it says how many more there are.
+readonly MAX_PROBLEMS=10
 readonly ASSIGNMENT_PATTERN='^[A-Za-z_][A-Za-z0-9_]*='
 readonly DIGITS_PATTERN='^[0-9]+$'
 # The first word of a simple command after which `((` starts an arithmetic command (or none: `((i++))`, `for ((...))`).
@@ -102,6 +104,8 @@ PROBLEMS=()
 # order: a variable exported in one segment, or in a nested `bash -c`, reaches merges anywhere after it.
 MERGE_SEEN=0
 GIT_REPOSITORY_ENV=0
+# The first git subcommand of the command that can move a ref or HEAD (see ref_mover_name), or empty.
+REF_MOVER=''
 # 1 when the whole command mentions a merge (see mentions_merge). A script, eval text, program or git subcommand that
 # comes from a shell expansion, or from standard input, is text from elsewhere in the command, so such a source matters
 # when the command mentions a merge anywhere.
@@ -689,6 +693,54 @@ analyze_cleanup_wave() {
   done <<<"$branches"
 }
 
+# ref_mover_name <index of a git subcommand>: sets REF_MOVER to the subcommand (with its qualifier) when it can move a ref
+# or HEAD to a commit that is not a descendant of the current one, so that a merge in the same command may see another
+# state than the hook checks: fetch, pull, checkout, switch, reset, rebase, update-ref, symbolic-ref, replace, bisect,
+# filter-branch and remote always; branch and tag with a force option (branch also -M and -C, which overwrite); `stash
+# branch`; `worktree add`. Left out on purpose: commit, revert, cherry-pick, am and merge, which only add commits on top
+# of HEAD and keep every merge base; stash push and pop; and `branch -d` and `tag -d`, after which a merge of that name
+# either fails or resolves the same ref the hook resolves. It reads WORDS of analyze_git.
+ref_mover_name() {
+  local index=$1 subcommand=${WORDS[$1]} word letters=f position
+  case $subcommand in
+  fetch | pull | checkout | switch | reset | rebase | update-ref | symbolic-ref | replace | bisect | filter-branch | \
+    remote)
+    REF_MOVER=$subcommand
+    ;;
+  stash)
+    if [[ ${WORDS[index + 1]:-} == branch ]]; then
+      REF_MOVER='stash branch'
+    fi
+    ;;
+  worktree)
+    if [[ ${WORDS[index + 1]:-} == add ]]; then
+      REF_MOVER='worktree add'
+    fi
+    ;;
+  branch | tag)
+    if [[ $subcommand == branch ]]; then
+      letters=fMC
+    fi
+    for ((position = index + 1; position < ${#WORDS[@]}; position++)); do
+      word=${WORDS[position]}
+      case $word in
+      --force)
+        REF_MOVER="$subcommand --force"
+        return 0
+        ;;
+      --*) ;;
+      -?*)
+        if [[ $word == -*[$letters]* ]]; then
+          REF_MOVER="$subcommand $word"
+          return 0
+        fi
+        ;;
+      esac
+    done
+    ;;
+  esac
+}
+
 # analyze_git <index of git>: finds `merge` after git's global options and checks every ref it merges.
 analyze_git() {
   local index=$(($1 + 1)) count=${#WORDS[@]} directory=$cwd repository_known=1 word cluster
@@ -724,6 +776,9 @@ analyze_git() {
       PROBLEMS+=("git runs a subcommand given by a shell expansion: ${WORDS[index]}")
     fi
     return 0
+  fi
+  if [[ -z $REF_MOVER ]]; then
+    ref_mover_name "$index"
   fi
   [[ ${WORDS[index]} == merge ]] || return 0
   index=$((index + 1))
@@ -1264,6 +1319,22 @@ analyze_command() {
 
 # --- main -------------------------------------------------------------------------------------------------------------
 
+# unique_messages <message>...: sets UNIQUE_MESSAGES to the messages without repeats, in first-seen order. One printf, tr
+# and awk do it in linear time, which bash pattern substitution would not on a long message (see the early probe); a
+# newline inside a message becomes a space so that a message stays one line. If the pipeline fails, the messages stay as
+# they are: more text, never less. It needs at least one message.
+unique_messages() {
+  local lines line
+  UNIQUE_MESSAGES=()
+  if ! lines=$(printf '%s\0' "$@" | tr '\n\0' ' \n' | awk '!seen[$0]++'); then
+    UNIQUE_MESSAGES=("$@")
+    return 0
+  fi
+  while IFS= read -r line; do
+    UNIQUE_MESSAGES+=("$line")
+  done <<<"$lines"
+}
+
 command -v jq >/dev/null 2>&1 || ask_author "jq is not on PATH, so the hook cannot read the command."
 read_hook_input "$INPUT"
 input_string COMMAND '.tool_input.command' || ask_author "the command in the tool input is not a usable string."
@@ -1279,12 +1350,19 @@ if [[ $MERGE_SEEN -eq 1 && $GIT_REPOSITORY_ENV -eq 1 ]]; then
   PROBLEMS+=("the command sets GIT_DIR, GIT_WORK_TREE, GIT_COMMON_DIR or GIT_CEILING_DIRECTORIES, so the hook cannot \
 tell which repository git merge runs in")
 fi
+# The order of the analysis follows the depth of substitutions, not the text, so the rule ignores the order on purpose.
+if [[ $MERGE_SEEN -eq 1 && -n $REF_MOVER ]]; then
+  PROBLEMS+=("git $REF_MOVER in the same command may move a ref or HEAD that the merge uses before it runs, and the \
+hook checks the current state")
+fi
 
 if [[ ${#HITS[@]} -eq 0 && ${#PROBLEMS[@]} -eq 0 ]]; then
   no_decision
 fi
 REASON=''
 if [[ ${#HITS[@]} -gt 0 ]]; then
+  unique_messages "${HITS[@]}"
+  HITS=("${UNIQUE_MESSAGES[@]}")
   LISTED=''
   for ((index = 0; index < ${#HITS[@]} && index < MAX_LISTED; index++)); do
     LISTED+="${LISTED:+, }${HITS[index]}"
@@ -1296,10 +1374,15 @@ if [[ ${#HITS[@]} -gt 0 ]]; then
 confirmation (AIDEV-08)."
 fi
 if [[ ${#PROBLEMS[@]} -gt 0 ]]; then
+  unique_messages "${PROBLEMS[@]}"
+  PROBLEMS=("${UNIQUE_MESSAGES[@]}")
   PROBLEM_TEXT=''
-  for problem in "${PROBLEMS[@]}"; do
-    PROBLEM_TEXT+="${PROBLEM_TEXT:+; }$problem"
+  for ((index = 0; index < ${#PROBLEMS[@]} && index < MAX_PROBLEMS; index++)); do
+    PROBLEM_TEXT+="${PROBLEM_TEXT:+; }${PROBLEMS[index]}"
   done
+  if [[ ${#PROBLEMS[@]} -gt $MAX_PROBLEMS ]]; then
+    PROBLEM_TEXT+="; and $((${#PROBLEMS[@]} - MAX_PROBLEMS)) more"
+  fi
   REASON+="${REASON:+ }the hook could not check every merge in this command ($PROBLEM_TEXT), so it asks. Confirm \
 that the command merges no governed path."
 fi
