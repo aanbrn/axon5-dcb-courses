@@ -99,9 +99,12 @@ class ComposeVersionsFunctionalTest {
         /** The `[versions]` table header line. */
         val VERSIONS_SECTION = Regex("""(?m)^\[versions][ \t]*(#.*)?$""")
 
+        /** The number of hexadecimal digits in a SHA-256 image digest. */
+        const val SHA256_HEX_LENGTH = 64
+
         /** A well-formed tag-and-digest reference under a registry that cannot exist, with a distinct digest. */
         fun fixtureReference(name: String, digitFill: Char): String =
-            "registry.invalid/fixture/$name:1.0.0@sha256:" + digitFill.toString().repeat(64)
+            "registry.invalid/fixture/$name:1.0.0@sha256:" + digitFill.toString().repeat(SHA256_HEX_LENGTH)
 
         val FIXTURE_IMAGES =
             mapOf(
