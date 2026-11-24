@@ -15,7 +15,9 @@
 # call; a command without a merge gets no output.
 #
 # The governed list is ${CLAUDE_PROJECT_DIR}/governance/governed-paths.txt, as for the edit hook. The hook runs on every
-# Bash command, so a command that does not mention `merge` or `cleanup-wave` leaves before anything else is loaded.
+# Bash command, so a command that does not mention `merge` or `cleanup-wave` leaves before anything else is loaded. It
+# looks for the words as written and again with quotes, backslashes, `$` and line continuations removed, so a word that
+# the shell assembles (`git mer''ge`) takes the full check; the early probe below says how.
 # Outside its view on purpose (ADR-0015): `git pull`, cherry-pick, rebase, reset, checkout of paths, git aliases and
 # programs that run git themselves; the pull request gate and the maintainer's review stay the control there.
 set -uo pipefail
@@ -33,10 +35,30 @@ INPUT=$(cat) || {
   printf '%s\n' "$EARLY_FAILURE_ASK"
   exit 0
 }
-# JSON keeps letters unescaped, so these words appear as written. A \u escape could hide them and takes the full check.
+# The early probe: a command that cannot mention a merge leaves here, before the shared scripts are loaded. JSON keeps
+# letters unescaped, so the words merge and cleanup-wave appear as written, unless a \u escape hides them (full check) or
+# the shell assembles them, which quotes, backslashes, `$` and line continuations can do (`git mer''ge`, `git m\erge`,
+# `git mer\<newline>ge`). Without any of these three characters in the raw input the command has no shell quoting at all
+# (a quote that belongs to the command appears as \", which holds a backslash), so it leaves at once. Otherwise one sed
+# and one tr drop a line continuation (the JSON text backslash backslash backslash n) and then every quote, backslash and
+# `$`, and the words are searched again. Deleting characters can only join text, and neither word holds a deleted
+# character, so the filter can only add full checks. A failing filter takes the full check, too. The test stays linear
+# on purpose: bash pattern substitution on the whole input is quadratic in bash 3.2 and would run into the hook's
+# timeout, which blocks the call.
 case $INPUT in
 *merge* | *cleanup-wave* | *'\u'*) ;;
-*) exit 0 ;;
+*)
+  case $INPUT in
+  *"'"* | *\\* | *'$'*) ;;
+  *) exit 0 ;;
+  esac
+  if PROBE=$(printf '%s' "$INPUT" | sed 's/\\\\\\n//g' | tr -d '\047\042\134\044'); then
+    case $PROBE in
+    *merge* | *cleanup-wave*) ;;
+    *) exit 0 ;;
+    esac
+  fi
+  ;;
 esac
 
 SCRIPT_DIR=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P) || SCRIPT_DIR=''
@@ -467,12 +489,21 @@ check_merge() {
 }
 
 # mentions_merge <word>...: succeeds when a word mentions a merge, so that an unresolvable command around it matters.
+# Text that holds quotes, backslashes, `$` or newlines is searched again with these characters removed, because a shell
+# joins `mer''ge` and `mer\<newline>ge` to a merge word. The search is linear (one tr, no pattern substitution), and a
+# failing tr counts as a mention.
 mentions_merge() {
-  local word
+  local word plain
   for word in "$@"; do
-    if [[ $word == *merge* || $word == *cleanup-wave* ]]; then
-      return 0
-    fi
+    case $word in
+    *merge* | *cleanup-wave*) return 0 ;;
+    *"'"* | *'"'* | *\\* | *'$'* | *$'\n'*)
+      plain=$(printf '%s' "$word" | tr -d '\047\042\134\044\012') || return 0
+      case $plain in
+      *merge* | *cleanup-wave*) return 0 ;;
+      esac
+      ;;
+    esac
   done
   return 1
 }
