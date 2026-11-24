@@ -4,9 +4,25 @@
 #
 # The project ask rules `Edit(/<entry>)` anchor at the directory the session started in, so they never match a file in
 # another worktree of the repository, such as the worktree under .claude/worktrees/<name>/ of a subagent dispatched
-# with `isolation: worktree`. This hook asks the author before every edit whose file, taken relative to any worktree
-# root of the repository, is a governed path. Without a governed match it prints nothing and leaves the call to the
-# normal permission flow; it never allows a call.
+# with `isolation: worktree`. This hook asks the author before an edit whose file, taken relative to the main checkout
+# or to any worktree that is not an agent worktree, is a governed path. Without a governed match it prints nothing and
+# leaves the call to the normal permission flow; it never allows a call.
+#
+# Inside an agent worktree the hook stays silent: the change reaches the main checkout only through the merge that
+# ask-governed-merge.sh asks about, and the session's settings, hooks and governed list come from CLAUDE_PROJECT_DIR,
+# not from the worktree (ADR-0015, author decision of 2026-11-24). An agent worktree is a worktree that
+# `git worktree list` of the session's repository reports and that
+#   - is on a branch, not detached, bare or prunable;
+#   - sits at <session root or main worktree root>/.claude/worktrees/agent-<id>, as written and with its symbolic links
+#     resolved, <id> made of A-Z, a-z, 0-9, dot, underscore and hyphen, compared byte for byte;
+#   - is on the branch agent-<id> or worktree-agent-<id>;
+#   - is neither the session root nor the main worktree root.
+# The exemption covers only a match relative to such a worktree and only for a path that starts with its root byte for
+# byte. Every other match still asks, for the path as written and as resolved, so a `..` path, a symbolic link into
+# the main checkout and a different case spelling all ask. These keep asking too: the main checkout, a session
+# started inside an agent worktree, EnterWorktree worktrees (`worktree-<name>`, renamed to `gsd/phase-*`), worktrees
+# outside .claude/worktrees/, Workflow-tool worktrees (`worktree-wf_*`) and unregistered directories.
+# No environment variable and no tool-input field beyond the file path and cwd takes part in that decision.
 #
 # Input: the PreToolUse JSON on standard input, with the absolute path in tool_input.file_path (tool_input.notebook_path
 # for NotebookEdit) and cwd. The governed list is ${CLAUDE_PROJECT_DIR}/governance/governed-paths.txt, the copy in the
@@ -88,6 +104,56 @@ Edits to governed paths need the author's confirmation (AIDEV-08)."
   fi
 }
 
+# agent_worktree_record <path> <branch>: records the worktree's name in AGENT_NAMES when the worktree, which git
+# reports on a branch, is an agent worktree: its path as written and resolved ends in agent-<id> and equals
+# <base>/.claude/worktrees/agent-<id> for a base in BASES, it is not itself a base, and the branch is agent-<id> or
+# worktree-agent-<id>. Anything else, such as a link in place of the directory, leaves it out.
+agent_worktree_record() {
+  local lexical physical name base lexical_ok=0 physical_ok=0
+  lexical_path lexical "$1"
+  physical_path physical "$1" || return 0
+  name=${lexical##*/}
+  [[ $name == "${physical##*/}" && $name == agent-* && ${#name} -gt 6 && $name != *[!A-Za-z0-9._-]* ]] || return 0
+  [[ $2 == "$name" || $2 == "worktree-$name" ]] || return 0
+  for base in "${BASES[@]}"; do
+    if [[ $lexical == "$base" || $physical == "$base" ]]; then
+      return 0
+    fi
+    if [[ $lexical == "$base$CLAUDE_WORKTREES$name" ]]; then
+      lexical_ok=1
+    fi
+    if [[ $physical == "$base$CLAUDE_WORKTREES$name" ]]; then
+      physical_ok=1
+    fi
+  done
+  if [[ $lexical_ok -eq 1 && $physical_ok -eq 1 ]]; then
+    AGENT_NAMES+=("$name")
+  fi
+}
+
+# finish_worktree_record: hands the record read so far, when it is usable and has a branch, to agent_worktree_record,
+# and starts an empty record.
+finish_worktree_record() {
+  if [[ -n $record_path && $record_usable -eq 1 && -n $record_branch ]]; then
+    agent_worktree_record "$record_path" "$record_branch"
+  fi
+  record_path=''
+  record_branch=''
+  record_usable=0
+}
+
+# is_agent_root <root> <absolute path>: succeeds when the root is the root of an agent worktree and the path starts
+# with it followed by a slash, both compared byte for byte, so a different case spelling never qualifies.
+is_agent_root() {
+  local agent_root
+  for agent_root in ${AGENT_ROOTS[@]+"${AGENT_ROOTS[@]}"}; do
+    if [[ $1 == "$agent_root" && $2 == "$agent_root"/* ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 command -v jq >/dev/null 2>&1 || ask_author "jq is not on PATH, so the hook cannot read the call."
 read_hook_input
 input_string FILE_PATH '.tool_input.file_path // .tool_input.notebook_path' ||
@@ -116,13 +182,46 @@ add_root "$SESSION_ROOT"
 add_root "$MAIN_ROOT"
 # The roots that hold the .claude/worktrees/ directory of Claude Code, before the worktrees are added.
 BASES=("${ROOTS[@]}")
+# Each record of the list starts with its `worktree <path>` field and ends with an empty field. The branch name and
+# the marks that make a record unusable for the agent worktree rule are read from the fields in between.
+AGENT_NAMES=()
+record_path=''
+record_branch=''
+record_usable=0
 rest=$WORKTREE_LIST
 while [[ $rest == *$'\001'* ]]; do
   field=${rest%%$'\001'*}
   rest=${rest#*$'\001'}
-  if [[ $field == 'worktree '* ]]; then
-    add_root "${field#worktree }"
-  fi
+  case $field in
+  'worktree '*)
+    finish_worktree_record
+    record_path=${field#worktree }
+    record_usable=1
+    add_root "$record_path"
+    ;;
+  'branch refs/heads/'*) record_branch=${field#branch refs/heads/} ;;
+  detached | bare | prunable | 'prunable '*) record_usable=0 ;;
+  '') finish_worktree_record ;;
+  esac
+done
+finish_worktree_record
+
+# The roots of the agent worktrees, below every spelling of the session root and the main worktree root, except a root
+# that is itself one of those.
+AGENT_ROOTS=()
+for name in ${AGENT_NAMES[@]+"${AGENT_NAMES[@]}"}; do
+  for base in "${BASES[@]}"; do
+    agent_root=$base$CLAUDE_WORKTREES$name
+    skip=0
+    for other in "${BASES[@]}"; do
+      if [[ $other == "$agent_root" ]]; then
+        skip=1
+      fi
+    done
+    if [[ $skip -eq 0 ]]; then
+      AGENT_ROOTS+=("$agent_root")
+    fi
+  done
 done
 
 CANDIDATES=()
@@ -134,14 +233,15 @@ else
   ask_author "the symbolic links of $FILE_PATH cannot be resolved."
 fi
 
-# check_candidate <absolute path>: asks the author when the path, taken relative to a root, is governed. The prefix
-# test compares folded case; the relative path keeps the spelling of the candidate.
+# check_candidate <absolute path>: asks the author when the path, taken relative to a root, is governed, except for a
+# path below the root of an agent worktree. The prefix test compares folded case; the relative path keeps the spelling
+# of the candidate.
 check_candidate() {
   local candidate=$1 folded_candidate='' folded='' root base relative
   fold_case folded_candidate "$candidate"
   for root in "${ROOTS[@]}"; do
     fold_case folded "$root"
-    if [[ $folded != / && $folded_candidate == "$folded"/* ]]; then
+    if [[ $folded != / && $folded_candidate == "$folded"/* ]] && ! is_agent_root "$root" "$candidate"; then
       match_relative "${candidate:${#root}+1}" "$root"
     fi
   done
@@ -149,7 +249,10 @@ check_candidate() {
     fold_case folded "$base"
     if [[ $folded != / && $folded_candidate == "$folded$CLAUDE_WORKTREES"*/* ]]; then
       relative=${candidate:${#base}+${#CLAUDE_WORKTREES}}
-      match_relative "${relative#*/}" "$base$CLAUDE_WORKTREES${relative%%/*}"
+      root=$base$CLAUDE_WORKTREES${relative%%/*}
+      if ! is_agent_root "$root" "$candidate"; then
+        match_relative "${relative#*/}" "$root"
+      fi
     fi
   done
 }

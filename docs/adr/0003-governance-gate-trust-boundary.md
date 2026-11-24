@@ -67,9 +67,11 @@ Reasons:
 - The single maintainer merges every pull request. Through the ruleset, every change to `main` arrives as a
   squash-merged pull request whose diff the maintainer reads, including a rewrite of the gate.
 - Claude Code's ask rules and the governance hooks of [ADR-0015](0015-governance-hooks-for-worktrees-and-merges.md)
-  cover every governed path for the agent's file-edit tools in every worktree, and the merges that bring changes to
-  one into a worktree (`.claude/settings.json`, kept in step with `governance/governed-paths.txt` by
-  `checkClaudeAskRules`), so an edit to the gate through those tools needs the author's confirmation (AIDEV-08).
+  cover every governed path (`.claude/settings.json`, kept in step with `governance/governed-paths.txt` by
+  `checkClaudeAskRules`) for the agent's file-edit tools in the main checkout and in worktrees that are not agent
+  worktrees, governed changes made in an agent worktree when a merge brings them into the main checkout, and the
+  merges that bring changes to one into a worktree, so an edit to the gate through those tools needs the author's
+  confirmation (AIDEV-08).
   They match neither every shell command that writes files nor every git command that integrates changes, so they
   make an unconfirmed change unlikely rather than impossible; they are a guard rail, not a security boundary, and
   the maintainer's review of the diff remains the control.

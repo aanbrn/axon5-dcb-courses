@@ -1,7 +1,7 @@
 ---
 status: "accepted"
-date: "2026-11-23"
-decision-makers: ["repository author (debug session ask-rules-skip-worktree-agents)"]
+date: "2026-11-24"
+decision-makers: ["repository author (debug session ask-rules-skip-worktree-agents)", "repository author (2026-11-24)"]
 ---
 
 # ADR-0015: Governance hooks guard governed paths in every worktree and at merge time
@@ -30,10 +30,18 @@ session found two independent gaps:
 
 Both gaps must close for AIDEV-08 to hold for delegated work.
 
+Once the hooks were live, a second problem showed. Quick task 261124-c1g, whose executor edited governed files in its
+agent worktree, raised dozens of prompts, one per Edit or Write, for changes that cannot reach the main checkout before
+the merge prompt, which lists them anyway. Many prompts about the same change set wear down the attention each prompt
+deserves. The author decided on 2026-11-24 that an agent worktree needs no per-edit prompt and that the merge prompt is
+its single confirmation point.
+
 ## Decision Drivers
 
-- The author is asked before a governed path changes, in whichever worktree the agent works.
+- The author is asked before a governed change reaches the main checkout: per edit in the main checkout and in worktrees
+  that are not agent worktrees, and once per merge for the work of an agent worktree.
 - Governed content that reaches a worktree through any write channel is caught before it enters the main checkout.
+- Prompts stay few enough to be read.
 - One source of truth: the hooks read `governance/governed-paths.txt` with the grammar the pull request gate and
   `checkClaudeAskRules` use.
 - Fail closed: a hook that cannot decide asks, and a hook that cannot start blocks.
@@ -50,11 +58,26 @@ Both gaps must close for AIDEV-08 to hold for delegated work.
 - Coverage of shell writes at write time: heuristics over shell commands, or a sandbox `denyWrite` on governed paths.
 - Process only: plans that touch governed paths run inline in the main session.
 
+For edits inside an agent worktree, once the hooks were live (2026-11-24):
+
+- Keep the per-edit ask in the agent worktree. Rejected by the author: dozens of prompts per task about changes that
+  cannot reach the main checkout before the merge prompt.
+- Remember an approval per task with a time to live. Rejected by the author.
+- No per-edit ask inside an agent worktree, with the merge hook as the single confirmation point (chosen).
+
 ## Decision Outcome
 
 Chosen options: the edit hook and the strict merge gate, because together they close both gaps. The edit hook restores
-the edit-level prompt of AIDEV-08 in every worktree, and the merge hook catches every other write channel at the point
-where worktree work enters the main checkout.
+the edit-level prompt of AIDEV-08 in the main checkout and in every worktree that is not an agent worktree, and the
+merge hook catches every other write channel at the point where worktree work enters the main checkout.
+
+Amendment of 2026-11-24 (author decision): inside an agent worktree the edit hook stays silent, and the merge hook is
+the single confirmation point for the work done there. AIDEV-08's intent holds because the settings, hooks and governed
+list the session runs on come from `${CLAUDE_PROJECT_DIR}`, so a governed change in an agent worktree has no effect on
+the session until it is merged, and the merge prompt names every governed file. The main checkout and the worktrees that
+are not agent worktrees keep the per-edit ask, because their changes reach a pull request branch without a merge the
+hook sees. The exemption belongs to the edited file's worktree, not to the caller: the hook never asks who is editing,
+only where the file lives.
 
 ### The hooks
 
@@ -63,7 +86,21 @@ where worktree work enters the main checkout.
   prefix and of its final component resolved), relative to the session root, the main worktree root, every worktree that
   `git worktree list` reports and any `.claude/worktrees/<name>/` below the session or main root. When a relative path
   matches a governed entry, ignoring ASCII case as the default macOS file system does, it asks and names the entry and
-  the worktree.
+  the worktree, except for a match relative to an agent worktree.
+  - **Agent worktree.** A worktree that `git worktree list --porcelain -z` of the session's repository reports, that is
+    on a branch (not detached, bare or prunable), whose path both as written and with symbolic links resolved is exactly
+    `<session root or main worktree root>/.claude/worktrees/agent-<id>` (`<id>` made of A-Z, a-z, 0-9, dot, underscore
+    and hyphen, compared byte for byte), whose branch is `agent-<id>` or `worktree-agent-<id>`, and which is neither the
+    session root nor the main worktree root. The exemption covers only a match relative to that root, and only for a
+    path that starts with the root followed by a slash, byte for byte. Every other match and every resolved spelling is
+    still checked, so a `..` path, a symbolic link into the main checkout, a directory replaced by a link, and a
+    different case spelling of the directory all ask. No environment variable and no tool-input field beyond the file
+    path and cwd takes part in the decision.
+  - **Still asking.** The main checkout and a session started inside an agent worktree (its own tree). EnterWorktree
+    worktrees (`worktree-<name>`, later renamed to `gsd/phase-*` and pushed as the pull request branch without a merge
+    into the main checkout). Worktrees outside `.claude/worktrees/`. Workflow-tool worktrees (`worktree-wf_*`), which
+    the decision does not cover. Agent worktrees nested under a worktree that is neither the session nor the main root.
+    Unregistered directories, whatever they are named.
 - **`scripts/governance/ask-governed-merge.sh`** (matcher `Bash`). A command that mentions neither `merge` nor
   `cleanup-wave` leaves at once, once quotes, backslashes, `$` and line continuations are removed from the text (so
   `git mer''ge` and `git mer\<newline>ge` count as mentions); the test is linear, because bash pattern substitution on a
@@ -77,7 +114,8 @@ where worktree work enters the main checkout.
   and asks when one is governed, listing them. `git merge --abort` and `--quit` pass. It also asks when a shell reads its
   script from standard input (a pipe, `/dev/stdin`, a process substitution, a heredoc fed to another command), when a
   script, eval text or program comes from a shell expansion, or when the lexing is left incomplete (an unterminated
-  quote, substitution or heredoc), if the command mentions a merge anywhere.
+  quote, substitution or heredoc), if the command mentions a merge anywhere. Since the amendment it is the single
+  confirmation point for governed work done in an agent worktree.
 - **Shared code.** `governed-paths.sh` holds the grammar and the glob matcher and is now also sourced by `check-pr.sh`;
   `hook-common.sh` holds the hook protocol. [ADR-0003](0003-governance-gate-trust-boundary.md) does not require the gate to
   be self-contained: the library lies under the same governed `scripts/governance/**` and comes from the same tree.
@@ -94,8 +132,11 @@ where worktree work enters the main checkout.
 
 ### Consequences
 
-- Good, because a worktree agent's edit of a governed path prompts the author again, in auto mode and in background
-  subagents: a hook's ask goes to the permission prompt, not to the auto mode classifier.
+- Good, because an edit of a governed path in the main checkout or in a worktree that is not an agent worktree prompts
+  the author, in auto mode and in background subagents: a hook's ask goes to the permission prompt, not to the auto mode
+  classifier.
+- Good, because the work of an agent worktree costs one prompt per merge instead of one per edit, and the prompt lists
+  the governed files.
 - Good, because governed content that shell commands, scripts or git wrote in a worktree is caught when it is merged
   through `git merge` or `worktree.cleanup-wave`, with the governed files listed in the prompt. That holds for the forms
   the hook analyses or, failing that, asks about; the forms under Residual risks stay outside.
@@ -109,7 +150,11 @@ where worktree work enters the main checkout.
 - Bad, because failing closed also asks for some commands that only mention a merge next to a script the hook cannot
   read (a pipe into a shell, `eval "$x"`), and an argument list that names git and merge, such as `echo git merge x`, is
   checked as a merge.
-- Bad, because shell writes in a worktree are still not prompted when they happen, only when they are merged.
+- Bad, because shell writes and file-tool edits in an agent worktree are not prompted when they happen, only when they
+  are merged.
+- Bad, because the merge prompt names the governed files but does not show their content, so the author reads the diff
+  (for example `git diff HEAD...<branch>`) before confirming.
+- Bad, because an executor that rewrites a governed file it should not touch is noticed only at the merge.
 
 ### Residual risks
 
@@ -117,6 +162,16 @@ where worktree work enters the main checkout.
   `checkout <ref> -- <path>`, `apply` and `am`, git aliases, and programs that run git themselves, except the wrappers
   and the argument lists it analyses (see The hooks). The pull request gate
   (`governance-success`) and the maintainer's review stay the control there, as ADR-0003 records.
+- Unapproved governed edits can accumulate in an agent worktree. They are gated only at the merge prompt and at the
+  pull request, where `governance-success` (`check-pr.sh`) requires the `governance-approved` label (ADR-0001,
+  ADR-0003).
+- The integration channels the merge hook does not see (`cherry-pick`, `rebase`, `checkout <ref> -- <path>`, a shell
+  copy from the agent worktree into the main checkout) now carry file-tool edits as well as shell writes.
+- A human worktree that is given an agent-shaped name and branch (`.claude/worktrees/agent-<id>` on `agent-<id>`) is
+  treated as an agent worktree.
+- An agent's edit of the governed `.claude/settings.json` or hook scripts in its own worktree does not change the
+  running session, which loads them from `${CLAUDE_PROJECT_DIR}`, but would apply to a session started inside that
+  worktree.
 - The hook never sees a merge word or git subcommand that the command text does not mention: one assembled by a
   parameter expansion or a command substitution (`git mer${E}ge`) or by ANSI-C escapes (`$'...'` with a hex or octal
   escape) leaves at the early probe.
@@ -138,16 +193,23 @@ where worktree work enters the main checkout.
   without `if` or `async`, that `disableAllHooks` is not true, and that both scripts exist and are governed paths. Its
   TestKit tests are in `AskRulesCheckHooksFunctionalTest`.
 - `scripts/governance/test-ask-governed-edit.sh` and `test-ask-governed-merge.sh` run the real hooks against throwaway
-  repositories with linked worktrees and branches; CI runs every `scripts/*/test-*.sh`.
-- Live check: with the hooks registered, a worktree subagent's Write to a governed path of its worktree must ask, which
-  repeats the debug session's probe that showed the gap.
+  repositories with linked worktrees and branches; CI runs every `scripts/*/test-*.sh`. The edit hook's cases cover
+  agent worktrees on both branch namespaces (silent, for every edit tool), the main checkout, a session started inside
+  an agent worktree and the worktrees that are not agent worktrees (ask), and every attempt to pass as an agent
+  worktree (ask): an unregistered directory, a different branch, a detached HEAD, another agent's branch, a worktree
+  outside `.claude/worktrees/`, a `..` or relative path into the main checkout, symbolic links into the main checkout, a
+  registered directory replaced by a symbolic link, and a different case spelling.
+- Live check: with the hooks registered, a worktree subagent's Write to a governed path of its own worktree passes
+  without a prompt, the `worktree.cleanup-wave` merge that brings it into the main checkout asks once and lists the
+  file, and a Write to the same path in the main checkout asks.
 
 ## More Information
 
 - The debug session `ask-rules-skip-worktree-agents` under `.planning/debug/` holds the evidence, the probes and the
-  eliminated hypotheses.
+  eliminated hypotheses. The quick task 261124-dvp implemented the amendment of 2026-11-24.
 - Claude Code documentation: hooks reference (Hook locations, Matcher patterns, Exit code output, Block the action when a
   hook fails, Reference scripts by path, PreToolUse decision control, PreToolUse `ask` decisions in auto mode) and
   permissions (how path patterns match).
-- Revisit when Claude Code anchors project rules at a subagent's worktree, which would make the edit hook redundant, or
-  when GSD brings executor work into the main checkout by a means other than `git merge`.
+- Revisit when Claude Code anchors project rules at a subagent's worktree, which would make the edit hook redundant, when
+  GSD or Claude Code brings agent worktree work into the main checkout by a means other than `git merge`, or when agent
+  worktrees run sessions that load their own project settings.
