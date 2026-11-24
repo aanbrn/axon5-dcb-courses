@@ -3,10 +3,10 @@
 # Claude Code PreToolUse hook for Bash (ADR-0015, AIDEV-08): asks the author before a merge that brings changes to
 # governed paths into a worktree.
 #
-# Ask rules and the edit hook see only the file tools. Work that reaches a governed file through a shell command in an
-# agent worktree (sed, a heredoc, a script) enters the main checkout through a merge, and this hook stands at that
-# point: it reads the Bash command and asks when the command merges a ref that changes a governed path since its merge
-# base with the target's HEAD. It recognises
+# Ask rules and the edit hook see only the file tools, and the edit hook does not ask in an agent worktree. Work that
+# reaches a governed file in an agent worktree, through the file tools or a shell command (sed, a heredoc, a script),
+# enters the main checkout through a merge, and this hook stands at that point: it reads the Bash command and asks when
+# the command merges a ref that changes a governed path since its merge base with the target's HEAD. It recognises
 #   - `git ... merge <ref>...`, with git's global options such as `-C <dir>`, inside pipelines, lists, subshells,
 #     command substitutions, `bash -c`, `eval`, heredocs and here-strings fed to a shell, after `cd`, `env` (also
 #     `env -S`), `sudo`, `doas` and similar wrappers, and behind programs that take git or `bash -c` among their

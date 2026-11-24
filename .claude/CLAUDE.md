@@ -336,8 +336,12 @@ How a Claude Code session takes a change from branch to `main` in this repositor
   dispatches. Commit the quick task's PLAN first, pass the plan commit and its parent as the allowed bases in the
   embedded worktree branch check, and merge the executor's branch back with
   `gsd-tools query worktree.cleanup-wave --manifest <file>`.
-- **Governed paths ask in every worktree.** Two hooks in `.claude/settings.json` (ADR-0015) ask the author before an
-  Edit, Write, MultiEdit or NotebookEdit of a governed path in any worktree, and before a Bash command whose
-  `git merge` or `worktree.cleanup-wave` brings changes to governed paths into a worktree. Change governed files with
-  those tools, not with shell writes, pass the manifest and refs as literal values so the merge hook can resolve them,
-  and when the author declines a prompt, stop and report instead of working around it.
+- **Governed paths ask in the main checkout and at merge.** Two hooks in `.claude/settings.json` (ADR-0015) ask the
+  author before an Edit, Write, MultiEdit or NotebookEdit of a governed path in the main checkout and in any worktree
+  that is not an agent worktree (`.claude/worktrees/agent-<id>` on branch `agent-<id>` or `worktree-agent-<id>`).
+  Inside an agent worktree the edit hook does not ask; the merge hook asks once, listing the governed files, before a
+  Bash command whose `git merge` or `worktree.cleanup-wave` brings them into the main checkout or another worktree.
+  Change governed files with the file tools, not with shell writes, pass the manifest and refs as literal values so the
+  merge hook can resolve them, and when the author declines a prompt, stop and report instead of working around it.
+  The orchestrator reads the governed diff of the branch (`git diff HEAD...<branch>`) before the author confirms the
+  merge prompt.

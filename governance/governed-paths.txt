@@ -4,7 +4,8 @@
 # (scripts/governance/check-pr.sh), and Claude Code asks before it edits one
 # (.claude/settings.json, kept in sync by the checkClaudeAskRules Gradle task: exactly one
 # `Edit(/<entry>)` ask rule per entry, plus the hooks of ADR-0015, which ask before an edit in
-# any worktree and before a merge that brings a change to one).
+# the main checkout or in a worktree that is not an agent worktree, and before a merge that
+# brings a change to one into a worktree).
 #
 # Format. One glob per line. `**` matches any characters including `/`; every other character
 # is literal. Blank lines and lines starting with `#` are ignored. Leading and trailing spaces,

@@ -8,9 +8,10 @@ import java.io.File
  * that `.claude/settings.json` registers them.
  *
  * The project ask rules `Edit(/<path>)` anchor at the directory a session starts in, so they never match a file in the
- * worktree of a subagent. `ask-governed-edit.sh` asks the author before a file tool changes a governed path in any
- * worktree, and `ask-governed-merge.sh` asks before a Bash command merges changes to governed paths. Each hook must be
- * registered exactly once under `hooks.PreToolUse`, with its matcher, run through `bash` with the script under
+ * worktree of a subagent. `ask-governed-edit.sh` asks the author before a file tool changes a governed path in the main
+ * checkout or in a worktree that is not an agent worktree, while inside an agent worktree the merge hook asks once when
+ * the work is merged. `ask-governed-merge.sh` asks before a Bash command merges changes to governed paths. Each hook
+ * must be registered exactly once under `hooks.PreToolUse`, with its matcher, run through `bash` with the script under
  * `${CLAUDE_PROJECT_DIR}`, with `onFailure` set to `"block"` so that a hook that cannot start or times out blocks the
  * call, and without an `if` filter or `async`, which would narrow it or discard its decision. `disableAllHooks` must
  * not be true. Further hooks are allowed: when hooks disagree, Claude Code lets `ask` win over `allow`.
