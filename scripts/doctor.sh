@@ -101,7 +101,13 @@ check_mise() {
     return
   fi
   local minimum installed lowest
-  minimum=$(sed -nE 's/^min_version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$ROOT/mise.toml" 2>/dev/null | sed -n 1p)
+  # The first sed fails on a missing or unreadable mise.toml, which pipefail turns into the end of the run.
+  if ! minimum=$(sed -nE 's/^min_version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$ROOT/mise.toml" 2>/dev/null |
+    sed -n 1p); then
+    report fail mise "mise.toml cannot be read from the repository root, so its min_version cannot be checked" \
+      "restore it: git restore mise.toml"
+    return
+  fi
   installed=$(mise --version 2>/dev/null | awk 'NR == 1 { print $1 }') || installed=''
   if [[ -z $installed ]]; then
     report fail mise "cannot read the installed version from 'mise --version'" "brew upgrade mise, or: mise self-update"
@@ -136,12 +142,19 @@ check_tools() {
     report fail tools "'mise ls --current --json' failed in the repository" "mise install"
     return
   fi
-  total=$("$jq" -r '[.[][]] | length' <<<"$json")
+  # The tool list must be an object whose values are arrays of objects, or the program below cannot run on it.
   # shellcheck disable=SC2016 # a jq program, not shell
-  missing=$("$jq" -r '
-    to_entries[] | .key as $tool | .value[]
-    | select(((.installed // false) and (.active // false)) | not)
-    | "\($tool)@\(.requested_version // .version // "?")"' <<<"$json" | paste -sd, - | sed 's/,/, /g')
+  if ! total=$("$jq" -r 'if type == "object" and all(.[]; type == "array" and all(.[]; type == "object"))
+    then [.[][]] | length else error("not a tool list") end' <<<"$json" 2>/dev/null) ||
+    ! missing=$("$jq" -r '
+      to_entries[] | .key as $tool | .value[]
+      | select(((.installed // false) and (.active // false)) | not)
+      | "\($tool)@\(.requested_version // .version // "?")"' <<<"$json" 2>/dev/null | paste -sd, - | sed 's/,/, /g'); then
+    report fail tools "cannot read the tool list that 'mise ls --current --json' printed (not a JSON object of tool lists)" \
+      "mise install" \
+      "if the output is still not a JSON object of tool lists: brew upgrade mise, or: mise self-update"
+    return
+  fi
   if [[ -n $missing ]]; then
     report fail tools "not installed or not active: $missing" "mise install"
   else
@@ -272,12 +285,12 @@ check_colima() {
   local profile=${DOCKER_CONTEXT#colima} file facts dns snapshotter
   profile=${profile#-}
   file=${HOME:-}/.colima/${profile:-default}/colima.yaml
-  if [[ ! -f $file ]]; then
+  # A file that exists but cannot be read is the same finding as a missing one: awk would end the run under pipefail.
+  if [[ ! -f $file ]] || ! facts=$(awk "$COLIMA_AWK" "$file" 2>/dev/null); then
     report warn colima "cannot read the colima configuration ~/.colima/${profile:-default}/colima.yaml" \
       "colima start --edit"
     return
   fi
-  facts=$(awk "$COLIMA_AWK" "$file")
   dns=${facts%% *}
   snapshotter=${facts#* }
   local -a problems=() fixes=()
@@ -346,7 +359,8 @@ readonly GSD_DIRECTORIES=(gsd-core agents commands hooks scripts)
 # gsd (local only, AIDEV-07): the pin is a plain version (validated before any command is built from it), the installed
 # GSD is the pinned version and every file is byte for byte what the manifest records. A modified hook changes what
 # agents do, so it is called out as a hook. Files that the manifest does not list under GSD's directories are reported as
-# unexpected. Nothing is repaired: the fix reinstalls the pinned version after you have looked at the difference.
+# unexpected. A manifest that cannot be read is reported with the same reinstall fix. Nothing is repaired: the fix
+# reinstalls the pinned version after you have looked at the difference.
 check_gsd() {
   local_only gsd && return
   local claude=$ROOT/.claude pinned_file=$ROOT/governance/gsd-version manifest pinned installed jq install_fix
@@ -355,7 +369,10 @@ check_gsd() {
     report fail gsd "governance/gsd-version is missing" "write the version of the installed GSD into governance/gsd-version"
     return
   fi
-  pinned=$(sed -n 1p "$pinned_file" | tr -d '[:space:]')
+  if ! pinned=$(sed -n 1p "$pinned_file" 2>/dev/null | tr -d '[:space:]'); then
+    report fail gsd "governance/gsd-version cannot be read" "chmod u+r governance/gsd-version"
+    return
+  fi
   # The pin goes into a command that a maintainer copies and runs, so it must be a plain version (the shape that the
   # Renovate custom manager matches). The message does not repeat it: it can hold anything a file can.
   if [[ ! $pinned =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -382,7 +399,14 @@ check_gsd() {
     return
   fi
 
-  installed=$("$jq" -r '.version // empty' "$manifest")
+  # One guarded read that also checks the shape: the manifest is an object with an object of files. That is what
+  # makes the later reads of `.files` safe, which would otherwise end the run under set -e.
+  if ! installed=$("$jq" -r 'if type == "object" and (.files | type) == "object" then .version // empty
+    else error("not a GSD manifest") end' "$manifest" 2>/dev/null); then
+    report fail gsd ".claude/gsd-file-manifest.json cannot be read as a GSD manifest (not JSON, or no object of files)" \
+      "$install_fix"
+    return
+  fi
   if [[ $installed != "$pinned" ]]; then
     report fail gsd "installed GSD ${installed:-unknown} differs from governance/gsd-version $pinned" \
       "$install_fix"
@@ -482,11 +506,19 @@ check_mcp() {
     report warn mcp "jq is needed to read .mcp.json and is not installed" "mise install"
     return
   fi
+  # The shape check: an object whose `mcpServers`, when present, is an object of server objects. Anything else would end
+  # the run under set -e (or, for an array of servers, be counted as zero servers).
   # shellcheck disable=SC2016 # a jq program, not shell
-  servers=$("$jq" -r '
-    .mcpServers // {} | to_entries[] | (.value.args // []) as $args
-    | if .value.command == "mise" and ($args[0] == "x" or $args[0] == "exec") and $args[1] == "--"
-      then [.key, $args[2], "mise"] else [.key, .value.command, "path"] end | @tsv' "$file")
+  if ! servers=$("$jq" -r '
+    if type == "object" and ((.mcpServers // {}) | type == "object" and all(.[]; type == "object")) then
+      .mcpServers // {} | to_entries[] | (.value.args // []) as $args
+      | if .value.command == "mise" and ($args[0] == "x" or $args[0] == "exec") and $args[1] == "--"
+        then [.key, $args[2], "mise"] else [.key, .value.command, "path"] end | @tsv
+    else error("not MCP server configuration") end' "$file" 2>/dev/null); then
+    report warn mcp ".mcp.json cannot be read as MCP server configuration (not JSON, or not an object of server objects)" \
+      "repair .mcp.json, or restore the committed version: git restore .mcp.json"
+    return
+  fi
   while IFS=$'\t' read -r name binary wrapped; do
     [[ -n $name ]] || continue
     total=$((total + 1))
@@ -524,8 +556,10 @@ readonly TOKEN_AWK
 check_platform_token() {
   local_only platform-token && return
   local dotenv=$ROOT/.env state=absent
-  if [[ -f $dotenv ]]; then
-    state=$(awk "$TOKEN_AWK" "$dotenv")
+  if [[ -f $dotenv ]] && ! state=$(awk "$TOKEN_AWK" "$dotenv" 2>/dev/null); then
+    report warn platform-token ".env exists but cannot be read, so the state of AXONIQ_PLATFORM_AUTHENTICATION is unknown" \
+      "chmod u+r .env"
+    return
   fi
   case $state in
   set) report ok platform-token "AXONIQ_PLATFORM_AUTHENTICATION is set in .env (the value is not shown)" ;;

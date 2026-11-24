@@ -214,6 +214,21 @@ fresh() {
   EXTRA_ENV=''
 }
 
+# make_unreadable <file>: sets the mode of the file to 000. Succeeds only when that really makes it unreadable: root
+# reads a mode-000 file, so there the mode is restored and the helper fails, and the case prints a skip line.
+make_unreadable() {
+  chmod 000 "$1"
+  if cat "$1" >/dev/null 2>&1; then
+    chmod 644 "$1"
+    return 1
+  fi
+}
+
+# skip_unreadable <case name>: the skip line of a case that cannot make a file unreadable. It is not counted.
+skip_unreadable() {
+  echo "skip - $1: root can read a mode-000 file"
+}
+
 # --- usage ---------------------------------------------------------------------------------------
 
 fresh
@@ -301,6 +316,30 @@ assert_code "mise --version fails" 1
 assert_out "mise --version fails" "^fail  mise: cannot read the installed version from 'mise --version'"
 assert_out "mise --version fails" "^summary: "
 
+# A tool list that is not a JSON object of tool lists is reported (the review's WR-01 class: jq died under set -e).
+for list in 'not json' '{"jq": {"version": "1.8.2"}}'; do
+  fresh
+  printf '%s\n' "$list" >"$ENV/mise-tools.json"
+  run_doctor "$ENV"
+  assert_code "unreadable tool list [$list]" 1
+  assert_out "unreadable tool list [$list]" \
+    "^fail  tools: cannot read the tool list that 'mise ls --current --json' printed"
+  assert_out "unreadable tool list [$list]" "^      fix: mise install"
+  assert_no_out "unreadable tool list [$list]" "jq: "
+  assert_out "unreadable tool list [$list]" "^ok  java: "
+  assert_out "unreadable tool list [$list]" "^summary: "
+done
+
+# Without mise.toml the min_version cannot be read: that is a failure with a fix, not a silent end of the run.
+fresh
+rm "$ENV/repo/mise.toml"
+run_doctor "$ENV"
+assert_code "no mise.toml" 1
+assert_out "no mise.toml" "^fail  mise: mise\\.toml cannot be read"
+assert_out "no mise.toml" "^      fix: restore it: git restore mise\\.toml"
+assert_out "no mise.toml" "^ok  tools: "
+assert_out "no mise.toml" "^summary: "
+
 # --- the local-only checks of a healthy tree ----------------------------------------------------------
 
 fresh
@@ -385,6 +424,37 @@ assert_code "no manifest" 1
 assert_out "no manifest" "^fail  gsd: .claude/gsd-file-manifest\\.json is missing"
 assert_out "no manifest" "^      fix: npx -y @opengsd/gsd-core@1\\.22\\.0 --claude --local"
 
+# A manifest that is not JSON, or that holds no object of files, is reported with the reinstall fix, and the later
+# checks and the summary still run (the review's WR-01: jq died under set -e). The shape cases also cover the later
+# reads of `.files`, which a manifest without an object of files would have ended.
+for content in '{' '[]' '{"version": "1.22.0"}' '{"version": "1.22.0", "files": []}'; do
+  fresh
+  printf '%s\n' "$content" >"$ENV/repo/.claude/gsd-file-manifest.json"
+  run_doctor "$ENV"
+  assert_code "unreadable manifest [$content]" 1
+  assert_out "unreadable manifest [$content]" \
+    "^fail  gsd: \\.claude/gsd-file-manifest\\.json cannot be read as a GSD manifest"
+  assert_out "unreadable manifest [$content]" "^      fix: npx -y @opengsd/gsd-core@1\\.22\\.0 --claude --local"
+  assert_out "unreadable manifest [$content]" "^ok  mcp: "
+  assert_out "unreadable manifest [$content]" "^summary: "
+  assert_no_out "unreadable manifest [$content]" "jq: "
+  assert_no_out "unreadable manifest [$content]" "^fail  gsd: (unexpected|missing|modified)"
+done
+
+# A pin that cannot be read is a failure with a fix (skipped where root reads a mode-000 file).
+fresh
+if make_unreadable "$ENV/repo/governance/gsd-version"; then
+  run_doctor "$ENV"
+  chmod 644 "$ENV/repo/governance/gsd-version"
+  assert_code "unreadable pin" 1
+  assert_out "unreadable pin" "^fail  gsd: governance/gsd-version cannot be read"
+  assert_out "unreadable pin" "^      fix: chmod u\\+r governance/gsd-version"
+  assert_out "unreadable pin" "^ok  gsd-defaults: "
+  assert_out "unreadable pin" "^summary: "
+else
+  skip_unreadable "unreadable pin"
+fi
+
 # --- ~/.gsd/defaults.json --------------------------------------------------------------------------
 
 fresh
@@ -403,6 +473,20 @@ run_doctor "$ENV"
 assert_code "unresolved MCP binary" 0
 assert_out "unresolved MCP binary" "^warn  mcp: .*context7.*context7-mcp"
 assert_out "unresolved MCP binary" "^      fix: mise install"
+
+# A .mcp.json that is not JSON, or not an object of server objects, is a warning with a fix (the review's WR-01 class).
+for content in '{' '{"mcpServers": {"context7": 1}}' '{"mcpServers": []}'; do
+  fresh
+  printf '%s\n' "$content" >"$ENV/repo/.mcp.json"
+  run_doctor "$ENV"
+  assert_code "unreadable .mcp.json [$content]" 0
+  assert_out "unreadable .mcp.json [$content]" "^warn  mcp: \\.mcp\\.json cannot be read as MCP server configuration"
+  assert_out "unreadable .mcp.json [$content]" "^      fix: .*git restore \\.mcp\\.json"
+  assert_out "unreadable .mcp.json [$content]" "^ok  platform-token: "
+  assert_out "unreadable .mcp.json [$content]" "^summary: "
+  assert_no_out "unreadable .mcp.json [$content]" "^ok  mcp:"
+  assert_no_out "unreadable .mcp.json [$content]" "jq: "
+done
 
 # --- the Platform token ----------------------------------------------------------------------------
 
@@ -435,6 +519,20 @@ for empty in 'AXONIQ_PLATFORM_AUTHENTICATION=' 'AXONIQ_PLATFORM_AUTHENTICATION="
   assert_out "empty token [$empty]" "^      fix: remove the line or set <environment-id>:<token>"
 done
 
+# A .env that exists but cannot be read is a warning with a fix, and its content is never shown.
+fresh
+if make_unreadable "$ENV/repo/.env"; then
+  run_doctor "$ENV"
+  chmod 644 "$ENV/repo/.env"
+  assert_code "unreadable .env" 0
+  assert_out "unreadable .env" "^warn  platform-token: \\.env exists but cannot be read"
+  assert_out "unreadable .env" "^      fix: chmod u\\+r \\.env"
+  assert_out "unreadable .env" "^summary: "
+  assert_no_out "unreadable .env" "secret-sentinel-value"
+else
+  skip_unreadable "unreadable .env"
+fi
+
 # --- colima and the image store --------------------------------------------------------------------
 
 fresh
@@ -451,6 +549,17 @@ printf 'network:\n  dns:\n    - 8.8.8.8\ndocker:\n  features:\n    containerd-sn
 run_doctor "$ENV"
 assert_code "colima with the containerd snapshotter" 0
 assert_out "colima with the containerd snapshotter" "^warn  colima: .*containerd-snapshotter is not false"
+
+fresh
+if make_unreadable "$ENV/home/.colima/default/colima.yaml"; then
+  run_doctor "$ENV"
+  chmod 644 "$ENV/home/.colima/default/colima.yaml"
+  assert_code "unreadable colima configuration" 0
+  assert_out "unreadable colima configuration" "^warn  colima: cannot read the colima configuration"
+  assert_out "unreadable colima configuration" "^summary: "
+else
+  skip_unreadable "unreadable colima configuration"
+fi
 
 fresh
 echo overlayfs >"$ENV/docker-driver"
