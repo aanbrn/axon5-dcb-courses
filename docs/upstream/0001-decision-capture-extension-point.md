@@ -116,6 +116,13 @@ conditional append, which lets the command service drop its decorator of the `@I
 (milestone 5.5.0). The pull request for #5328 (UP-0004) follows. This record is updated when the pull request merges,
 and the workaround is removed only after a release that contains the change.
 
+Follow-up on 2026-11-24: the author asked where the decorator belongs and how it hands the observed data to users
+([comment](https://github.com/AxonIQ/AxonFramework/issues/5326#issuecomment-7120364420)). Maintainer reply
+([comment](https://github.com/AxonIQ/AxonFramework/issues/5326#issuecomment-7126078229)): the decorator belongs in the
+`axon-eventsourcing` module, in the `org.axonframework.eventsourcing.eventstore` package next to `EventStorageEngine`
+itself; a configurable callback is welcome, with a default callback that logs, and the author may propose otherwise. The
+issue is assigned to the author, and the pull request targets `main`, which is the 5.5.0 line.
+
 ### Public extension point to observe the conditional append of a decision
 
 #### Environment and versions
