@@ -5,19 +5,19 @@ titles: json
 findings:
   - id: WR-07
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "The merge hook's early exit lets a quote-split `merge` skip every check"
   - id: WR-08
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "A merge fed to a shell through a pipe or a here-string is not seen"
   - id: WR-09
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "A `<<` that is not a heredoc swallows the rest of the command without a trace"
   - id: WR-10
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`ComposeVersionsFunctionalTest` pins the repository catalog's current image set"
   - id: IN-06
     severity: info
@@ -75,7 +75,7 @@ findings:
     severity: info
     disposition: skipped
     title: "Necessity (judgment) - the empty `contracts-queries` module and its rule entries have no instantiation yet"
-open: 7
+open: 3
 total: 18
 recorded: 2026-11-24T01:30:29.860Z
 ---
@@ -84,10 +84,10 @@ recorded: 2026-11-24T01:30:29.860Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-07 | warning | open | - |
-| WR-08 | warning | open | - |
-| WR-09 | warning | open | - |
-| WR-10 | warning | open | - |
+| WR-07 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in 01bf991 (the early exit tests the command with quotes, backslashes, `$` and line continuations removed, by a linear filter) |
+| WR-08 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in 55247cc (shells reading standard input, here-strings, `env -S`, `sudo`/`doas` and programs whose arguments run git are analysed or ask; the rest is listed in ADR-0015 residual risks) |
+| WR-09 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in bd589d0 (`<<` in arithmetic is not a heredoc; a heredoc without its delimiter line leaves the lexing incomplete) |
+| WR-10 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in 6a06a26 (every test runs on its own fixture image set) |
 | IN-06 | info | open | - |
 | IN-07 | info | open | - |
 | IN-08 | info | open | - |

@@ -4,7 +4,6 @@ package io.github.aanbrn.courses.buildlogic
 import io.kotest.matchers.collections.shouldBeIn
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
-import java.nio.file.Files
 import java.nio.file.Path
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -12,6 +11,10 @@ import org.junit.jupiter.api.io.TempDir
 /**
  * Proves that `generateComposeVersions` and `checkComposeVersions` derive the compose images from every `image-*` entry
  * of the version catalog, except the test-only ones, so a new compose image needs no build-logic change.
+ *
+ * The tests own their image set: the fixture runs on a copy of the repository catalog in which every real `image-*`
+ * entry is replaced by fixture entries (see [withFixtureImages]). Adding a compose image to `gradle/libs.versions.toml`
+ * therefore cannot break them, and none of them names an image of the repository.
  */
 class ComposeVersionsFunctionalTest {
     @TempDir lateinit var projectDir: Path
@@ -29,22 +32,23 @@ class ComposeVersionsFunctionalTest {
                 """
                     .trimIndent() + "\n",
             )
+            changeCatalog { catalog -> withFixtureImages(catalog) }
         }
     }
 
     @Test
-    fun `the repository catalog renders its compose images and leaves out the test-only reaper`() {
+    fun `the fixture catalog renders its compose images sorted by name and leaves out the test-only reaper`() {
         val result = fixture.run(GENERATE)
 
         result.task(":$GENERATE")?.outcome shouldBeIn GradleFixture.PASSED
-        fixture.read(VERSIONS_FILE) shouldBe versionsFor("axonserver", "postgres")
+        fixture.read(VERSIONS_FILE) shouldBe versionsFor(FIXTURE_IMAGES)
     }
 
     @Test
     fun `a third image entry is rendered by the generator and checked by the freshness check`() {
-        val oldVersions = versionsFor("axonserver", "postgres")
+        val oldVersions = versionsFor(FIXTURE_IMAGES)
         fixture.changeCatalog { catalog ->
-            catalog.replace(Regex("""(?m)^(image-ryuk = .*)$"""), "$1\n$NEW_ENTRY")
+            catalog.replace(Regex("""(?m)^image-fixture-two = .*$""")) { it.value + "\n" + THIRD_ENTRY }
         }
         fixture.file(VERSIONS_FILE, oldVersions)
 
@@ -52,34 +56,34 @@ class ComposeVersionsFunctionalTest {
 
         fixture.run(GENERATE).task(":$GENERATE")?.outcome shouldBeIn GradleFixture.PASSED
         val regenerated = fixture.read(VERSIONS_FILE)
-        regenerated shouldContain "OTEL_LGTM_IMAGE=$OTEL_LGTM_REFERENCE"
-        regenerated shouldBe versionsFor("axonserver", "otel_lgtm", "postgres")
+        regenerated shouldContain "FIXTURE_THREE_IMAGE=$THIRD_REFERENCE"
+        regenerated shouldBe versionsFor(FIXTURE_IMAGES + (THIRD_NAME to THIRD_REFERENCE))
         fixture.run(CHECK).task(":$CHECK")?.outcome shouldBeIn GradleFixture.PASSED
     }
 
     @Test
     fun `a versions file that also names the test-only reaper is stale`() {
-        fixture.file(VERSIONS_FILE, versionsFor("axonserver", "postgres") + "RYUK_IMAGE=${reference("ryuk")}\n")
+        fixture.file(VERSIONS_FILE, versionsFor(FIXTURE_IMAGES) + "RYUK_IMAGE=$REAPER_REFERENCE\n")
 
         fixture.runAndFail(CHECK).output shouldContain STALE
     }
 
     /**
-     * The text `generateComposeVersions` writes for the [names] of the fixture's current catalog, in the given order.
+     * The text `generateComposeVersions` writes for [images], by short name, sorted by name as the generator sorts
+     * them.
      */
-    private fun versionsFor(vararg names: String): String =
-        (listOf(VERSIONS_HEADER) + names.map { "${it.uppercase()}_IMAGE=${reference(it)}" }).joinToString(
-            separator = "\n",
-            postfix = "\n",
-        )
+    private fun versionsFor(images: Map<String, String>): String =
+        (listOf(VERSIONS_HEADER) +
+                images.toSortedMap().map { (name, reference) -> "${name.uppercase()}_IMAGE=$reference" })
+            .joinToString(separator = "\n", postfix = "\n")
 
-    /** The reference of the catalog entry `image-<name>` as the fixture reads it, with `_` standing for `-`. */
-    private fun reference(name: String): String {
-        val alias = "image-" + name.replace('_', '-')
-        val catalog = Files.readString(Path.of(fixture.catalog))
-        return checkNotNull(Regex("""(?m)^$alias = "([^"]+)"$""").find(catalog)) { "$alias is not in the catalog" }
-            .groupValues[1]
-    }
+    /**
+     * Replaces every `image-*` entry of the repository [catalog], bare, quoted or indented, with the fixture entries,
+     * which are inserted right after the `[versions]` header. Every other entry stays, because the convention plugins
+     * read them. The entries are declared in reverse name order, so the sorting of the rendering is visible.
+     */
+    private fun withFixtureImages(catalog: String): String =
+        catalog.replace(IMAGE_ENTRY, "").replace(VERSIONS_SECTION) { it.value + "\n" + FIXTURE_ENTRIES }
 
     private companion object {
         const val GENERATE = "generateComposeVersions"
@@ -88,7 +92,34 @@ class ComposeVersionsFunctionalTest {
         const val VERSIONS_HEADER =
             "# Generated by ./gradlew generateComposeVersions from gradle/libs.versions.toml; do not edit."
         const val STALE = "compose/versions.env is stale; run ./gradlew generateComposeVersions"
-        val OTEL_LGTM_REFERENCE = "grafana/otel-lgtm:0.41.1@sha256:" + "a".repeat(64)
-        val NEW_ENTRY = "image-otel-lgtm = \"$OTEL_LGTM_REFERENCE\""
+
+        /** An `image-*` catalog entry with its line break, in the key shapes `ImageReferenceCheck` recognises. */
+        val IMAGE_ENTRY = Regex("""(?m)^[ \t]*(["']?)image-[A-Za-z0-9_.-]+\1[ \t]*=.*\n?""")
+
+        /** The `[versions]` table header line. */
+        val VERSIONS_SECTION = Regex("""(?m)^\[versions][ \t]*(#.*)?$""")
+
+        /** A well-formed tag-and-digest reference under a registry that cannot exist, with a distinct digest. */
+        fun fixtureReference(name: String, digitFill: Char): String =
+            "registry.invalid/fixture/$name:1.0.0@sha256:" + digitFill.toString().repeat(64)
+
+        val FIXTURE_IMAGES =
+            mapOf(
+                "fixture_one" to fixtureReference("one", '1'),
+                "fixture_two" to fixtureReference("two", '2'),
+            )
+        val REAPER_REFERENCE = fixtureReference("ryuk", '3')
+        const val THIRD_NAME = "fixture_three"
+        val THIRD_REFERENCE = fixtureReference("three", '4')
+        val THIRD_ENTRY = "image-fixture-three = \"$THIRD_REFERENCE\""
+
+        /** The fixture entries: two compose images, declared in reverse name order, and the test-only reaper. */
+        val FIXTURE_ENTRIES =
+            listOf(
+                    "image-fixture-two = \"${FIXTURE_IMAGES.getValue("fixture_two")}\"",
+                    "image-fixture-one = \"${FIXTURE_IMAGES.getValue("fixture_one")}\"",
+                    "image-ryuk = \"$REAPER_REFERENCE\"",
+                )
+                .joinToString("\n")
     }
 }
