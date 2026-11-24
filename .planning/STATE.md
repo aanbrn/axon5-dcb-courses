@@ -4,10 +4,10 @@ current_phase: 02
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: executing
 stopped_at: Phase 2 context gathered
-last_updated: "2026-11-24T05:24:50.293Z"
+last_updated: "2026-11-24T06:11:55.950Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 02 execution started
-state_head: 2ac6c3c134815ed7da4ce26a17b346d2442e0e90
+state_head: f81810039106a2619045441a63d13d154982ec50
 progress:
   total_phases: 13
   completed_phases: 1
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-11-22)
 Phase: 02 (Runtime Infrastructure & DCB Spikes) — VERIFYING
 Plan: 23 of 23 executed (all SUMMARYs present)
 Status: Phase 02 verification human_needed (5/5 success criteria verified); 02-UAT.md has 6 pending human items; the phase PR is not open yet
-Last activity: 2026-11-24 - Completed quick task 261124-gju: every required gate config governed, npm cooldown 7 days
+Last activity: 2026-11-24 - Completed quick task 261124-hbh: courses.kotlin-library convention plugin governed
 
 Progress: [█░░░░░░░░░] 8%
 
@@ -135,7 +135,7 @@ Recent decisions affecting current work:
 - [Phases 2, 13]: Third-party skills/MCP servers and upstream issue publication need explicit author approval at execution time (Phase 1 repository settings and the `main` ruleset are applied)
 - [Phase 3]: Review WR-01 deferred: conflict retry is fixed at 10 attempts with uncapped, unjittered back-off, so >~11 contenders on one open course end in raw `AppendEventsTransactionRejectedException`. Phase 3 SC2 must make the bound configurable, add capped full-jitter back-off and a 40-way concurrent subscription test. Upstream input (UP-0003, axoniq-framework#811): a dispatch-side `RetryPolicy` can match `AppendEventsTransactionRejectedException` in the `CommandExecutionException` message; the rejection is non-transient on purpose and only re-dispatching the command is retryable; weigh this against the handling-side decorator when the retry becomes configurable
 - [Phase 3]: Qodana `UnusedSymbol` (profile Default, threshold 0) will likely flag production `@CommandHandler`/`@EventSourcingHandler` methods reached only through annotation scanning; choose the approach (explicit registration, entry-point configuration, or other) before the first slice, without suppressions
-- [Phase 2 ship]: Open author decision (raised by the 261124-gju planner): `build-logic/src/main/kotlin/courses.kotlin-library.gradle.kts` stays ungoverned under the 01-17/01-19 exclusion, yet it wires the detekt config path and `allWarningsAsErrors` into every module, so one edit there can relax detekt and the compiler gate. Also optional: make `scripts/qodana.sh` refuse a `qodana.yml`; once a `package.json` lands, decide on `minimumReleaseAgePackageManager: "7 days"`
+- [Optional hardening]: make `scripts/qodana.sh` refuse a `qodana.yml` (the Qodana CLI reads it before `qodana.yaml`; the path is governed since 261124-gju); once a `package.json` lands, decide on `minimumReleaseAgePackageManager: "7 days"` for the npm manager
 - [Upstream]: Author decided (2026-11-24) to contribute pull requests to AxonIQ/AxonFramework after the Phase 2 PR: first #5326 (UP-0001) as an opt-in decorator definition, the public way to observe the conditional append that lets the command service drop its decorator of the `@Internal` `EventStorageEngine` (5.5.0 milestone); then #5328 (UP-0004, Kotlin-aware tag resolver, upstream milestone 5.7.0), starting with where the code belongs (core or the Kotlin extension). Work in a fork cloned outside this repository; show the author the diff and PR text before `gh pr create`; update the UP records on merge and remove workarounds only after a release
 - [Tooling]: GSD hooks fail in Claude Code sessions started inside a git worktree (hooks resolve under `$CLAUDE_PROJECT_DIR`, the worktree has no `.claude/hooks/`); deferred follow-up from UAT test 3
 
@@ -163,6 +163,7 @@ Recent decisions affecting current work:
 | 261124-dvp | Governance edit hook stops asking inside verified agent worktrees; the merge hook asks once (ADR-0015) | 2026-11-24 | 9fb92b0 | [261124-dvp-stop-the-governance-edit-hook-from-askin](./quick/261124-dvp-stop-the-governance-edit-hook-from-askin/) |
 | 261124-eum | Renovate tracks the GSD version pin; the pin is never exempt from the governance label; GSD update flow in docs/tooling.md | 2026-11-24 | 4ebefac | [261124-eum-add-a-renovate-custom-manager-that-track](./quick/261124-eum-add-a-renovate-custom-manager-that-track/) |
 | 261124-gju | Govern the configs and launchers of every required CI gate (58 -> 80 entries) and restore the 7-day Renovate cooldown for npm | 2026-11-24 | 2ac6c3c | [261124-gju-govern-the-configs-of-the-other-required](./quick/261124-gju-govern-the-configs-of-the-other-required/) |
+| 261124-hbh | Govern the courses.kotlin-library convention plugin (detekt, allWarningsAsErrors, licence apply line, Dokka failOnWarning); narrow the residual to per-module build scripts | 2026-11-24 | f818100 | [261124-hbh-govern-build-logic-src-main-kotlin-cours](./quick/261124-hbh-govern-build-logic-src-main-kotlin-cours/) |
 
 ## Deferred Items
 
