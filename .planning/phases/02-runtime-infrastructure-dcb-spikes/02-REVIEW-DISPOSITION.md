@@ -5,31 +5,31 @@ titles: json
 findings:
   - id: CR-01
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "`bash -euo pipefail -c '...'` hides the script from the merge hook"
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Option forms of `git`, `sudo`, `env` and a `GIT_DIR` prefix make the hook read the wrong repository or none"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Brace expansion assembles a merge command without a trace"
   - id: WR-03
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Refs that an earlier part of the same command moves are read before the command runs"
   - id: WR-04
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "The agent worktree exemption does not hold for the `**/` governed entries"
   - id: WR-05
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`doctor` builds a copy-paste install command from the unvalidated pin"
   - id: WR-06
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "UP-0001 and UP-0004 still say the contribution is undecided"
   - id: WR-07
     severity: warning
@@ -88,13 +88,13 @@ recorded: 2026-11-24T07:24:48.477Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-01 | critical | open | - |
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
-| WR-04 | warning | open | - |
-| WR-05 | warning | open | - |
-| WR-06 | warning | open | - |
+| CR-01 | critical | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 9f8be86 (shell option clusters and value-taking long options parsed as bash does; unknown forms ask) |
+| WR-01 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 9f8be86 (`--attr-source`, wrapper option clusters and `--chdir=`, repository environment variables ask or resolve) |
+| WR-02 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 9f8be86 (unquoted brace expansion makes a word dynamic; in-word merge spellings recorded as ADR-0015 residual risks) |
+| WR-03 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 0534a85 (a ref-moving git command anywhere in the same command makes the merge ask) |
+| WR-04 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 996829c (a `**/` match inside an agent worktree is exempt; the five `Edit(/**/...)` ask rules recorded as an ADR-0015 residual risk) |
+| WR-05 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in dd73bcf (the pin must match a plain version before the fix command is built) |
+| WR-06 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in dd73bcf (UP-0001 and UP-0004 record the 2026-11-24 contribution decision) |
 | WR-07 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in 01bf991 (the early exit tests the command with quotes, backslashes, `$` and line continuations removed, by a linear filter) (not in the current review) |
 | WR-08 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in 55247cc (shells reading standard input, here-strings, `env -S`, `sudo`/`doas` and programs whose arguments run git are analysed or ask; the rest is listed in ADR-0015 residual risks) (not in the current review) |
 | WR-09 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in bd589d0 (`<<` in arithmetic is not a heredoc; a heredoc without its delimiter line leaves the lexing incomplete) (not in the current review) |

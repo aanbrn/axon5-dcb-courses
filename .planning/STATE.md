@@ -4,10 +4,10 @@ current_phase: 02
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: executing
 stopped_at: Phase 2 context gathered
-last_updated: "2026-11-24T06:11:55.950Z"
+last_updated: "2026-11-24T09:55:40.714Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 02 execution started
-state_head: f81810039106a2619045441a63d13d154982ec50
+state_head: e34377bd430742631e66d29fac73cfb0dceac704
 progress:
   total_phases: 13
   completed_phases: 1
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-11-22)
 Phase: 02 (Runtime Infrastructure & DCB Spikes) — VERIFYING
 Plan: 23 of 23 executed (all SUMMARYs present)
 Status: Phase 02 verification human_needed (5/5 success criteria verified); 02-UAT.md has 6 pending human items; the phase PR is not open yet
-Last activity: 2026-11-24 - Completed quick task 261124-hbh: courses.kotlin-library convention plugin governed
+Last activity: 2026-11-24 - Completed quick task 261124-kh6: Phase 2 review findings CR-01 and WR-01..WR-06 fixed, merge-hook reasons deduplicated
 
 Progress: [█░░░░░░░░░] 8%
 
@@ -127,7 +127,6 @@ Recent decisions affecting current work:
 - [Renovate, from 2026-11-27]: Merge open Renovate PRs by hand (automerge is off for them). #19 `npm:renovate` 44.252.8 → 44.257.5 was released 2026-11-20, so it meets the 7-day npm cooldown (CICD-04) only from 2026-11-27. #20 lock file maintenance waits until its `renovate/stability-days` check is green. Both touch `mise.lock` and the renovate sidecar lock, as does the Phase 2 branch: expect a rebase of whichever lands later.
 - [Phase 4 discuss]: Choose the documentation-site tool. Docusaurus 3.10.2 with Mermaid is only a research recommendation (`.planning/research/STACK.md`, SUMMARY.md); PROJECT.md Key Decisions fixes only "docs site as a Gradle subproject" (Pending), and no ADR exists. Needed by INFRA-08 (docs-site skeleton as a Gradle subproject, Phase 4/5), GH-04 (GitHub Pages publication, Phase 8, with Storybook per UI-08), UPS-02's index on the site (Phase 5) and DOC-02 (final docs phase). Record the choice in an ADR and PROJECT.md.
 
-- [Quick, after Phase 2 execute-phase]: Deduplicate the reasons of the governance merge hook. `scripts/governance/ask-governed-merge.sh` appends one `PROBLEMS` entry per occurrence (for example line 1030, "the command runs a program named by a shell expansion: $R") and joins them into `REASON` (line 1155) without removing repeats, so a command that calls `$R` thirty times shows the same reason thirty times and the prompt is truncated. Remove duplicates (keeping first-seen order), consider capping the list, and add a case to `scripts/governance/test-ask-governed-merge.sh`. The script is a governed path.
 
 - [Quick, after the Phase 2 PR merges]: Pull forward the GitHub presentation items that do not depend on the UI (author decision 2026-11-24), as quick tasks: (1) GH-01 repository metadata as code without the social preview image and homepage (description, topics, unused features disabled; applied via `gh` after author approval); (2) GH-03 community health files (CONTRIBUTING, CODE_OF_CONDUCT, SUPPORT, CODEOWNERS, SECURITY.md with the stated policy); (3) GH-13 `CITATION.cff`; (4) an honest work-in-progress README with CI, OpenSSF Scorecard and licence badges (the full showcase README, GH-02/DOC-01, stays in Phase 13). Update REQUIREMENTS.md traceability for each item delivered (GH-01 becomes partial until the social preview and homepage land in Phase 13). While there, reconcile the GH-04 phase: REQUIREMENTS.md says Phase 7, the Phase 4 discuss todo above says Phase 8.
 
@@ -168,6 +167,7 @@ Recent decisions affecting current work:
 | 261124-eum | Renovate tracks the GSD version pin; the pin is never exempt from the governance label; GSD update flow in docs/tooling.md | 2026-11-24 | 4ebefac | [261124-eum-add-a-renovate-custom-manager-that-track](./quick/261124-eum-add-a-renovate-custom-manager-that-track/) |
 | 261124-gju | Govern the configs and launchers of every required CI gate (58 -> 80 entries) and restore the 7-day Renovate cooldown for npm | 2026-11-24 | 2ac6c3c | [261124-gju-govern-the-configs-of-the-other-required](./quick/261124-gju-govern-the-configs-of-the-other-required/) |
 | 261124-hbh | Govern the courses.kotlin-library convention plugin (detekt, allWarningsAsErrors, licence apply line, Dokka failOnWarning); narrow the residual to per-module build scripts | 2026-11-24 | f818100 | [261124-hbh-govern-build-logic-src-main-kotlin-cours](./quick/261124-hbh-govern-build-logic-src-main-kotlin-cours/) |
+| 261124-kh6 | Fix Phase 2 review findings CR-01 and WR-01..WR-06 (merge-hook bypass forms, agent-worktree ** exemption, GSD pin validation, upstream records) and deduplicate merge-hook reasons | 2026-11-24 | e34377b | [261124-kh6-fix-phase-02-review-findings-cr-01-and-w](./quick/261124-kh6-fix-phase-02-review-findings-cr-01-and-w/) |
 
 ## Deferred Items
 
