@@ -1,0 +1,836 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Claude Code PreToolUse hook for Bash (ADR-0015, AIDEV-08): asks the author before a merge that brings changes to
+# governed paths into a worktree.
+#
+# Ask rules and the edit hook see only the file tools. Work that reaches a governed file through a shell command in an
+# agent worktree (sed, a heredoc, a script) enters the main checkout through a merge, and this hook stands at that
+# point: it reads the Bash command and asks when the command merges a ref that changes a governed path since its merge
+# base with the target's HEAD. It recognises
+#   - `git ... merge <ref>...`, with git's global options such as `-C <dir>`, inside pipelines, lists, subshells,
+#     command substitutions, `bash -c`, `eval` and heredocs fed to a shell, after `cd`, `env` and similar wrappers;
+#   - `worktree.cleanup-wave --manifest <file>` of GSD, which merges every branch of the manifest's `worktrees` list.
+# `git merge --abort` and `--quit` merge nothing. When the hook cannot resolve a merge, because the ref, the manifest or
+# the directory comes from a shell expansion, does not exist or cannot be read, it asks as well. It never allows a
+# call; a command without a merge gets no output.
+#
+# The governed list is ${CLAUDE_PROJECT_DIR}/governance/governed-paths.txt, as for the edit hook. The hook runs on every
+# Bash command, so a command that does not mention `merge` or `cleanup-wave` leaves before anything else is loaded.
+# Outside its view on purpose (ADR-0015): `git pull`, cherry-pick, rebase, reset, checkout of paths, git aliases and
+# programs that run git themselves; the pull request gate and the maintainer's review stay the control there.
+set -uo pipefail
+export LC_ALL=C
+unset CDPATH
+
+# The answers before the shared scripts are loaded; hook-common.sh defines the same text for later failures.
+EARLY_FAILURE_ASK='{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"ask",'
+EARLY_FAILURE_ASK+='"permissionDecisionReason":"Governance hook: the hook could not read its input or load its shared '
+EARLY_FAILURE_ASK+='scripts, so it asks. Confirm that this command merges no governed path '
+EARLY_FAILURE_ASK+='(governance/governed-paths.txt)."}}'
+readonly EARLY_FAILURE_ASK
+
+INPUT=$(cat) || {
+  printf '%s\n' "$EARLY_FAILURE_ASK"
+  exit 0
+}
+# JSON keeps letters unescaped, so these words appear as written. A \u escape could hide them and takes the full check.
+case $INPUT in
+*merge* | *cleanup-wave* | *'\u'*) ;;
+*) exit 0 ;;
+esac
+
+SCRIPT_DIR=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P) || SCRIPT_DIR=''
+# shellcheck source=/dev/null
+if [[ -z $SCRIPT_DIR ]] || ! source "$SCRIPT_DIR/hook-common.sh" || ! source "$SCRIPT_DIR/governed-paths.sh"; then
+  printf '%s\n' "$EARLY_FAILURE_ASK"
+  exit 0
+fi
+install_fail_closed
+
+# How deep `bash -c`, `eval` and heredocs fed to a shell may nest before the hook gives up and asks.
+readonly MAX_DEPTH=3
+# How many governed files a reason lists before it says how many more there are.
+readonly MAX_LISTED=20
+readonly ASSIGNMENT_PATTERN='^[A-Za-z_][A-Za-z0-9_]*='
+readonly DIGITS_PATTERN='^[0-9]+$'
+
+# What the analysis found: governed files a merge brings in, and merges it could not check.
+HITS=()
+PROBLEMS=()
+
+# --- lexer ----------------------------------------------------------------------------------------------------------
+# lex_command <text> splits a shell command into words without running anything, close enough to bash to find the
+# simple commands it runs. It sets
+#   TOKENS          each word with its quotes removed;
+#   TOKEN_SEGMENT   the number of the simple command the word belongs to;
+#   TOKEN_DYNAMIC   1 when the word holds an expansion the hook cannot evaluate ($NAME, $(...), `...`, $'...');
+#   TOKEN_REDIRECT  1 when the word is the target of a redirection or a here-string;
+#   TOKEN_DEPTH     how many command substitutions enclose the word;
+#   NESTED_SCRIPTS  the bodies of heredocs fed to a shell, to be analysed like the command;
+#   LEX_INCOMPLETE  1 when quoting or a substitution is left open;
+#   LEX_HEREDOC_SUBSTITUTION  1 when the body of a heredoc with an unquoted delimiter, which the shell expands, holds a
+#                   command substitution and mentions a merge.
+# The text of a command substitution is a simple command of its own; the word that holds it continues afterwards as a
+# dynamic word. The words of one simple command are contiguous among the words of the same TOKEN_DEPTH. The helpers
+# lex_* share the state of lex_command through bash's dynamic scoping. Runs of ordinary characters are taken in one
+# step, because every character access costs a pass over the text in bash.
+
+lex_end_word() {
+  if [[ $in_word -eq 1 ]]; then
+    TOKENS+=("$word")
+    TOKEN_SEGMENT+=("$segment")
+    TOKEN_DYNAMIC+=("$dynamic")
+    TOKEN_REDIRECT+=("$redirect")
+    TOKEN_DEPTH+=($((${#contexts[@]} - 1)))
+    if [[ $redirect -eq 0 && -z $segment_command && ! $word =~ $ASSIGNMENT_PATTERN ]]; then
+      segment_command=${word##*/}
+    fi
+    redirect=0
+  fi
+  word=''
+  in_word=0
+  dynamic=0
+}
+
+lex_end_segment() {
+  lex_end_word
+  segment_count=$((segment_count + 1))
+  segment=$segment_count
+  segment_command=''
+  redirect=0
+}
+
+# lex_open_substitution <S|B>: starts a command substitution, $(...) or `...`, inside the current word.
+lex_open_substitution() {
+  saved_words+=("$word")
+  saved_segments+=("$segment")
+  saved_commands+=("$segment_command")
+  word=''
+  in_word=0
+  dynamic=0
+  lex_end_segment
+  contexts+=("$1")
+  depths+=(0)
+}
+
+lex_close_substitution() {
+  local top=$((${#contexts[@]} - 1)) saved=$((${#saved_words[@]} - 1))
+  lex_end_word
+  unset 'contexts[top]' 'depths[top]'
+  word=${saved_words[saved]}
+  segment=${saved_segments[saved]}
+  segment_command=${saved_commands[saved]}
+  unset 'saved_words[saved]' 'saved_segments[saved]' 'saved_commands[saved]'
+  in_word=1
+  dynamic=1
+}
+
+# lex_quoted <ansi>: reads a single-quoted string that starts at i; with ansi=1 a backslash escapes the next character,
+# as in $'...', and the word becomes dynamic because the escapes are not decoded.
+lex_quoted() {
+  local ansi=$1 c rest
+  i=$((i + 1))
+  in_word=1
+  if [[ $ansi -eq 0 ]]; then
+    rest=${text:i}
+    if [[ $rest == *"'"* ]]; then
+      rest=${rest%%"'"*}
+      word+=$rest
+      i=$((i + ${#rest} + 1))
+      return 0
+    fi
+    word+=$rest
+    i=$length
+    LEX_INCOMPLETE=1
+    return 0
+  fi
+  while ((i < length)); do
+    c=${text:i:1}
+    if [[ $c == "'" ]]; then
+      i=$((i + 1))
+      return 0
+    fi
+    if [[ $ansi -eq 1 && $c == "\\" ]]; then
+      word+=${text:i:2}
+      dynamic=1
+      i=$((i + 2))
+      continue
+    fi
+    word+=$c
+    i=$((i + 1))
+  done
+  LEX_INCOMPLETE=1
+}
+
+# lex_heredoc_delimiter: reads the delimiter word of a heredoc that starts at i, with its quotes removed, and whether it
+# was quoted, which keeps the shell from expanding the body.
+lex_heredoc_delimiter() {
+  local c delimiter='' quoted=0
+  while [[ ${text:i:1} == ' ' || ${text:i:1} == $'\t' ]]; do
+    i=$((i + 1))
+  done
+  while ((i < length)); do
+    c=${text:i:1}
+    case $c in
+    ' ' | $'\t' | $'\n' | ';' | '&' | '|' | '<' | '>' | '(' | ')') break ;;
+    "'" | '"')
+      quoted=1
+      i=$((i + 1))
+      while ((i < length)) && [[ ${text:i:1} != "$c" ]]; do
+        delimiter+=${text:i:1}
+        i=$((i + 1))
+      done
+      i=$((i + 1))
+      ;;
+    "\\")
+      quoted=1
+      delimiter+=${text:i+1:1}
+      i=$((i + 2))
+      ;;
+    *)
+      delimiter+=$c
+      i=$((i + 1))
+      ;;
+    esac
+  done
+  if [[ -z $delimiter ]]; then
+    LEX_INCOMPLETE=1
+  fi
+  heredoc_delimiters+=("$delimiter")
+  heredoc_quoted+=("$quoted")
+}
+
+# lex_redirect: reads a redirection operator at i. A word of digits right before it is a file descriptor, and the word
+# after it is a target, not an argument. A heredoc is registered so that its body is skipped at the next newline.
+lex_redirect() {
+  if [[ $in_word -eq 1 && $dynamic -eq 0 && $word =~ $DIGITS_PATTERN ]]; then
+    word=''
+    in_word=0
+  else
+    lex_end_word
+  fi
+  if [[ ${text:i:3} == '<<<' ]]; then
+    i=$((i + 3))
+    redirect=1
+  elif [[ ${text:i:2} == '<<' ]]; then
+    i=$((i + 2))
+    if [[ ${text:i:1} == '-' ]]; then
+      heredoc_strips+=(1)
+      i=$((i + 1))
+    else
+      heredoc_strips+=(0)
+    fi
+    case $segment_command in
+    bash | sh | zsh | dash | ksh) heredoc_shells+=(1) ;;
+    *) heredoc_shells+=(0) ;;
+    esac
+    lex_heredoc_delimiter
+  else
+    i=$((i + 1))
+    while [[ ${text:i:1} == '>' || ${text:i:1} == '&' || ${text:i:1} == '|' ]]; do
+      i=$((i + 1))
+    done
+    redirect=1
+  fi
+}
+
+# lex_heredoc_bodies: after a newline, skips the bodies of the heredocs registered on the line before and keeps those
+# fed to a shell in NESTED_SCRIPTS.
+lex_heredoc_bodies() {
+  local index line body rest candidate
+  for ((index = 0; index < ${#heredoc_delimiters[@]}; index++)); do
+    body=''
+    while ((i < length)); do
+      rest=${text:i}
+      line=${rest%%$'\n'*}
+      i=$((i + ${#line} + 1))
+      candidate=$line
+      if [[ ${heredoc_strips[index]} -eq 1 ]]; then
+        while [[ $candidate == $'\t'* ]]; do
+          candidate=${candidate#?}
+        done
+      fi
+      [[ $candidate != "${heredoc_delimiters[index]}" ]] || break
+      body+=$line$'\n'
+    done
+    if [[ ${heredoc_shells[index]} -eq 1 ]]; then
+      NESTED_SCRIPTS+=("$body")
+    elif [[ ${heredoc_quoted[index]} -eq 0 && ($body == *"\$("* || $body == *"\`"*) ]] && mentions_merge "$body"; then
+      LEX_HEREDOC_SUBSTITUTION=1
+    fi
+  done
+  heredoc_delimiters=()
+  heredoc_quoted=()
+  heredoc_strips=()
+  heredoc_shells=()
+}
+
+lex_command() {
+  local text=$1 length=${#1} i=0 c next context top rest chunk
+  local word='' in_word=0 dynamic=0 redirect=0 segment=0 segment_count=0 segment_command=''
+  local -a contexts=(U) depths=(0) saved_words=() saved_segments=() saved_commands=()
+  local -a heredoc_delimiters=() heredoc_quoted=() heredoc_strips=() heredoc_shells=()
+  TOKENS=()
+  TOKEN_SEGMENT=()
+  TOKEN_DYNAMIC=()
+  TOKEN_REDIRECT=()
+  TOKEN_DEPTH=()
+  NESTED_SCRIPTS=()
+  LEX_INCOMPLETE=0
+  LEX_HEREDOC_SUBSTITUTION=0
+  while ((i < length)); do
+    c=${text:i:1}
+    top=$((${#contexts[@]} - 1))
+    context=${contexts[top]}
+    if [[ $context == D ]]; then
+      case $c in
+      '"')
+        unset 'contexts[top]' 'depths[top]'
+        i=$((i + 1))
+        ;;
+      "\\")
+        next=${text:i+1:1}
+        case $next in
+        '$' | '`' | '"' | "\\") word+=$next ;;
+        $'\n') ;;
+        *) word+="\\$next" ;;
+        esac
+        i=$((i + 2))
+        ;;
+      '$')
+        if [[ ${text:i+1:1} == '(' ]]; then
+          lex_open_substitution S
+          i=$((i + 2))
+        else
+          word+='$'
+          dynamic=1
+          i=$((i + 1))
+        fi
+        ;;
+      '`')
+        lex_open_substitution B
+        i=$((i + 1))
+        ;;
+      *)
+        rest=${text:i}
+        chunk=${rest%%[\"\$\`\\]*}
+        word+=$chunk
+        i=$((i + ${#chunk}))
+        ;;
+      esac
+      continue
+    fi
+    case $c in
+    ' ' | $'\t')
+      lex_end_word
+      i=$((i + 1))
+      ;;
+    $'\n')
+      lex_end_segment
+      i=$((i + 1))
+      lex_heredoc_bodies
+      ;;
+    ';' | '|')
+      lex_end_segment
+      i=$((i + 1))
+      ;;
+    '&')
+      if [[ ${text:i+1:1} == '>' ]]; then
+        lex_end_word
+        i=$((i + 1))
+        lex_redirect
+      else
+        lex_end_segment
+        i=$((i + 1))
+      fi
+      ;;
+    '(')
+      if [[ $context == S ]]; then
+        depths[top]=$((depths[top] + 1))
+      fi
+      lex_end_segment
+      i=$((i + 1))
+      ;;
+    ')')
+      if [[ $context == S && ${depths[top]} -eq 0 ]]; then
+        lex_close_substitution
+      else
+        if [[ $context == S ]]; then
+          depths[top]=$((depths[top] - 1))
+        fi
+        lex_end_segment
+      fi
+      i=$((i + 1))
+      ;;
+    '`')
+      if [[ $context == B ]]; then
+        lex_close_substitution
+      else
+        lex_open_substitution B
+      fi
+      i=$((i + 1))
+      ;;
+    '<' | '>') lex_redirect ;;
+    "'") lex_quoted 0 ;;
+    '"')
+      contexts+=(D)
+      depths+=(0)
+      in_word=1
+      i=$((i + 1))
+      ;;
+    "\\")
+      next=${text:i+1:1}
+      if [[ $next != $'\n' ]]; then
+        word+=$next
+        in_word=1
+      fi
+      i=$((i + 2))
+      ;;
+    '$')
+      next=${text:i+1:1}
+      if [[ $next == '(' ]]; then
+        lex_open_substitution S
+        i=$((i + 2))
+      elif [[ $next == "'" ]]; then
+        i=$((i + 1))
+        dynamic=1
+        lex_quoted 1
+      else
+        word+='$'
+        dynamic=1
+        in_word=1
+        i=$((i + 1))
+      fi
+      ;;
+    '#')
+      if [[ $in_word -eq 0 ]]; then
+        rest=${text:i}
+        rest=${rest%%$'\n'*}
+        i=$((i + ${#rest}))
+      else
+        word+=$c
+        i=$((i + 1))
+      fi
+      ;;
+    *)
+      rest=${text:i}
+      chunk=${rest%%[[:space:]\;\&\|\(\)\<\>\'\"\$\`\\]*}
+      # A character that ends a run without being special, such as a carriage return, is taken alone.
+      [[ -n $chunk ]] || chunk=$c
+      word+=$chunk
+      in_word=1
+      i=$((i + ${#chunk}))
+      ;;
+    esac
+  done
+  lex_end_segment
+  if [[ ${#contexts[@]} -ne 1 ]]; then
+    LEX_INCOMPLETE=1
+  fi
+}
+
+# --- analysis ---------------------------------------------------------------------------------------------------------
+
+# check_merge <directory> <ref> <optional>: records the governed files the ref changes since its merge base with HEAD
+# of the repository that contains the directory. A ref that does not resolve is a problem, unless it is optional.
+check_merge() {
+  local directory=$1 ref=$2 optional=$3 top changed rest item
+  if [[ $ref == -* ]]; then
+    PROBLEMS+=("cannot resolve the merged ref '$ref'")
+    return 0
+  fi
+  if ! top=$(git -C "$directory" rev-parse --show-toplevel 2>/dev/null); then
+    PROBLEMS+=("cannot find the git repository of $directory")
+    return 0
+  fi
+  if ! git -C "$top" rev-parse --verify --quiet "$ref^{commit}" >/dev/null 2>&1; then
+    if [[ $optional -eq 0 ]]; then
+      PROBLEMS+=("cannot resolve the merged ref '$ref' in $top")
+    fi
+    return 0
+  fi
+  # `-z` ends every name with a NUL, which the command substitution would drop, so it becomes \001 first. Renames are
+  # split into a deletion and an addition, so a file moved out of a governed path still counts.
+  if ! changed=$(git -C "$top" diff --no-ext-diff --no-renames --name-only -z "HEAD...$ref" 2>/dev/null |
+    tr '\0' '\001'); then
+    PROBLEMS+=("cannot list what '$ref' changes since its merge base with HEAD in $top")
+    return 0
+  fi
+  rest=$changed
+  while [[ $rest == *$'\001'* ]]; do
+    item=${rest%%$'\001'*}
+    rest=${rest#*$'\001'}
+    if match_governed '' "$item"; then
+      HITS+=("$item (from $ref)")
+    fi
+  done
+}
+
+# mentions_merge <word>...: succeeds when a word mentions a merge, so that an unresolvable command around it matters.
+mentions_merge() {
+  local word
+  for word in "$@"; do
+    if [[ $word == *merge* || $word == *cleanup-wave* ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# The analysis of one simple command reads WORDS and WORD_DYNAMIC from analyze_words and the current directory `cwd`
+# of analyze_command, which `cd` updates; an empty `cwd` means it is unknown.
+
+analyze_cleanup_wave() {
+  local index manifest='' manifest_dynamic=0 base=$cwd base_dynamic=0 found=0 path branches branch
+  for ((index = 0; index < ${#WORDS[@]}; index++)); do
+    case ${WORDS[index]} in
+    worktree.cleanup-wave) found=1 ;;
+    cleanup-wave) [[ $index -eq 0 || ${WORDS[index - 1]} != worktree ]] || found=1 ;;
+    --manifest)
+      manifest=${WORDS[index + 1]:-}
+      manifest_dynamic=${WORD_DYNAMIC[index + 1]:-0}
+      ;;
+    --manifest=*)
+      manifest=${WORDS[index]#--manifest=}
+      manifest_dynamic=${WORD_DYNAMIC[index]}
+      ;;
+    --cwd)
+      join_path base "$cwd" "${WORDS[index + 1]:-}"
+      base_dynamic=${WORD_DYNAMIC[index + 1]:-0}
+      ;;
+    --cwd=*)
+      join_path base "$cwd" "${WORDS[index]#--cwd=}"
+      base_dynamic=${WORD_DYNAMIC[index]}
+      ;;
+    esac
+  done
+  # Without --manifest, cleanup-wave refuses to run and merges nothing.
+  [[ $found -eq 1 && -n $manifest ]] || return 0
+  if [[ $manifest_dynamic -eq 1 || $base_dynamic -eq 1 || -z $base ]]; then
+    PROBLEMS+=("cannot resolve the manifest of worktree.cleanup-wave: $manifest")
+    return 0
+  fi
+  join_path path "$base" "$manifest"
+  if ! branches=$(jq -r '(if type == "array" then . else .worktrees end)
+      | if type == "array" then .[] else error("no worktrees list") end | objects | .branch | strings' \
+    "$path" 2>/dev/null); then
+    PROBLEMS+=("cannot read the worktree.cleanup-wave manifest $path")
+    return 0
+  fi
+  while IFS= read -r branch; do
+    if [[ -n $branch ]]; then
+      check_merge "$base" "$branch" 0
+    fi
+  done <<<"$branches"
+}
+
+# analyze_git <index of git>: finds `merge` after git's global options and checks every ref it merges.
+analyze_git() {
+  local index=$(($1 + 1)) count=${#WORDS[@]} directory=$cwd repository_known=1 word cluster
+  local abort=0 continue_merge=0 options_done=0 ref_index
+  local -a refs=() ref_dynamic=()
+  while ((index < count)); do
+    word=${WORDS[index]}
+    case $word in
+    -C)
+      if [[ ${WORD_DYNAMIC[index + 1]:-0} -eq 1 ]]; then
+        directory=''
+      else
+        join_path directory "$directory" "${WORDS[index + 1]:-}"
+      fi
+      index=$((index + 2))
+      ;;
+    -c | --namespace | --config-env | --super-prefix) index=$((index + 2)) ;;
+    --git-dir | --work-tree)
+      repository_known=0
+      index=$((index + 2))
+      ;;
+    --git-dir=* | --work-tree=*)
+      repository_known=0
+      index=$((index + 1))
+      ;;
+    -*) index=$((index + 1)) ;;
+    *) break ;;
+    esac
+  done
+  ((index < count)) || return 0
+  if [[ ${WORD_DYNAMIC[index]} -eq 1 ]]; then
+    if mentions_merge "${WORDS[@]}"; then
+      PROBLEMS+=("git runs a subcommand given by a shell expansion: ${WORDS[index]}")
+    fi
+    return 0
+  fi
+  [[ ${WORDS[index]} == merge ]] || return 0
+  index=$((index + 1))
+  while ((index < count)); do
+    word=${WORDS[index]}
+    if [[ $options_done -eq 1 || $word != -* || ${WORD_DYNAMIC[index]} -eq 1 ]]; then
+      refs+=("$word")
+      ref_dynamic+=("${WORD_DYNAMIC[index]}")
+      index=$((index + 1))
+      continue
+    fi
+    case $word in
+    --) options_done=1 ;;
+    --abort | --quit) abort=1 ;;
+    --continue) continue_merge=1 ;;
+    -m | --message | -F | --file | -s | --strategy | -X | --strategy-option | --into-name | --cleanup)
+      index=$((index + 1))
+      ;;
+    --*) ;;
+    *)
+      # A cluster of short options: -S takes the rest as its key; m, F, s and X take the rest or the next word.
+      cluster=${word#-}
+      while [[ -n $cluster ]]; do
+        case ${cluster:0:1} in
+        S) break ;;
+        m | F | s | X)
+          if [[ ${#cluster} -eq 1 ]]; then
+            index=$((index + 1))
+          fi
+          break
+          ;;
+        esac
+        cluster=${cluster:1}
+      done
+      ;;
+    esac
+    index=$((index + 1))
+  done
+  [[ $abort -eq 0 ]] || return 0
+  if [[ $ARGUMENTS_FROM_STDIN -eq 1 ]]; then
+    PROBLEMS+=("git merge takes further refs from xargs")
+    return 0
+  fi
+  if [[ $repository_known -eq 0 || -z $directory ]]; then
+    PROBLEMS+=("cannot tell which repository git merge runs in")
+    return 0
+  fi
+  if [[ $continue_merge -eq 1 ]]; then
+    check_merge "$directory" MERGE_HEAD 1
+    return 0
+  fi
+  if [[ ${#refs[@]} -eq 0 ]]; then
+    check_merge "$directory" '@{upstream}' 0
+    return 0
+  fi
+  for ((ref_index = 0; ref_index < ${#refs[@]}; ref_index++)); do
+    if [[ ${ref_dynamic[ref_index]} -eq 1 ]]; then
+      PROBLEMS+=("cannot resolve the merged ref '${refs[ref_index]}': it holds a shell expansion")
+    else
+      check_merge "$directory" "${refs[ref_index]}" 0
+    fi
+  done
+}
+
+# analyze_shell <index of the shell>: analyses the script of `bash -c <script>` and similar shells.
+analyze_shell() {
+  local index=$(($1 + 1)) count=${#WORDS[@]} word has_script=0
+  while ((index < count)); do
+    word=${WORDS[index]}
+    case $word in
+    --) break ;;
+    -o | +o | -O | +O) index=$((index + 2)) ;;
+    --*) index=$((index + 1)) ;;
+    -* | +*)
+      if [[ $word == -*c* ]]; then
+        has_script=1
+      fi
+      index=$((index + 1))
+      ;;
+    *) break ;;
+    esac
+  done
+  [[ $has_script -eq 1 && $index -lt $count ]] || return 0
+  if [[ ${WORD_DYNAMIC[index]} -eq 1 ]]; then
+    if mentions_merge "${WORDS[index]}"; then
+      PROBLEMS+=("cannot read a shell script that holds a shell expansion: ${WORDS[index]}")
+    fi
+    return 0
+  fi
+  analyze_command "${WORDS[index]}" "$cwd" $((DEPTH + 1))
+}
+
+# analyze_eval <index of eval>: analyses the words eval joins into a command.
+analyze_eval() {
+  local index=$(($1 + 1)) script=''
+  for (( ; index < ${#WORDS[@]}; index++)); do
+    if [[ ${WORD_DYNAMIC[index]} -eq 1 ]]; then
+      if mentions_merge "${WORDS[@]}"; then
+        PROBLEMS+=("cannot read an eval command that holds a shell expansion")
+      fi
+      return 0
+    fi
+    script+=" ${WORDS[index]}"
+  done
+  analyze_command "$script" "$cwd" $((DEPTH + 1))
+}
+
+# analyze_words: analyses the simple command in SEGMENT_WORDS and SEGMENT_DYNAMIC.
+analyze_words() {
+  local -a WORDS=("${SEGMENT_WORDS[@]}") WORD_DYNAMIC=("${SEGMENT_DYNAMIC[@]}")
+  local count=${#SEGMENT_WORDS[@]} index=0 wrapper ARGUMENTS_FROM_STDIN=0
+  # Reserved words, assignments and wrappers in front of the program that runs.
+  while ((index < count)); do
+    if [[ ${WORD_DYNAMIC[index]} -eq 0 && ${WORDS[index]} =~ $ASSIGNMENT_PATTERN ]]; then
+      index=$((index + 1))
+      continue
+    fi
+    wrapper=${WORDS[index]##*/}
+    case $wrapper in
+    '!' | '{' | '}' | if | then | else | elif | fi | do | done | while | until) index=$((index + 1)) ;;
+    env)
+      index=$((index + 1))
+      while ((index < count)); do
+        case ${WORDS[index]} in
+        -C | --chdir)
+          cwd=''
+          index=$((index + 2))
+          ;;
+        -u | --unset | -S | --split-string) index=$((index + 2)) ;;
+        -*) index=$((index + 1)) ;;
+        *) break ;;
+        esac
+      done
+      ;;
+    command | builtin | exec | nohup | time | nice | timeout | xargs)
+      if [[ $wrapper == xargs ]]; then
+        ARGUMENTS_FROM_STDIN=1
+      fi
+      index=$((index + 1))
+      # The options of these wrappers that take a value: nice -n, timeout -s and -k, xargs -n -s -I -L -P -d -E -a.
+      while ((index < count)); do
+        case ${WORDS[index]} in
+        -n | -s | -k | -I | -L | -P | -d | -E | -a) index=$((index + 2)) ;;
+        -*) index=$((index + 1)) ;;
+        *) break ;;
+        esac
+      done
+      if [[ $wrapper == timeout ]]; then
+        index=$((index + 1))
+      fi
+      ;;
+    *) break ;;
+    esac
+  done
+  ((index < count)) || return 0
+  analyze_cleanup_wave
+  if [[ ${WORD_DYNAMIC[index]} -eq 1 ]]; then
+    if mentions_merge "${WORDS[@]:index}"; then
+      PROBLEMS+=("the command runs a program named by a shell expansion: ${WORDS[index]}")
+    fi
+    return 0
+  fi
+  case ${WORDS[index]##*/} in
+  cd | pushd) change_directory "$index" ;;
+  git) analyze_git "$index" ;;
+  bash | sh | zsh | dash | ksh) analyze_shell "$index" ;;
+  eval) analyze_eval "$index" ;;
+  esac
+}
+
+# change_directory <index of cd>: follows `cd` and `pushd` in `cwd`; a target the hook cannot evaluate makes it unknown.
+change_directory() {
+  local index=$(($1 + 1)) count=${#WORDS[@]}
+  while ((index < count)) && [[ ${WORDS[index]} == -?* ]]; do
+    index=$((index + 1))
+  done
+  if ((index >= count)); then
+    cwd=${HOME:-}
+  elif [[ ${WORDS[index]} == - || ${WORD_DYNAMIC[index]} -eq 1 ]]; then
+    cwd=''
+  else
+    join_path cwd "$cwd" "${WORDS[index]}"
+  fi
+}
+
+# analyze_command <text> <cwd> <depth>: analyses every simple command of the text in order.
+analyze_command() {
+  local cwd=$2 DEPTH=$3 depth deepest=0 index segment script
+  local -a order=() nested=()
+  if ((DEPTH > MAX_DEPTH)); then
+    PROBLEMS+=("the command nests shells more than $MAX_DEPTH levels deep")
+    return 0
+  fi
+  lex_command "$1"
+  if [[ $LEX_INCOMPLETE -eq 1 ]] && mentions_merge "$1"; then
+    PROBLEMS+=("the command leaves quoting, a substitution or a heredoc open")
+  fi
+  if [[ $LEX_HEREDOC_SUBSTITUTION -eq 1 ]]; then
+    PROBLEMS+=("a heredoc expands a command substitution that mentions a merge")
+  fi
+  local -a tokens=(${TOKENS[@]+"${TOKENS[@]}"}) token_segment=(${TOKEN_SEGMENT[@]+"${TOKEN_SEGMENT[@]}"})
+  local -a token_dynamic=(${TOKEN_DYNAMIC[@]+"${TOKEN_DYNAMIC[@]}"}) token_depth=(${TOKEN_DEPTH[@]+"${TOKEN_DEPTH[@]}"})
+  local -a token_redirect=(${TOKEN_REDIRECT[@]+"${TOKEN_REDIRECT[@]}"})
+  nested=(${NESTED_SCRIPTS[@]+"${NESTED_SCRIPTS[@]}"})
+  # The words in order of depth, which keeps every simple command in one run, and then run by run.
+  for ((index = 0; index < ${#tokens[@]}; index++)); do
+    if ((token_depth[index] > deepest)); then
+      deepest=${token_depth[index]}
+    fi
+  done
+  for ((depth = 0; depth <= deepest; depth++)); do
+    for ((index = 0; index < ${#tokens[@]}; index++)); do
+      if ((token_depth[index] == depth)); then
+        order+=("$index")
+      fi
+    done
+  done
+  segment=-1
+  SEGMENT_WORDS=()
+  SEGMENT_DYNAMIC=()
+  for index in ${order[@]+"${order[@]}"} end; do
+    if [[ $index == end || ${token_segment[index]} -ne $segment ]]; then
+      if [[ ${#SEGMENT_WORDS[@]} -gt 0 ]]; then
+        analyze_words
+      fi
+      SEGMENT_WORDS=()
+      SEGMENT_DYNAMIC=()
+      [[ $index != end ]] || break
+      segment=${token_segment[index]}
+    fi
+    if [[ ${token_redirect[index]} -eq 0 ]]; then
+      SEGMENT_WORDS+=("${tokens[index]}")
+      SEGMENT_DYNAMIC+=("${token_dynamic[index]}")
+    fi
+  done
+  for script in ${nested[@]+"${nested[@]}"}; do
+    analyze_command "$script" "$cwd" $((DEPTH + 1))
+  done
+}
+
+# --- main -------------------------------------------------------------------------------------------------------------
+
+command -v jq >/dev/null 2>&1 || ask_author "jq is not on PATH, so the hook cannot read the command."
+read_hook_input "$INPUT"
+input_string COMMAND '.tool_input.command' || ask_author "the command in the tool input is not a usable string."
+input_string CWD '.cwd' || ask_author "the cwd in the hook input is not a usable string."
+[[ $CWD == /* ]] || CWD=''
+load_governed_globs "$SCRIPT_DIR"
+
+analyze_command "$COMMAND" "$CWD" 0
+
+if [[ ${#HITS[@]} -eq 0 && ${#PROBLEMS[@]} -eq 0 ]]; then
+  no_decision
+fi
+REASON=''
+if [[ ${#HITS[@]} -gt 0 ]]; then
+  LISTED=''
+  for ((index = 0; index < ${#HITS[@]} && index < MAX_LISTED; index++)); do
+    LISTED+="${LISTED:+, }${HITS[index]}"
+  done
+  if [[ ${#HITS[@]} -gt $MAX_LISTED ]]; then
+    LISTED+=", and $((${#HITS[@]} - MAX_LISTED)) more"
+  fi
+  REASON="this command merges changes to governed paths: $LISTED. Merges of governed paths need the author's \
+confirmation (AIDEV-08)."
+fi
+if [[ ${#PROBLEMS[@]} -gt 0 ]]; then
+  PROBLEM_TEXT=''
+  for problem in "${PROBLEMS[@]}"; do
+    PROBLEM_TEXT+="${PROBLEM_TEXT:+; }$problem"
+  done
+  REASON+="${REASON:+ }the hook could not check every merge in this command ($PROBLEM_TEXT), so it asks. Confirm \
+that the command merges no governed path."
+fi
+ask_author "$REASON"
