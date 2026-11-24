@@ -102,7 +102,7 @@ check_mise() {
   fi
   local minimum installed lowest
   minimum=$(sed -nE 's/^min_version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$ROOT/mise.toml" 2>/dev/null | sed -n 1p)
-  installed=$(mise --version 2>/dev/null | awk 'NR == 1 { print $1 }')
+  installed=$(mise --version 2>/dev/null | awk 'NR == 1 { print $1 }') || installed=''
   if [[ -z $installed ]]; then
     report fail mise "cannot read the installed version from 'mise --version'" "brew upgrade mise, or: mise self-update"
     return
@@ -553,7 +553,7 @@ check_claude_code() {
     return
   fi
   local installed lowest
-  installed=$(claude --version 2>/dev/null | awk 'NR == 1 { print $1 }')
+  installed=$(claude --version 2>/dev/null | awk 'NR == 1 { print $1 }') || installed=''
   if [[ -z $installed ]]; then
     report warn claude-code "cannot read the version from 'claude --version'" "brew upgrade --cask claude-code@latest"
     return
@@ -574,7 +574,9 @@ check_claude_code() {
 readonly GIT_MIN_VERSION=2.36.0
 
 # git (local only, AIDEV-08): the installed git supports the calls of the governance hooks. A missing git, an older
-# git and a version that cannot be read all fail, because the hooks then ask for every edit.
+# git and a version that cannot be read all fail, because the hooks then ask for every edit. A `git` that fails
+# outright, like the macOS /usr/bin/git stub without the Command Line Tools, also reads as a version that cannot
+# be read.
 check_git() {
   local_only git && return
   if ! has git; then
@@ -583,10 +585,11 @@ check_git() {
     return
   fi
   local installed lowest
-  installed=$(git --version 2>/dev/null | awk 'NR == 1 && $1 == "git" && $2 == "version" { print $3 }')
+  installed=$(git --version 2>/dev/null | awk 'NR == 1 && $1 == "git" && $2 == "version" { print $3 }') || installed=''
   if [[ ! $installed =~ ^[0-9]+\.[0-9]+ ]]; then
     report fail git "cannot read the version from 'git --version'" \
-      "brew install git (Homebrew's git must come before /usr/bin on PATH), or upgrade git with your package manager"
+      "brew install git (Homebrew's git must come before /usr/bin on PATH), or upgrade git with your package manager" \
+      "xcode-select --install (on macOS, /usr/bin/git is a stub until the Xcode Command Line Tools are installed)"
     return
   fi
   lowest=$(printf '%s\n%s\n' "$GIT_MIN_VERSION" "$installed" | sort -V | sed -n 1p)
