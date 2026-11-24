@@ -6,7 +6,7 @@ status: "reported"
 workaround: true
 upstream: ["https://github.com/AxonIQ/AxonFramework/issues/5326"]
 reported: "2026-11-23"
-updated: "2026-11-23"
+updated: "2026-11-24"
 ---
 
 # UP-0001: No public extension point to observe the conditional append of a decision
@@ -20,9 +20,10 @@ Axon Framework 5.4.2 has no public type that reports these facts. The public `Ev
 show only some of them, and only through workarounds (see the reproduction). The one place where all of them meet is
 the `@Internal` `EventStorageEngine`.
 
-Impact on this repository: the command service decorates an `@Internal` type, so any Axon release may break the
-decorator without a deprecation period. The permanent `DecisionCaptureIntegrationTest` makes such a break fail in the
-pull request that brings the update.
+Impact on this repository: the command service decorates `EventStorageEngine`, which is `@Internal`. According to the
+maintainer response, `@Internal` here signals that the type may change, it is not experimental, and the engine stays in
+Axon Framework 5 without being removed. A minor release can still change its contract without a deprecation period. The
+permanent `DecisionCaptureIntegrationTest` makes such a change fail in the pull request that brings the update.
 
 ## Minimal reproduction
 
@@ -52,7 +53,10 @@ A design gap, not a defect. `DefaultEventStoreTransaction` collects the criteria
 and, in the `APPEND_EVENTS` phase, calls `eventStorageEngine.appendEvents(appendCondition, processingContext,
 eventQueue)` ([line 231][transaction]). That call is the only place where the exact condition, the tagged events and
 the verdict of the store come together, and `EventStorageEngine` carries `@Internal` ([line 51][engine]), which means
-that it may change in any release. No public hook offers the same view.
+that it may change in any release. The decoration mechanism itself is public, because every component registered with
+Axon Framework can be decorated through the configurer
+([documentation](https://docs.axoniq.io/axon-framework-reference/5.4/configuration/configurer/#decorators)). The gap is
+that the one component that sees all the facts is an `@Internal` type, and no public type offers the same view.
 
 [transaction]: https://github.com/AxonIQ/AxonFramework/blob/axon-5.4.2/eventsourcing/src/main/java/org/axonframework/eventsourcing/eventstore/DefaultEventStoreTransaction.java#L231
 [engine]: https://github.com/AxonIQ/AxonFramework/blob/axon-5.4.2/eventsourcing/src/main/java/org/axonframework/eventsourcing/eventstore/EventStorageEngine.java#L51
@@ -76,6 +80,14 @@ marker, the tagged events, the marker after the commit and the verdict of the st
 of a rejection. A release that removes `@Internal` from the engine decorator contract and promises its stability
 meets the criterion as well. The release notes or the API documentation of the release name the API.
 
+The maintainer response applies to this criterion as follows. The statement that `EventStorageEngine` stays in Axon
+Framework 5 is not a stability promise for the decorator contract, so it does not meet the criterion on its own. A
+`debug` log statement in the `EventStorageEngine`, the angle the maintainer suggests for a pull request, does not meet
+it either, because the capture needs the facts as data in the application, not as log text. An opt-in decorator
+definition shipped by Axon Framework, which the maintainer also accepts, meets the criterion when it hands the listed
+facts to application code. The issue is on the Axon Framework 5.5.0 milestone (on 2026-11-24), set on the expectation of
+a pull request from this repository and to be moved otherwise.
+
 ## How to verify removal
 
 Replace `DecisionCaptureEngine` with the public API, delete the decorator registration and both markers, then run
@@ -85,6 +97,22 @@ unchanged, and `grep -rn "eventstore.EventStorageEngine" backend/command-service
 ## Upstream issue draft
 
 Target: `AxonIQ/AxonFramework`, as a feature request. Published as https://github.com/AxonIQ/AxonFramework/issues/5326 on 2026-11-23.
+
+Maintainer response on 2026-11-23 ([comment](https://github.com/AxonIQ/AxonFramework/issues/5326#issuecomment-7102785005)):
+the issue is re-classified as an enhancement, although it was filed like a bug. An observer API is redundant in the
+maintainer's view, because every component registered with Axon Framework can be decorated
+([documentation](https://docs.axoniq.io/axon-framework-reference/5.4/configuration/configurer/#decorators)). The
+suggested angle for a pull request is a `debug` log statement with all the information in the `EventStorageEngine`; an
+opt-in decorator definition that users can enable is acceptable as well. `@Internal` on `EventStorageEngine` is not
+experimental: the concept stays in Axon Framework 5 and is not going to be removed, and the annotation only signals
+that the type may change and calls for care. The issue is placed on 5.5.0, expecting a pull request from the reporter;
+the milestone is adjusted otherwise.
+
+Status on 2026-11-24: open, milestone "Release 5.5.0", labels "Priority 4: Would" and "Ideal for Contribution".
+
+Open decision for the author: upstream would welcome a pull request that adds a `debug` log statement with all the
+information to the `EventStorageEngine` or an opt-in decorator definition. This repository has not decided whether to
+contribute it; until it does, the 5.5.0 milestone may move.
 
 ### Public extension point to observe the conditional append of a decision
 

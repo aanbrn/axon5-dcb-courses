@@ -6,7 +6,7 @@ status: "reported"
 workaround: true
 upstream: ["https://github.com/AxonIQ/AxonFramework/issues/5328"]
 reported: "2026-11-23"
-updated: "2026-11-23"
+updated: "2026-11-24"
 ---
 
 # UP-0004: AnnotationBasedTagResolver tags the raw UUID of a Kotlin value-class property
@@ -52,7 +52,9 @@ getter with a mangled name that returns the `UUID`, so reflection never sees the
 one of the underlying `UUID`. A resolver based on `kotlin-reflect` boxes the property first and gets the TypeID.
 
 The same unboxing defeats `@TargetEntityId`, see [UP-0005](0005-target-entity-id-value-classes.md). The discussion
-in [AxonIQ/AxonFramework#3761][entity-id-issue] points to a Kotlin-aware property access as the direction.
+in [AxonIQ/AxonFramework#3761][entity-id-issue] points to a Kotlin-aware property access as the direction. The
+maintainer confirmed that this defect is separate from #3761, which concerns `AnnotationBasedEntityIdResolver` (the
+`@TargetEntityId` side recorded in UP-0005), while this one concerns `AnnotationBasedTagResolver`.
 
 [resolver]: https://github.com/AxonIQ/AxonFramework/blob/axon-5.4.2/eventsourcing/src/main/java/org/axonframework/eventsourcing/eventstore/AnnotationBasedTagResolver.java#L91-L109
 [entity-id-issue]: https://github.com/AxonIQ/AxonFramework/issues/3761
@@ -72,7 +74,8 @@ getter, boxes the value and uses its `toString()`. `CommandServiceConfigurationE
 
 An Axon Framework or `axon-kotlin` release whose default tag resolution yields `value.toString()` of the Kotlin value
 class for an annotated value-class property, for example through a Kotlin-aware resolver that the Spring Boot starter
-or the Kotlin extension registers. The release notes or the changed resolver show it.
+or the Kotlin extension registers. The release notes or the changed resolver show it. Upstream plans it for Axon
+Framework 5.7.0 (milestone on 2026-11-24), earlier if a pull request lands first.
 
 ## How to verify removal
 
@@ -84,6 +87,17 @@ still see their events through criteria built from the TypeIDs.
 ## Upstream issue draft
 
 Target: `AxonIQ/AxonFramework` (the Kotlin extension lives in the same ecosystem), as a bug report. Published as https://github.com/AxonIQ/AxonFramework/issues/5328 on 2026-11-23.
+
+Maintainer response on 2026-11-23 ([comment](https://github.com/AxonIQ/AxonFramework/issues/5328#issuecomment-7106068823)):
+the report was filed as a bug and is accepted as a fair enhancement. It first looked like a duplicate of
+AxonIQ/AxonFramework#3761, but that issue concerns `AnnotationBasedEntityIdResolver`, this one
+`AnnotationBasedTagResolver`. A pull request would be much welcome; otherwise the issue is placed on 5.7.0, for the
+Axoniq team to tackle at their earliest convenience.
+
+Status on 2026-11-24: open, milestone "Release 5.7.0", label "Priority 3: Could".
+
+Open decision for the author: upstream would much welcome a pull request. This repository has not decided whether to
+contribute the Kotlin-aware resolver that the published issue offers.
 
 ### AnnotationBasedTagResolver tags the unboxed value of a Kotlin value-class property
 
