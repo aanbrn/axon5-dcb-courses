@@ -101,11 +101,17 @@ check_mise() {
     return
   fi
   local minimum installed lowest
-  # The first sed fails on a missing or unreadable mise.toml, which pipefail turns into the end of the run.
+  # A missing mise.toml is restored from git; one that exists but cannot be read keeps its content and needs its mode
+  # changed. The first sed fails on either, which pipefail would turn into the end of the run.
+  if [[ ! -e $ROOT/mise.toml ]]; then
+    report fail mise "mise.toml cannot be read from the repository root, so its min_version cannot be checked" \
+      "restore it: git restore mise.toml"
+    return
+  fi
   if ! minimum=$(sed -nE 's/^min_version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$ROOT/mise.toml" 2>/dev/null |
     sed -n 1p); then
     report fail mise "mise.toml cannot be read from the repository root, so its min_version cannot be checked" \
-      "restore it: git restore mise.toml"
+      "chmod u+r mise.toml"
     return
   fi
   installed=$(mise --version 2>/dev/null | awk 'NR == 1 { print $1 }') || installed=''

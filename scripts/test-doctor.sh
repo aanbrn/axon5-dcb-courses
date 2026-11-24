@@ -340,6 +340,21 @@ assert_out "no mise.toml" "^      fix: restore it: git restore mise\\.toml"
 assert_out "no mise.toml" "^ok  tools: "
 assert_out "no mise.toml" "^summary: "
 
+# A mise.toml that exists but cannot be read needs a different fix than a missing one: restoring would overwrite it.
+fresh
+if make_unreadable "$ENV/repo/mise.toml"; then
+  run_doctor "$ENV"
+  chmod 644 "$ENV/repo/mise.toml"
+  assert_code "unreadable mise.toml" 1
+  assert_out "unreadable mise.toml" "^fail  mise: mise\\.toml cannot be read"
+  assert_out "unreadable mise.toml" "^      fix: chmod u\\+r mise\\.toml"
+  assert_no_out "unreadable mise.toml" "git restore mise\\.toml"
+  assert_out "unreadable mise.toml" "^ok  tools: "
+  assert_out "unreadable mise.toml" "^summary: "
+else
+  skip_unreadable "unreadable mise.toml"
+fi
+
 # --- the local-only checks of a healthy tree ----------------------------------------------------------
 
 fresh
