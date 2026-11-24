@@ -924,6 +924,58 @@ boundary_case mise.local.lock ungoverned
 boundary_case backend/contracts/kernel/mise.toml ungoverned
 boundary_case frontend/package.json ungoverned
 
+# Required CI gate configuration (author decision of 2026-11-24).
+boundary_case .editorconfig governed
+boundary_case docs/.editorconfig governed
+boundary_case backend/command-service/.editorconfig governed
+# A `**/` entry needs the slash: a name that merely ends in `.editorconfig` is not governed.
+boundary_case docs/x.editorconfig ungoverned
+# Lint job: editorconfig-checker, line-ending renormalisation, reuse lint, shellcheck, zizmor.
+boundary_case .editorconfig-checker.json governed
+boundary_case .gitattributes governed
+boundary_case frontend/.gitattributes governed
+boundary_case REUSE.toml governed
+boundary_case backend/REUSE.toml governed
+boundary_case .reuse/dep5 governed
+boundary_case .shellcheckrc governed
+boundary_case shellcheckrc governed
+boundary_case scripts/.shellcheckrc governed
+boundary_case scripts/upstream/shellcheckrc governed
+boundary_case zizmor.yml governed
+boundary_case zizmor.yaml governed
+# Build job formatters: Prettier, taplo and the licence header templates of Spotless.
+boundary_case .prettierrc.yaml governed
+boundary_case .taplo.toml governed
+boundary_case config/spotless/license-header.txt governed
+# Secrets job: gitleaks.
+boundary_case .gitleaks.toml governed
+boundary_case .gitleaksignore governed
+# Qodana job and doctor job.
+boundary_case qodana.yml governed
+boundary_case scripts/doctor.sh governed
+boundary_case tooling/doctor/build.gradle.kts governed
+boundary_case tooling/doctor/src/main/kotlin/io/github/aanbrn/courses/doctor/Doctor.kt governed
+# Recorded exclusions of the gate configs, each explained in governance/governed-paths.txt.
+boundary_case lefthook.yml ungoverned
+boundary_case scripts/format-staged.sh ungoverned
+boundary_case .gitignore ungoverned
+boundary_case .ecrc ungoverned
+boundary_case taplo.toml ungoverned
+boundary_case scripts/test-doctor.sh ungoverned
+boundary_case \
+  tooling/architecture/src/main/kotlin/io/github/aanbrn/courses/architecture/ArchitectureScopes.kt ungoverned
+boundary_case scripts/upstream/changed-dependencies.sh ungoverned
+
+# The root zizmor.yml applies alongside the governed .github/zizmor.yml, and the file does not exist yet: adding it
+# must still need the label.
+run_case "a pull request adding zizmor.yml without the label fails" 1 "zizmor\.yml" \
+  PR_FILES_JSON="$(files_of adds-zizmor-yml "$(entry zizmor.yml added)")" \
+  PR_LABELS_JSON="$LABEL_NONE"
+# The Qodana CLI reads qodana.yml before the governed qodana.yaml, so an added qodana.yml replaces the configuration.
+run_case "a pull request adding qodana.yml without the label fails" 1 "qodana\.yml" \
+  PR_FILES_JSON="$(files_of adds-qodana-yml "$(entry qodana.yml added)")" \
+  PR_LABELS_JSON="$LABEL_NONE"
+
 # A root renovate.json beats the governed renovate.json5, and the file does not exist yet: adding it
 # must still need the label.
 run_case "a pull request adding renovate.json without the label fails" 1 "renovate\.json" \
