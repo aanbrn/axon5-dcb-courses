@@ -32,6 +32,16 @@ plugins {
 // input as well. Testcontainers' own Ryuk reaper is pinned through its environment variable, the same way on colima and
 // Docker Desktop, and the Axon update checker is switched off in every test JVM. No image literal exists in any test.
 
+// Native access (JEP 472): since JDK 24 a call of a restricted method (`System::load`, `System::loadLibrary`, the
+// foreign function and memory linker) from code without native access prints a warning, and a future JDK blocks the
+// call. Two libraries of the test classpath make such calls: the gRPC transport of the Axon Server connector
+// (grpc-netty-shaded, `NativeLibraryUtil` through `System::loadLibrary`) and JNA (`com.sun.jna.Native` through
+// `System::load`, reached through Testcontainers). Both load from the classpath, which is the unnamed module, so
+// `ALL-UNNAMED` is the narrowest scope that covers them; a module name would match nothing. The argument is set on
+// every `Test` task of a module that applies this convention, `architectureTest` included. It is a task input, so a
+// change re-runs the suites. It does not cover the Gradle daemon, which Gradle starts with the flag itself, the
+// build-logic TestKit JVM, which loads neither library, or the runtime JVMs (`bootRun`, the service images).
+
 val libs = the<org.gradle.accessors.dm.LibrariesForLibs>()
 
 /** Passes the catalog images and the environment settings of the container-based suites to [this] test task. */
@@ -89,6 +99,10 @@ testing {
         }
     }
 }
+
+// Every test JVM of the module gets native access for the classpath (see "Native access" above). By type, so that
+// `architectureTest` and any later suite is covered, and lazy, so that no task is created for it.
+tasks.withType<Test>().configureEach { jvmArgs("--enable-native-access=ALL-UNNAMED") }
 
 // D-19: `check` runs every suite, not only the built-in `test`.
 @Suppress("UnstableApiUsage")
