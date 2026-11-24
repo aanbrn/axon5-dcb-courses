@@ -38,6 +38,14 @@
     },
     {
       customType: "regex",
+      description: "GSD version pin in governance/gsd-version, read as the npm package @opengsd/gsd-core (the GSD installation under .claude/ is not committed)",
+      managerFilePatterns: ["/^governance/gsd-version$/"],
+      matchStrings: ["^(?<currentValue>\\d+\\.\\d+\\.\\d+)\\s*$"],
+      depNameTemplate: "@opengsd/gsd-core",
+      datasourceTemplate: "npm",
+    },
+    {
+      customType: "regex",
       description: "Versions annotated with '# renovate: datasource=... depName=...' in the Gradle version catalog",
       managerFilePatterns: ["/(^|/)gradle/libs\\.versions\\.toml$/"],
       matchStrings: [
@@ -232,6 +240,23 @@
       automerge: false,
       prBodyNotes: [
         "MCP server update: read the changelog, then re-run `claude mcp list` and confirm both project servers still connect before merging by hand.",
+      ],
+    },
+
+    // A GSD release replaces the commands, agents and hooks that run in the maintainer's Claude Code session, so its
+    // pull request is reviewed and merged by hand and never takes the governance exemption
+    // (scripts/governance/check-pr.sh). The flow is in docs/tooling.md (GSD updates). Like the rule above, it stays
+    // after every automerge rule because later rules win.
+    {
+      description: "GSD (agent commands, agents and hooks): never automerge, seven-day cooldown, with the review steps",
+      matchDepNames: ["@opengsd/gsd-core"],
+      automerge: false,
+      // Restates the repository's standard cooldown: the `security:minimumReleaseAgeNpm` rule of
+      // `config:best-practices` lowers npm packages to three days, and package rules override the top-level value.
+      // The npm datasource reports release timestamps, so the default timestamp-required behaviour applies.
+      minimumReleaseAge: "7 days",
+      prBodyNotes: [
+        "This pull request changes only `governance/gsd-version`, because the GSD installation is not committed. Before merging, read the release notes, review the hook diff with `npm diff --ignore-scripts --diff=@opengsd/gsd-core@{{{currentVersion}}} --diff=@opengsd/gsd-core@{{{newVersion}}} hooks`, check out this branch, install the release with `npx -y @opengsd/gsd-core@{{{newVersion}}} --claude --local` and run `scripts/doctor.sh` until it is green. The pin never takes the governance exemption, so add the `governance-approved` label and merge by hand (docs/tooling.md, GSD updates).",
       ],
     },
 
