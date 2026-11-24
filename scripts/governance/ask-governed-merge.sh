@@ -27,11 +27,13 @@
 # Bash command, so a command that does not mention `merge` or `cleanup-wave` leaves before anything else is loaded. It
 # looks for the words as written and again with quotes, backslashes, `$` and line continuations removed, so a word that
 # the shell assembles (`git mer''ge`) takes the full check; the early probe below says how.
-# Outside its view on purpose (ADR-0015): `git pull`, cherry-pick, rebase, reset, checkout of paths, git aliases, script
-# files that a shell or `source` runs, programs that run git themselves, a merge word that a parameter expansion, a
-# brace expansion inside one word (`mer{g,}e`) or ANSI-C escapes assemble, a merge option value that splits into several
-# words, and a shell that reads standard input behind a program the hook does not know as a wrapper; the pull request
-# gate and the maintainer's review stay the control there.
+# A command that merges and also runs a git subcommand that can move a ref or HEAD (fetch, pull, checkout, switch, reset,
+# rebase, a forced branch or tag and the like) asks too, because the refs are checked as they are before the command.
+# Outside its view on purpose (ADR-0015): `git pull`, cherry-pick, rebase, reset and checkout of paths without a merge
+# in the same command, git aliases, script files that a shell or `source` runs, programs that run git themselves, a
+# merge word that a parameter expansion, a brace expansion inside one word (`mer{g,}e`) or ANSI-C escapes assemble, a
+# merge option value that splits into several words, and a shell that reads standard input behind a program the hook
+# does not know as a wrapper; the pull request gate and the maintainer's review stay the control there.
 set -uo pipefail
 export LC_ALL=C
 unset CDPATH

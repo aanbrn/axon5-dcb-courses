@@ -59,6 +59,8 @@ ln -s ../mise.toml "$REPO/docs/alias.toml"
 AGENT="$REPO/.claude/worktrees/agent-a"
 ln -s "$REPO/mise.toml" "$AGENT/docs/escape.toml"
 ln -s "$REPO/governance" "$AGENT/linked-main"
+mkdir -p "$AGENT/sub"
+ln -s "$REPO/docs/.editorconfig" "$AGENT/sub/.editorconfig"
 
 # edit_input <tool> <path> [cwd]: the PreToolUse input for a file tool call.
 edit_input() {
@@ -144,6 +146,10 @@ run_case "an agent worktree on the agent-<id> branch namespace stays silent" non
   "$(edit_input Write "$REPO/.claude/worktrees/agent-n/mise.toml" "$REPO/.claude/worktrees/agent-n")"
 run_case "a file that is not governed in an agent worktree passes silently" none '' \
   "$(edit_input Edit "$AGENT/docs/readme.md" "$AGENT")"
+run_case "an agent worktree: a leading \`**/\` entry at the root of the worktree stays silent" none '' \
+  "$(edit_input Write "$AGENT/.editorconfig" "$AGENT")"
+run_case "an agent worktree: a leading \`**/\` entry in a subdirectory of the worktree stays silent" none '' \
+  "$(edit_input Write "$AGENT/docs/.editorconfig" "$AGENT")"
 
 # --- trees that keep asking: the main checkout, the session's own tree and worktrees that are not agent worktrees ---
 
@@ -194,6 +200,11 @@ run_case "a registered agent worktree replaced by a symbolic link to the main ch
   "$(edit_input Edit "$REPO/.claude/worktrees/agent-s/mise.toml" "$REPO")"
 run_case "a different case spelling of an agent worktree directory asks" ask \
   'mise\.toml in .*AGENT-A is a governed path' "$(edit_input Edit "$REPO/.claude/worktrees/AGENT-A/mise.toml" "$REPO")"
+run_case "a leading \`**/\` entry under a different case spelling of an agent worktree asks" ask \
+  "docs/\\.editorconfig.*\`\\*\\*/\\.editorconfig\`" \
+  "$(edit_input Write "$REPO/.claude/worktrees/AGENT-A/docs/.editorconfig" "$REPO")"
+run_case "a symbolic link in an agent worktree to a \`**/\` entry in the main checkout asks" ask \
+  "docs/\\.editorconfig.*\`\\*\\*/\\.editorconfig\`" "$(edit_input Write "$AGENT/sub/.editorconfig" "$AGENT")"
 
 # --- path spellings --------------------------------------------------------------------------------------------------
 
