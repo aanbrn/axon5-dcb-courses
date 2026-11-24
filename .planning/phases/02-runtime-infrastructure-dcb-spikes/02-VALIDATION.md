@@ -84,7 +84,7 @@ Filled by the planner per task; the requirement-level map is in `02-RESEARCH.md`
 | 2-18-02 | 18 | 9 | UPS-04 | T-02-43 | Read-only advisory job | lint | `actionlint`; `zizmor --offline` | ✅ | ✅ green |
 | 2-19-01 | 19 | 9 | DOC-03 | T-02-44 | Decisions unchanged by normalisation | check | `mise x -- ./gradlew checkAdrs spotlessCheck` | ✅ | ✅ green |
 | 2-19-02 | 19 | 9 | DOC-03, GH-12 | T-02-45 | Fail-closed ADR metadata | TestKit | `*AdrCheckFunctionalTest*`; `build` | ✅ | ✅ green |
-| 2-20-01 | 20 | 10 | CICD-09 | T-02-58, T-02-60 | Licence gate wiring and detekt rule set governed; CI fails when no module registers the gate | check + shell + lint | `checkClaudeAskRules spotlessCheck`; `bash scripts/governance/test-check-pr.sh`; `actionlint`; `zizmor --offline`; `build checkDependencyLicences --dry-run` task count; ask-rule counts (57) | ✅ | ✅ green |
+| 2-20-01 | 20 | 10 | CICD-09 | T-02-58, T-02-60 | Licence gate wiring and detekt rule set governed; CI fails when no module registers the gate | check + shell + lint | `checkClaudeAskRules spotlessCheck`; `bash scripts/governance/test-check-pr.sh`; `actionlint`; `zizmor --offline`; `build checkDependencyLicences --dry-run` task count; ask-rule count 57 at `febcf70` (point in time: later quick tasks grew the governed paths, 82 rules on 2026-11-24, and `checkClaudeAskRules` keeps the rules covering them) | ✅ | ✅ green |
 | 2-20-02 | 20 | 10 | CICD-09 | — | — | check + grep | `checkToolingInventory spotlessCheck`; no version numbers in `docs/tooling.md`; `outside the licence check` grep | ✅ | ✅ green |
 | 2-21-01 | 21 | 10 | AIDEV-01 | T-02-48 | Mapping approved first | checkpoint (blocking-human) | — (manual approval) | n/a | 🔒 manual (approved) |
 | 2-21-02 | 21 | 10 | AIDEV-01 | T-02-48 | Config equals policy | check | `checkGsdConfigPolicy checkAdrs spotlessCheck`; `jq` equality | ✅ | ✅ green |
@@ -132,10 +132,20 @@ Filled by the planner per task; the requirement-level map is in `02-RESEARCH.md`
 
 **Approval:** validated 2026-11-23 — full `./gradlew build` green (39 test classes, 274 tests, 0 failures), shell tests `test-doctor.sh`, `test-check-pr.sh` and `test-changed-dependencies.sh` green, `docker compose config --quiet` clean
 
+**Re-validated 2026-11-24** (after quick tasks changed covered files): full `./gradlew build` green (43 test classes, 328 tests, 0 failures) once `6e2f690` named a magic number that detekt rejected in `ComposeVersionsFunctionalTest` (introduced by quick task 261124-c1g); all seven shell test suites green (684 checks); real `scripts/doctor.sh` run exits 0 with 16 checks and no `fail` line; `docker compose config --quiet` clean
+
 ## Validation Audit 2026-11-23
 
 | Metric | Count |
 |---|---|
 | Gaps found | 0 |
 | Resolved | 0 |
+| Escalated | 0 |
+
+## Validation Audit 2026-11-24
+
+| Metric | Count |
+|---|---|
+| Gaps found | 1 |
+| Resolved | 1 |
 | Escalated | 0 |
