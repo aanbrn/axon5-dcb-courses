@@ -129,6 +129,8 @@ Recent decisions affecting current work:
 
 - [Quick, after Phase 2 execute-phase]: Deduplicate the reasons of the governance merge hook. `scripts/governance/ask-governed-merge.sh` appends one `PROBLEMS` entry per occurrence (for example line 1030, "the command runs a program named by a shell expansion: $R") and joins them into `REASON` (line 1155) without removing repeats, so a command that calls `$R` thirty times shows the same reason thirty times and the prompt is truncated. Remove duplicates (keeping first-seen order), consider capping the list, and add a case to `scripts/governance/test-ask-governed-merge.sh`. The script is a governed path.
 
+- [Quick, after the Phase 2 PR merges]: Pull forward the GitHub presentation items that do not depend on the UI (author decision 2026-11-24), as quick tasks: (1) GH-01 repository metadata as code without the social preview image and homepage (description, topics, unused features disabled; applied via `gh` after author approval); (2) GH-03 community health files (CONTRIBUTING, CODE_OF_CONDUCT, SUPPORT, CODEOWNERS, SECURITY.md with the stated policy); (3) GH-13 `CITATION.cff`; (4) an honest work-in-progress README with CI, OpenSSF Scorecard and licence badges (the full showcase README, GH-02/DOC-01, stays in Phase 13). Update REQUIREMENTS.md traceability for each item delivered (GH-01 becomes partial until the social preview and homepage land in Phase 13). While there, reconcile the GH-04 phase: REQUIREMENTS.md says Phase 7, the Phase 4 discuss todo above says Phase 8.
+
 ### Blockers/Concerns
 
 - [Phase 2]: Unlicensed Axon Server behaviour (12-hour shutdown vs 14-day limit, restart effect) may affect the `docker compose up` quick start and CI
