@@ -4,10 +4,10 @@ current_phase: 02
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: executing
 stopped_at: Phase 2 context gathered
-last_updated: "2026-11-24T10:23:27.014Z"
+last_updated: "2026-11-24T11:37:33.360Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 02 execution started
-state_head: 2ad525f4701aff645a06cbbe304b305b82ae19dc
+state_head: b62ce4d097c950acc8532ab51a21ba4894bcecb6
 progress:
   total_phases: 13
   completed_phases: 1
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-11-22)
 
 Phase: 02 (Runtime Infrastructure & DCB Spikes) — VERIFYING
 Plan: 23 of 23 executed (all SUMMARYs present)
-Status: Phase 02 verification human_needed (5/5 success criteria verified); 02-UAT.md has 6 pending human items; the phase PR is not open yet
-Last activity: 2026-11-24 - Completed quick task 261124-nlk: Phase 2 review findings IN-06..IN-08 closed
+Status: Phase 02 verification human_needed (5/5 success criteria verified, re-verified 2026-11-24 at 6d81294); 02-UAT.md has 6 pending human items; the phase PR is not open yet
+Last activity: 2026-11-24 - Completed quick task 261124-oyk: Phase 2 review findings WR-01..WR-03 and IN-01 closed
 
 Progress: [█░░░░░░░░░] 8%
 
@@ -124,6 +124,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
+- [First ID-keyed map in a contract]: Decide the JSON key form of an ID-keyed map (today jackson-module-kotlin writes the raw UUID and rejects the TypeID form; the TypeID form needs a key serializer and a key deserializer) and record it in an ADR. `CoursesJsonModule` KDoc and `JsonRoundTripTest` pin the current behaviour (review WR-02, quick task 261124-oyk).
 - [Renovate, from 2026-11-27]: Merge open Renovate PRs by hand (automerge is off for them). #19 `npm:renovate` 44.252.8 → 44.257.5 was released 2026-11-20, so it meets the 7-day npm cooldown (CICD-04) only from 2026-11-27. #20 lock file maintenance waits until its `renovate/stability-days` check is green. Both touch `mise.lock` and the renovate sidecar lock, as does the Phase 2 branch: expect a rebase of whichever lands later.
 - [Phase 4 discuss]: Choose the documentation-site tool. Docusaurus 3.10.2 with Mermaid is only a research recommendation (`.planning/research/STACK.md`, SUMMARY.md); PROJECT.md Key Decisions fixes only "docs site as a Gradle subproject" (Pending), and no ADR exists. Needed by INFRA-08 (docs-site skeleton as a Gradle subproject, Phase 4/5), GH-04 (GitHub Pages publication, Phase 8, with Storybook per UI-08), UPS-02's index on the site (Phase 5) and DOC-02 (final docs phase). Record the choice in an ADR and PROJECT.md.
 
@@ -170,6 +171,7 @@ Recent decisions affecting current work:
 | 261124-kh6 | Fix Phase 2 review findings CR-01 and WR-01..WR-06 (merge-hook bypass forms, agent-worktree ** exemption, GSD pin validation, upstream records) and deduplicate merge-hook reasons | 2026-11-24 | e34377b | [261124-kh6-fix-phase-02-review-findings-cr-01-and-w](./quick/261124-kh6-fix-phase-02-review-findings-cr-01-and-w/) |
 | 261124-nlk | Close Phase 2 review findings IN-06 (false positive, guarded by tests), IN-07 (value-only KDoc) and IN-08 (doctor checks git >= 2.36) | 2026-11-24 | 54f0e53 | [261124-nlk-fix-phase-02-review-findings-in-06-and-i](./quick/261124-nlk-fix-phase-02-review-findings-in-06-and-i/) |
 | 24 | Record the 2026-11-24 maintainer reply on AxonFramework#5326 in UP-0001 (package, callback with logging default, assignment, target main) | 2026-11-24 | 2ad525f | — |
+| 261124-oyk | Fix Phase 2 review findings WR-01 (doctor survives a failing --version), WR-02 (KDoc states the raw-UUID map key), WR-03 (image check matches the Renovate form) and IN-01 | 2026-11-24 | b62ce4d | [261124-oyk-fix-phase-2-review-findings-wr-01-wr-02-](./quick/261124-oyk-fix-phase-2-review-findings-wr-01-wr-02-/) |
 
 ## Deferred Items
 

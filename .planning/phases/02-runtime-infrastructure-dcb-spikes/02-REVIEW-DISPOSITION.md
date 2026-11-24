@@ -5,19 +5,19 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`check_git` aborts the whole doctor run, with no report, when `git --version` exits non-zero"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "The new KDoc on `CoursesJsonModule` states a wrong map-key behaviour and a remedy that would not round-trip"
   - id: WR-03
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`ImageReferenceCheck` accepts catalog entries that the Renovate manager never matches, though its KDoc says the check exists to catch them"
   - id: IN-01
     severity: info
-    disposition: open
+    disposition: fixed
     title: "A shell whose operand comes from an expansion now asks with a misleading reason"
   - id: CR-01
     severity: critical
@@ -88,10 +88,10 @@ recorded: 2026-11-24T10:49:07.687Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
-| IN-01 | info | open | - |
+| WR-01 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-oyk in 5781180 (empty-string fallback on the git, mise and claude version reads; doctor reports `fail  git:` and finishes) |
+| WR-02 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-oyk in 9392b29 (KDoc states the observed raw-UUID map key; JsonRoundTripTest pins it; key form left to an ADR when a contract first holds an ID-keyed map) |
+| WR-03 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-oyk in b61e980 (check accepts exactly the form the Renovate image manager reads, rejects registry ports; parity test reads the regex from renovate.json5) |
+| IN-01 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-oyk in 58ccbb2 (reason names the shell expansion; still asks) |
 | CR-01 | critical | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 9f8be86 (shell option clusters and value-taking long options parsed as bash does; unknown forms ask) (not in the current review) |
 | WR-04 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 996829c (a `**/` match inside an agent worktree is exempt; the five `Edit(/**/...)` ask rules recorded as an ADR-0015 residual risk) (not in the current review) |
 | WR-05 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in dd73bcf (the pin must match a plain version before the fix command is built) (not in the current review) |
