@@ -55,6 +55,7 @@
       "Edit(/build-logic/src/main/kotlin/courses.root.gradle.kts)",
       "Edit(/build-logic/src/main/kotlin/courses.settings.settings.gradle.kts)",
       "Edit(/config/detekt/**)",
+      "Edit(/build-logic/src/main/kotlin/courses.kotlin-library.gradle.kts)",
       "Edit(/.editorconfig)",
       "Edit(/**/.editorconfig)",
       "Edit(/.editorconfig-checker.json)",
