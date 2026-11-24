@@ -1,115 +1,79 @@
 ---
 phase: 02-runtime-infrastructure-dcb-spikes
-reviewed: 2026-11-24T00:00:00Z
+reviewed: 2026-11-24T19:35:00Z
 depth: standard
-files_reviewed: 13
+files_reviewed: 10
 files_reviewed_list:
   - backend/serialization-jackson/src/main/kotlin/io/github/aanbrn/courses/serialization/CoursesJsonModule.kt
+  - backend/serialization-jackson/src/test/kotlin/io/github/aanbrn/courses/serialization/JsonRoundTripTest.kt
+  - build-logic/build.gradle.kts
   - build-logic/src/functionalTest/kotlin/io/github/aanbrn/courses/buildlogic/governance/ImageReferenceCheckFunctionalTest.kt
   - build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/governance/ImageReferenceCheck.kt
   - docs/adr/0015-governance-hooks-for-worktrees-and-merges.md
-  - docs/tooling.md
-  - docs/upstream/0001-decision-capture-extension-point.md
-  - docs/upstream/0004-tag-resolver-value-classes.md
   - scripts/doctor.sh
-  - scripts/governance/ask-governed-edit.sh
   - scripts/governance/ask-governed-merge.sh
-  - scripts/governance/test-ask-governed-edit.sh
   - scripts/governance/test-ask-governed-merge.sh
   - scripts/test-doctor.sh
 findings:
   critical: 0
-  warning: 3
-  info: 1
-  total: 4
+  warning: 1
+  info: 2
+  total: 3
   necessity: 0
 status: issues_found
 ---
 
-# Phase 2: Code Review Report (incremental re-review)
+# Phase 2: Code Review Report (incremental, after quick task 261124-oyk)
 
-**Reviewed:** 2026-11-24
+**Reviewed:** 2026-11-24T19:35:00Z
 **Depth:** standard
-**Files Reviewed:** 13
+**Files Reviewed:** 10
 **Status:** issues_found
 
 ## Summary
 
-This re-review covers the diff `d49aa53..HEAD` for the files changed by quick tasks 261124-kh6 and 261124-nlk, read in the context of the whole files. I also ran the merge hook against about 50 commands, replayed the new `check_git` against a failing `git`, and ran a throwaway probe of the Jackson module in a scratch copy of the repository (`git archive HEAD`). The repository itself was not modified.
+This is an incremental review of `git diff 2e36184..HEAD` for the ten files that quick task 261124-oyk changed. I read each diff and its immediate surroundings, and ran the affected checks.
 
-The earlier findings are fixed correctly:
-- The merge hook now reads shell option clusters, wrapper options, `GIT_*` repository variables, brace expansion and moved refs as the ADR describes, and I found no bypass among the cases I tried.
-- `below_agent_root` in the edit hook exempts only byte-for-byte agent-root paths, so the `..`, symlink and case-spelling cases still ask.
-- `ImageReferenceCheck` now trims lines, so indented entries are matched.
-- The gsd pin is validated before it reaches a command.
+All four previous findings are fixed correctly and completely:
 
-No new Critical issues. Three Warnings remain, and one of them (WR-01) is a regression introduced by the new `check_git`. WR-02 is a factual error in the new KDoc, which I confirmed by running the code. WR-03 is a gap between the image check and the Renovate manager, which the amended doc comment overstates.
+- **WR-01 (doctor survives a failing `--version`): fixed.** `scripts/doctor.sh` is `set -euo pipefail`, so a failing `mise`, `claude` or `git` made the pipeline fail inside the command substitution and killed doctor silently. The `|| installed=''` guards at lines 105, 556 and 588 turn that into the existing "cannot read the version" report. The new git-stub case adds the `xcode-select --install` fix line (`report` accepts any number of fix lines). `scripts/test-doctor.sh` has regression cases for each of the three tools, and the git-stub case also asserts that the later checks and the summary still run. `bash scripts/test-doctor.sh` gives 167 passed, 0 failed, and shellcheck is clean on all four scripts.
+- **WR-02 (`CoursesJsonModule` KDoc on ID map keys): fixed.** The KDoc now states the observed behaviour: the key is written as the raw UUID, read back from it, and a TypeID-form key is rejected. It also names both directions the TypeID form needs, `addKeySerializer` and `addKeyDeserializer`. Two new `JsonRoundTripTest` cases pin the behaviour. `:serialization-jackson:test` is green with 16 tests, including both new ones.
+- **WR-03 (`checkImageReferences` accepts what Renovate reads): fixed.** The check now enforces the manager regex of `renovate.json5`: a bare key `image-[a-z0-9-]+`, exactly one space on each side of `=`, a double-quoted `name:tag@sha256:digest` with no colon in the name, and no registry port. I traced the regexes by hand and ran `ImageReferenceCheckFunctionalTest` (15 tests, 0 failures). The functional test extracts the live regex from `renovate.json5` and compares accepted and rejected samples against it, including the `localhost:5000` misread. Adding `../renovate.json5` to the `repoFiles` inputs in `build-logic/build.gradle.kts` keeps that test's task cacheable and correctly invalidated. The three real catalog entries (`image-axonserver`, `image-postgres`, `image-ryuk`) are in the accepted form.
+- **IN-01 (merge hook names the real reason for a dynamic shell word): fixed.** The new message names the word and both possibilities, and the ADR-0015 paragraph matches what the code does. The three new hook cases and the literal-script control (`bash run.sh && git merge docs-only` passes silently) pass; `bash scripts/governance/test-ask-governed-merge.sh` gives 169 passed, 0 failed.
+
+I found no regressions, no security issues and no correctness bugs in the changed lines. Three residual items remain, none blocking.
 
 ## Warnings
 
-### WR-01: `check_git` aborts the whole doctor run, with no report, when `git --version` exits non-zero
+### WR-01: `check_gsd` still dies silently under `set -e` when the GSD manifest is not valid JSON
 
-**File:** `scripts/doctor.sh:586-594`
-**Issue:** `doctor.sh` runs under `set -euo pipefail`. The new check reads the version with:
-
-```bash
-installed=$(git --version 2>/dev/null | awk 'NR == 1 && $1 == "git" && $2 == "version" { print $3 }')
-```
-
-If `git --version` exits non-zero, `pipefail` makes the pipeline fail, and `set -e` terminates the script at that assignment. The `[[ ! $installed =~ ... ]]` branch that is meant to report "cannot read the version" is never reached.
-
-The common real case is a fresh macOS machine without the Xcode Command Line Tools. `/usr/bin/git` is a shim there: `has git` succeeds, and the shim exits 1 with `xcode-select: note: no developer tools were found`. I replayed `check_git` with a fake `git` that prints that note and exits 1. The script exited with status 1 and printed nothing. There was no `fail  git:` line, no `fix:` line and no summary, so the machine-health tool is silent exactly where it is meant to help. `test-doctor.sh` only covers a fake `git` that exits 0 with an unparsable line (the "git version unknown" case), so it did not catch this.
-
+**File:** `scripts/doctor.sh:385`
+**Issue:** This is the same failure class as the fixed WR-01, in a sibling check the quick task did not touch. `installed=$("$jq" -r '.version // empty' "$manifest")` is unguarded. A truncated or corrupted `.claude/gsd-file-manifest.json` makes `jq` exit non-zero (2 for a parse error), `set -e` ends the script, and the user gets a raw jq error with no `fail  gsd:` line, no fix hint and no summary. That is exactly the case where doctor should say "reinstall GSD". The `-f` test only proves the file exists, not that it parses. I traced this from the code and did not run it against a corrupt manifest.
 **Fix:**
-
 ```bash
-installed=$(git --version 2>/dev/null | awk 'NR == 1 && $1 == "git" && $2 == "version" { print $3 }') || installed=''
+if ! installed=$("$jq" -r '.version // empty' "$manifest" 2>/dev/null); then
+  report fail gsd ".claude/gsd-file-manifest.json cannot be parsed" "$install_fix"
+  return
+fi
 ```
-
-Add a test in `scripts/test-doctor.sh` where the fake `git --version` prints to stderr and exits 1. It should assert `^fail  git: cannot read the version`, a non-empty summary and exit code 1.
-
-### WR-02: The new KDoc on `CoursesJsonModule` states a wrong map-key behaviour and a remedy that would not round-trip
-
-**File:** `backend/serialization-jackson/src/main/kotlin/io/github/aanbrn/courses/serialization/CoursesJsonModule.kt:27-30`
-**Issue:** The added paragraph says a map keyed by an ID "would be written with the ID's `toString()` as the key". It is not. `CourseId` is a `@JvmInline value class` over `UUID`, and jackson-module-kotlin serialises value-class keys by unboxing them.
-
-I ran `coursesJsonMapper().writeValueAsString(mapOf(courseId to 1))` in a scratch copy of the repository:
-- It wrote `{"01a20d2a-468f-7579-adc8-b838667c40d5":1}`, the raw UUID, while `courseId.toString()` is `course_01m86jmhmfenwtvj5r71k7rg6n`.
-- Reading that JSON back into `Map<CourseId, Int>` succeeds, because the Kotlin module deserialises the key as a UUID.
-- Reading the TypeID form `{"course_01m8...":1}` fails with `Cannot deserialize Map key of type java.util.UUID ... Invalid UUID string`.
-
-So ID-keyed maps already round-trip today, but their key wire form differs from the TypeID wire form used for every value. The KDoc claims "no key deserializer to read it back", which is false. The plan it proposes (add only `addKeyDeserializer` that parses through `TypedIdCompanion.parse`) would make the module read TypeID keys while the Kotlin module keeps writing UUID keys. That breaks the round trip. Whoever follows this note later will be misled.
-
-**Fix:** Correct the paragraph to the observed behaviour. For example: "These types are registered as values only. As map keys, the Kotlin module writes a value-class ID as its unboxed UUID, not as the TypeID text, and reads it back as a UUID. The first contract with an ID-keyed map must decide the wire form: to use the TypeID form, add both `addKeySerializer` (`ToStringSerializer`) and `addKeyDeserializer`, with the latter parsing through `TypedIdCompanion.parse` and reporting rejection through `weirdKeyException`." Optionally pin the current behaviour with a test in `JsonRoundTripTest` so the decision is visible.
-
-### WR-03: `ImageReferenceCheck` accepts catalog entries that the Renovate manager never matches, though its KDoc says the check exists to catch them
-
-**File:** `build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/governance/ImageReferenceCheck.kt:27-30, 148, 158`
-**Issue:** The class KDoc says the double-quoted-value rule exists "because the Renovate custom manager reads only the double-quoted form and such an entry would never be updated". The check and the manager disagree on more than the value quoting. The manager regex (`renovate.json5:83`) is:
-
-`\bimage-[a-z0-9-]+ = "(?<depName>[^:"@\s]+):(?<currentValue>[^@"\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"`
-
-The check passes, and Renovate silently never updates, each of these entries:
-- A quoted key: `"image-x" = "name:1@sha256:..."`. `CATALOG_ENTRY` accepts it, but the regex needs `image-x = "` with no quote between key and ` =`.
-- A key with an uppercase letter, `_` or `.`, such as `image-Foo` or `image-a_b`. `CATALOG_ENTRY` allows `[A-Za-z0-9_.-]+`; the manager allows only `[a-z0-9-]+`.
-- No spaces around `=`, or more than one space (`image-x="..."`, `image-x  = "..."`). `CATALOG_ENTRY` uses `\s*=\s*`; the manager needs exactly one space on each side.
-- A registry with a port, `localhost:5000/app:1.0@sha256:...`. `PINNED_REFERENCE` explicitly allows the port prefix, but the manager's `depName` group excludes `:`.
-
-The indentation fix in this round widened the matched shapes further without narrowing this gap. This is a robustness defect in a guard whose purpose is "every image is updated by Renovate". It pre-exists, but the amended KDoc now presents the parity as complete.
-
-**Fix:** Either tighten the check to the manager's shape (bare lower-case key `image-[a-z0-9-]+`, single-space `=`, no registry port) and report anything else, or loosen the manager regex to the shapes the check accepts. Add a functional test for a quoted key and for a key written without spaces. Whichever way, update the KDoc to say what the two share.
+Add a `test-doctor.sh` case that writes `{` into the manifest and asserts `^fail  gsd: ` and `^summary: `.
 
 ## Info
 
-### IN-01: A shell whose operand comes from an expansion now asks with a misleading reason
+### IN-01: The TypeID-key test asserts only `JacksonException`, which any failure satisfies
 
-**File:** `scripts/governance/ask-governed-merge.sh:898-910`
-**Issue:** The new dynamic-word check in `analyze_shell` runs for the first word after the shell name. For `bash $SCRIPT; git merge docs-only` I verified that the hook now asks with "cannot tell where the options of bash end: they come from a shell expansion". There `$SCRIPT` is a script path, not an option. It is a legitimate fail-closed outcome (the hook cannot read the script). But the ADR lists "script files that a shell runs" as outside the hook's view, and the message points the maintainer at options that are not there. The ordinary command `bash "$HOME/run.sh" && git merge x` now prompts.
+**File:** `backend/serialization-jackson/src/test/kotlin/io/github/aanbrn/courses/serialization/JsonRoundTripTest.kt:173-178`
+**Issue:** `an ID map key in the TypeID form fails deserialisation` uses `shouldThrow<JacksonException>`, the root of the Jackson exception hierarchy. The test exists to pin "a TypeID-form key is rejected as a malformed UUID". It would also stay green if the failure came from something unrelated, such as a mapper misconfiguration or a changed target type. The sibling tests in this class already use `invalidFormat()` to pin the cause.
+**Fix:** Assert the specific cause, for example `shouldThrow<JacksonException> { ... }.invalidFormat()` (the existing helper walks the cause chain to an `InvalidFormatException`) and check its `targetType` or `value`.
 
-**Fix:** When the dynamic word is the first operand after the shell's options (nothing before it started with `-`), report "cannot read the script of bash: it comes from a shell expansion". Alternatively, treat a dynamic first operand as a script file and stay silent, as for a literal script file. If the prompt is kept on purpose, add a sentence to the ADR.
+### IN-02: Renovate reads catalog lines that `checkImageReferences` never inspects
+
+**File:** `build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/governance/ImageReferenceCheck.kt:93-100`
+**Issue:** The KDoc claim "every entry the check accepts is read by the manager" holds, and the tests pin it. The converse is not covered: the manager regex in `renovate.json5` is unanchored (`\bimage-[a-z0-9-]+ = "..."`) and the file pattern is the whole catalog. It therefore also reads a commented-out `# image-old = "x:1@sha256:..."` line and an `image-*` entry in any table other than `[versions]`. The check anchors at the line start and only looks inside `[versions]`, so it ignores both. The practical effect is limited to Renovate opening a PR for a dead comment or a stray entry, and no current line is affected. The "single source of every image" guarantee is slightly weaker than the KDoc suggests.
+**Fix:** Either note the gap in the KDoc ("Renovate also reads commented-out lines and other tables; keep neither"), or have `catalogProblems` also flag a commented-out line or a line outside `[versions]` that matches `image-[a-z0-9-]+ = "`.
 
 ---
 
-_Reviewed: 2026-11-24_
+_Reviewed: 2026-11-24T19:35:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
