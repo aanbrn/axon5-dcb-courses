@@ -9,6 +9,7 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 DOCTOR="$SCRIPT_DIR/doctor.sh"
 BASH_BIN=$(command -v bash)
+REAL_GIT=$(command -v git)
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
@@ -86,7 +87,19 @@ FAKE
 #!/usr/bin/env bash
 echo "$(cat "$FAKE_DIR/claude-version") (Claude Code)"
 FAKE
-  chmod +x "$dir/bin/mise" "$dir/bin/java" "$dir/bin/docker" "$dir/bin/claude"
+  # `git --version` prints the line in `git-version`; every other call goes to the real git (the tracking and
+  # upstream-removal checks run `git -C ...`), whose path is kept in `real-git`.
+  echo "git version 2.47.1 (Apple Git-154)" >"$dir/git-version"
+  echo "$REAL_GIT" >"$dir/real-git"
+  cat >"$dir/bin/git" <<'FAKE'
+#!/usr/bin/env bash
+if [[ ${1:-} == --version ]]; then
+  cat "$FAKE_DIR/git-version"
+  exit 0
+fi
+exec "$(cat "$FAKE_DIR/real-git")" "$@"
+FAKE
+  chmod +x "$dir/bin/mise" "$dir/bin/java" "$dir/bin/docker" "$dir/bin/claude" "$dir/bin/git"
   printf 'jq\ncontext7-mcp\nplaywright-mcp\n' >"$dir/mise-binaries"
   make_local_state "$dir"
 }
@@ -284,8 +297,9 @@ assert_out "healthy local state" "^ok  gsd-defaults: "
 assert_out "healthy local state" "^ok  mcp: all 2 servers in \\.mcp\\.json resolve through mise"
 assert_out "healthy local state" "^ok  platform-token: "
 assert_out "healthy local state" "^ok  claude-code: 2\\.1\\.330"
+assert_out "healthy local state" "^ok  git: 2\\.47\\.1 meets the minimum 2\\.36\\.0"
 assert_out "healthy local state" "^ok  claude-tracking: "
-assert_no_out "healthy local state" "^(warn|fail)  (image-store|colima|gsd|gsd-defaults|mcp|platform-token|claude-code|claude-tracking):"
+assert_no_out "healthy local state" "^(warn|fail)  (image-store|colima|gsd|gsd-defaults|mcp|platform-token|claude-code|git|claude-tracking):"
 
 # --- GSD integrity ---------------------------------------------------------------------------------
 
@@ -470,6 +484,28 @@ rm "$ENV/bin/claude"
 run_doctor "$ENV"
 assert_out "Claude Code missing" "^warn  claude-code: the claude CLI is not on PATH"
 
+# --- the git version the governance hooks need (ADR-0015) ---------------------------------------------
+
+fresh
+echo "git version 2.35.8" >"$ENV/git-version"
+run_doctor "$ENV"
+assert_code "git too old" 1
+assert_out "git too old" "^fail  git: 2\\.35\\.8 is older than 2\\.36\\.0"
+assert_out "git too old" "^      fix: brew install git"
+
+fresh
+echo "git version 2.36.0" >"$ENV/git-version"
+run_doctor "$ENV"
+assert_code "git at the minimum" 0
+assert_out "git at the minimum" "^ok  git: 2\\.36\\.0 meets the minimum 2\\.36\\.0"
+
+fresh
+echo "git version unknown" >"$ENV/git-version"
+run_doctor "$ENV"
+assert_code "git version unreadable" 1
+assert_out "git version unreadable" "^fail  git: cannot read the version from 'git --version'"
+assert_out "git version unreadable" "^      fix: brew install git"
+
 # --- tracked .claude files (AIDEV-03) --------------------------------------------------------------
 
 fresh
@@ -574,7 +610,7 @@ echo '{"runtime": "x"}' >"$ENV/home/.gsd/defaults.json"
 printf 'jq\n' >"$ENV/mise-binaries"
 run_doctor "$ENV" --ci
 assert_code "--ci" 0
-for check in gsd gsd-defaults mcp platform-token colima claude-code; do
+for check in gsd gsd-defaults mcp platform-token colima claude-code git; do
   assert_out "--ci skips $check" "^skip  $check: "
 done
 assert_out "--ci still checks the tracked files" "^ok  claude-tracking: "
