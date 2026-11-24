@@ -343,10 +343,10 @@ readonly GSD_UNLISTED_ALLOWED=(hooks/package.json scripts/changeset/README.md)
 # The directories under .claude/ that GSD owns. Anything else there (skills, settings) is not GSD's.
 readonly GSD_DIRECTORIES=(gsd-core agents commands hooks scripts)
 
-# gsd (local only, AIDEV-07): the installed GSD is the pinned version and every file is byte for byte what the
-# manifest records. A modified hook changes what agents do, so it is called out as a hook. Files that the manifest does
-# not list under GSD's directories are reported as unexpected. Nothing is repaired: the fix reinstalls the pinned version
-# after you have looked at the difference.
+# gsd (local only, AIDEV-07): the pin is a plain version (validated before any command is built from it), the installed
+# GSD is the pinned version and every file is byte for byte what the manifest records. A modified hook changes what
+# agents do, so it is called out as a hook. Files that the manifest does not list under GSD's directories are reported as
+# unexpected. Nothing is repaired: the fix reinstalls the pinned version after you have looked at the difference.
 check_gsd() {
   local_only gsd && return
   local claude=$ROOT/.claude pinned_file=$ROOT/governance/gsd-version manifest pinned installed jq install_fix
@@ -356,6 +356,13 @@ check_gsd() {
     return
   fi
   pinned=$(sed -n 1p "$pinned_file" | tr -d '[:space:]')
+  # The pin goes into a command that a maintainer copies and runs, so it must be a plain version (the shape that the
+  # Renovate custom manager matches). The message does not repeat it: it can hold anything a file can.
+  if [[ ! $pinned =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    report fail gsd "governance/gsd-version must hold one version such as 1.2.3" \
+      "write the version of the installed GSD into governance/gsd-version"
+    return
+  fi
   install_fix="npx -y @opengsd/gsd-core@$pinned --claude --local"
   if [[ ! -f $manifest ]]; then
     report fail gsd ".claude/gsd-file-manifest.json is missing, so GSD is not installed" "$install_fix"

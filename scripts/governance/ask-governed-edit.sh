@@ -154,6 +154,20 @@ is_agent_root() {
   return 1
 }
 
+# below_agent_root <root> <absolute path>: succeeds when the root contains the root of an agent worktree (the main or
+# session root holds .claude/worktrees/agent-<id>) and the path starts with that agent root followed by a slash, both
+# compared byte for byte. A match relative to such a root, such as `**/.editorconfig` against
+# .claude/worktrees/agent-<id>/docs/.editorconfig, only restates the match relative to the agent root, which is exempt.
+below_agent_root() {
+  local agent_root
+  for agent_root in ${AGENT_ROOTS[@]+"${AGENT_ROOTS[@]}"}; do
+    if [[ $agent_root == "$1"/* && $2 == "$agent_root"/* ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 command -v jq >/dev/null 2>&1 || ask_author "jq is not on PATH, so the hook cannot read the call."
 read_hook_input
 input_string FILE_PATH '.tool_input.file_path // .tool_input.notebook_path' ||
@@ -234,14 +248,16 @@ else
 fi
 
 # check_candidate <absolute path>: asks the author when the path, taken relative to a root, is governed, except for a
-# path below the root of an agent worktree. The prefix test compares folded case; the relative path keeps the spelling
+# path below the root of an agent worktree: the match relative to the agent root and the match relative to any root that
+# contains it are both exempt, byte for byte. The prefix test compares folded case; the relative path keeps the spelling
 # of the candidate.
 check_candidate() {
   local candidate=$1 folded_candidate='' folded='' root base relative
   fold_case folded_candidate "$candidate"
   for root in "${ROOTS[@]}"; do
     fold_case folded "$root"
-    if [[ $folded != / && $folded_candidate == "$folded"/* ]] && ! is_agent_root "$root" "$candidate"; then
+    if [[ $folded != / && $folded_candidate == "$folded"/* ]] && ! is_agent_root "$root" "$candidate" &&
+      ! below_agent_root "$root" "$candidate"; then
       match_relative "${candidate:${#root}+1}" "$root"
     fi
   done

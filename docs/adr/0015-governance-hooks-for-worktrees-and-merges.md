@@ -91,11 +91,12 @@ only where the file lives.
     on a branch (not detached, bare or prunable), whose path both as written and with symbolic links resolved is exactly
     `<session root or main worktree root>/.claude/worktrees/agent-<id>` (`<id>` made of A-Z, a-z, 0-9, dot, underscore
     and hyphen, compared byte for byte), whose branch is `agent-<id>` or `worktree-agent-<id>`, and which is neither the
-    session root nor the main worktree root. The exemption covers only a match relative to that root, and only for a
-    path that starts with the root followed by a slash, byte for byte. Every other match and every resolved spelling is
-    still checked, so a `..` path, a symbolic link into the main checkout, a directory replaced by a link, and a
-    different case spelling of the directory all ask. No environment variable and no tool-input field beyond the file
-    path and cwd takes part in the decision.
+    session root nor the main worktree root. The exemption covers a match relative to that root and a match relative to
+    a root that contains it (the main or session root, whose `**/<name>` entries would otherwise match
+    `.claude/worktrees/agent-<id>/<file>`), and only for a path that starts with the agent root followed by a slash,
+    byte for byte. Every other match and every resolved spelling is still checked, so a `..` path, a symbolic link into
+    the main checkout, a directory replaced by a link, and a different case spelling of the directory all ask. No
+    environment variable and no tool-input field beyond the file path and cwd takes part in the decision.
   - **Still asking.** The main checkout and a session started inside an agent worktree (its own tree). EnterWorktree
     worktrees (`worktree-<name>`, later renamed to `gsd/phase-*` and pushed as the pull request branch without a merge
     into the main checkout). Worktrees outside `.claude/worktrees/`. Workflow-tool worktrees (`worktree-wf_*`), which
@@ -105,17 +106,39 @@ only where the file lives.
   `cleanup-wave` leaves at once, once quotes, backslashes, `$` and line continuations are removed from the text (so
   `git mer''ge` and `git mer\<newline>ge` count as mentions); the test is linear, because bash pattern substitution on a
   long command is quadratic in bash 3.2 and would run into the hook's timeout. Otherwise a small lexer finds
-  `git ... merge <ref>...`, also with `-C`, after `cd`, in lists, pipelines, subshells, command substitutions, `bash -c`,
-  `eval`, heredocs and here-strings fed to a shell, behind `env` (also `env -S`), `sudo` and `doas`, behind programs that
-  take git or `bash -c` among their arguments (`mise x -- git merge`, `stdbuf`, `caffeinate`, `script`), and GSD's
-  `worktree.cleanup-wave --manifest <file>`, which merges every branch of the manifest. `<<` inside `$((...))` or
-  `((...))` is arithmetic, not a heredoc. For each merged ref the hook lists the files changed since the merge base with
-  the target's `HEAD` (`git diff --no-renames --name-only HEAD...<ref>`, so a file moved out of a governed path counts)
-  and asks when one is governed, listing them. `git merge --abort` and `--quit` pass. It also asks when a shell reads its
-  script from standard input (a pipe, `/dev/stdin`, a process substitution, a heredoc fed to another command), when a
-  script, eval text or program comes from a shell expansion, or when the lexing is left incomplete (an unterminated
-  quote, substitution or heredoc), if the command mentions a merge anywhere. Since the amendment it is the single
-  confirmation point for governed work done in an agent worktree.
+  `git ... merge <ref>...`, also with `-C` and `--attr-source <tree>`, after `cd`, in lists, pipelines, subshells,
+  command substitutions, `bash -c`, `eval`, heredocs and here-strings fed to a shell, behind `env` (also `env -S`),
+  `sudo` and `doas`, behind programs that take git or `bash -c` among their arguments (`mise x -- git merge`, `stdbuf`,
+  `caffeinate`, `script`), and GSD's `worktree.cleanup-wave --manifest <file>`, which merges every branch of the
+  manifest. `<<` inside `$((...))` or `((...))` is arithmetic, not a heredoc. For each merged ref the hook lists the
+  files changed since the merge base with the target's `HEAD` (`git diff --no-renames --name-only HEAD...<ref>`, so a
+  file moved out of a governed path counts) and asks when one is governed, listing them. `git merge --abort` and
+  `--quit` pass. It also asks when a shell reads its script from standard input (a pipe, `/dev/stdin`, a process
+  substitution, a heredoc fed to another command), when a script, eval text or program comes from a shell expansion, or
+  when the lexing is left incomplete (an unterminated quote, substitution or heredoc), if the command mentions a merge
+  anywhere. Since the amendment it is the single confirmation point for governed work done in an agent worktree.
+  - **Shell options.** Behind a shell the hook reads the options the way bash does: a cluster takes a value for each `o`
+    and `O` (`bash -euo pipefail -c`, `-oo pipefail errexit`, `+eo pipefail`), `--rcfile` and `--init-file` take a file,
+    `--` and a lone `-` end the options, and a script behind them is analysed. An unknown long option, or an option word
+    from a shell expansion, asks when the command mentions a merge.
+  - **Wrapper options.** `env`, `sudo` and `doas` options are read as clusters and long options. A directory change
+    (`env -C`, `--chdir`, `sudo -D`, also inside a cluster or attached to it) makes the repository unknown and asks, and
+    `env -iS'...'` is analysed like `env -S`.
+  - **Repository variables.** A command that merges and also assigns, exports or declares `GIT_DIR`, `GIT_WORK_TREE`,
+    `GIT_COMMON_DIR` or `GIT_CEILING_DIRECTORIES` anywhere asks, because git then works in another repository than the
+    hook checks. Other `GIT_` variables do not matter.
+  - **Brace expansion.** An unquoted `{a,b}` or `{a..b}` counts as a shell expansion, so a program, subcommand, ref or
+    script that holds one asks, as does an argument of another program that holds one and names git or a merge
+    (`mise x -- {git,merge,x}`). Quoted braces and a group command's `{ ... }` are not expansions.
+  - **Moved refs.** The hook checks the refs as they are when the command starts. A command that merges and also runs a
+    git subcommand that can move a ref or HEAD to a commit that is not a descendant of the current one asks, in either
+    order: `fetch`, `pull`, `checkout`, `switch`, `reset`, `rebase`, `update-ref`, `symbolic-ref`, `replace`, `bisect`,
+    `filter-branch` and `remote`; `branch` and `tag` with a force option (and `branch -M` or `-C`); `stash branch`;
+    `worktree add`. `commit`, `revert`, `cherry-pick`, `am`, `stash`, `branch -d` and another merge only add commits and
+    do not ask.
+  - **Reason.** The reason lists each governed file and each problem once, in the order they were found, with problems
+    capped at ten and a count of the rest, so a repeated problem cannot push the governed files or the other problems
+    out of the prompt.
 - **Shared code.** `governed-paths.sh` holds the grammar and the glob matcher and is now also sourced by `check-pr.sh`;
   `hook-common.sh` holds the hook protocol. [ADR-0003](0003-governance-gate-trust-boundary.md) does not require the gate to
   be self-contained: the library lies under the same governed `scripts/governance/**` and comes from the same tree.
@@ -135,8 +158,8 @@ only where the file lives.
 - Good, because an edit of a governed path in the main checkout or in a worktree that is not an agent worktree prompts
   the author, in auto mode and in background subagents: a hook's ask goes to the permission prompt, not to the auto mode
   classifier.
-- Good, because the work of an agent worktree costs one prompt per merge instead of one per edit, and the prompt lists
-  the governed files.
+- Good, because the work of an agent worktree costs one prompt per merge instead of one per edit (apart from the
+  `Edit(/**/<name>)` ask rules named under Residual risks), and the prompt lists the governed files.
 - Good, because governed content that shell commands, scripts or git wrote in a worktree is caught when it is merged
   through `git merge` or `worktree.cleanup-wave`, with the governed files listed in the prompt. That holds for the forms
   the hook analyses or, failing that, asks about; the forms under Residual risks stay outside.
@@ -147,6 +170,8 @@ only where the file lives.
 - Bad, because a merge the hook cannot resolve, such as `git merge "$BRANCH"`, asks even when it brings nothing
   governed, and an executor that merges the base branch into its own worktree is asked when the base changed governed
   paths.
+- Bad, because a command that merges and also fetches, checks out, resets or force-moves a branch asks even when the
+  ref moves after the merge, and an executor that fetches and merges the base branch in one command is asked.
 - Bad, because failing closed also asks for some commands that only mention a merge next to a script the hook cannot
   read (a pipe into a shell, `eval "$x"`), and an argument list that names git and merge, such as `echo git merge x`, is
   checked as a merge.
@@ -159,8 +184,9 @@ only where the file lives.
 ### Residual risks
 
 - The merge hook does not see other integration channels: `git pull`, `cherry-pick`, `rebase`, `reset`,
-  `checkout <ref> -- <path>`, `apply` and `am`, git aliases, and programs that run git themselves, except the wrappers
-  and the argument lists it analyses (see The hooks). The pull request gate
+  `checkout <ref> -- <path>`, `apply` and `am`, git aliases, programs other than git that move refs (`gh pr checkout`),
+  and programs that run git themselves, except the wrappers and the argument lists it analyses (see The hooks). The pull
+  request gate
   (`governance-success`) and the maintainer's review stay the control there, as ADR-0003 records.
 - Unapproved governed edits can accumulate in an agent worktree. They are gated only at the merge prompt and at the
   pull request, where `governance-success` (`check-pr.sh`) requires the `governance-approved` label (ADR-0001,
@@ -173,8 +199,16 @@ only where the file lives.
   running session, which loads them from `${CLAUDE_PROJECT_DIR}`, but would apply to a session started inside that
   worktree.
 - The hook never sees a merge word or git subcommand that the command text does not mention: one assembled by a
-  parameter expansion or a command substitution (`git mer${E}ge`) or by ANSI-C escapes (`$'...'` with a hex or octal
-  escape) leaves at the early probe.
+  parameter expansion or a command substitution (`git mer${E}ge`), by ANSI-C escapes (`$'...'` with a hex or octal
+  escape) or by a brace expansion inside one word (`mer{g,}e`) leaves at the early probe.
+- A value of a merge option that splits into several words (`git merge -m {x,feat} y`, an unquoted `$MSG`) shifts the
+  refs the hook reads. The lexer does not record whether an expansion is quoted, and asking for every `-m "$MSG"` would
+  add prompts for ordinary merges.
+- The `Edit(/**/<name>)` ask rules for `.editorconfig`, `.gitattributes`, `REUSE.toml`, `.shellcheckrc` and `shellcheckrc`
+  still prompt per edit inside an agent worktree: they anchor at the session root and match any depth, so they match
+  `.claude/worktrees/agent-<id>/<file>`, and `checkClaudeAskRules` requires one `Edit(/<entry>)` rule per entry.
+  Explicit directory entries would drop coverage of nested configs that these tools read from any directory, so the
+  prompts stay. That is safe, only extra.
 - A script file that a shell or `source` runs counts with the programs that run git themselves: the hook does not read
   the file.
 - A shell that reads standard input behind a program the hook does not know as a wrapper (for example
@@ -198,7 +232,11 @@ only where the file lives.
   an agent worktree and the worktrees that are not agent worktrees (ask), and every attempt to pass as an agent
   worktree (ask): an unregistered directory, a different branch, a detached HEAD, another agent's branch, a worktree
   outside `.claude/worktrees/`, a `..` or relative path into the main checkout, symbolic links into the main checkout, a
-  registered directory replaced by a symbolic link, and a different case spelling.
+  registered directory replaced by a symbolic link, and a different case spelling. A leading `**/` entry
+  (`.editorconfig`) inside an agent worktree is silent for the worktree's own path and still asks for a different case
+  spelling of the directory and for a symbolic link into the main checkout. The merge hook's cases cover the shell
+  option clusters, wrapper option clusters, `--attr-source`, the repository variables, brace expansion, the moved refs
+  and the deduplicated reasons.
 - Live check: with the hooks registered, a worktree subagent's Write to a governed path of its own worktree passes
   without a prompt, the `worktree.cleanup-wave` merge that brings it into the main checkout asks once and lists the
   file, and a Write to the same path in the main checkout asks.
