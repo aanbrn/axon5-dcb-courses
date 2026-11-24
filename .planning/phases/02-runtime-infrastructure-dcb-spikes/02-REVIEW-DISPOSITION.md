@@ -49,15 +49,15 @@ findings:
     title: "`ComposeVersionsFunctionalTest` pins the repository catalog's current image set"
   - id: IN-06
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`ImageReferenceCheck` skips an indented catalog entry"
   - id: IN-07
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`CoursesJsonModule` writes an ID as a map key but cannot read it back"
   - id: IN-08
     severity: info
-    disposition: open
+    disposition: fixed
     title: "The hooks need git 2.36 or newer, and `doctor` does not check it"
   - id: IN-01
     severity: info
@@ -99,9 +99,9 @@ recorded: 2026-11-24T07:24:48.477Z
 | WR-08 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in 55247cc (shells reading standard input, here-strings, `env -S`, `sudo`/`doas` and programs whose arguments run git are analysed or ask; the rest is listed in ADR-0015 residual risks) (not in the current review) |
 | WR-09 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in bd589d0 (`<<` in arithmetic is not a heredoc; a heredoc without its delimiter line leaves the lexing incomplete) (not in the current review) |
 | WR-10 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in 6a06a26 (every test runs on its own fixture image set) (not in the current review) |
-| IN-06 | info | open | - (not in the current review) |
-| IN-07 | info | open | - (not in the current review) |
-| IN-08 | info | open | - (not in the current review) |
+| IN-06 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-nlk in 474c1fc (false positive: catalogProblems trims each line before matching; two TestKit cases now guard indented entries, KDoc states it) (not in the current review) |
+| IN-07 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-nlk in 3f9da9c (KDoc states the ID types are registered as values only; the first ID-keyed map adds addKeyDeserializer) (not in the current review) |
+| IN-08 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-nlk in 04a892d and 3f9da9c (doctor fails on a missing, unparsable or pre-2.36 git; ADR-0015 and docs/tooling.md record the minimum) (not in the current review) |
 | IN-01 | info | fixed | 02-REVIEW.md — fixed by quick task 261123-rzt in f4fa65f (the pool is sized by STUDENTS and the suppression is gone) (not in the current review) |
 | IN-02 | info | fixed | 02-REVIEW.md — fixed by quick task 261123-rzt in f4fa65f (shared fixture barrier and submitDecision in the tests) and 71a11d1 (one .java-version parser in build-logic) (not in the current review) |
 | IN-03 | info | fixed | 02-REVIEW.md — fixed by quick task 261123-rzt in 57fc03f (one shared outline scanner that closes a fence only on its own fence string) (not in the current review) |
