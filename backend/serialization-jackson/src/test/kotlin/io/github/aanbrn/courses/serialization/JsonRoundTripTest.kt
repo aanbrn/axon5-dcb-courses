@@ -158,6 +158,7 @@ class JsonRoundTripTest {
 
     // The module registers IDs as values only. These two tests pin what jackson-module-kotlin does for an ID used as a
     // map key, so that the open key-form decision in the CoursesJsonModule KDoc stays visible: a change fails here.
+    // The TypeID key fails in the key deserializer of the underlying UUID, so the failure names the UUID, not the ID.
     @Test
     fun `an ID map key is written as its raw UUID and read back from it`() {
         val id = TestIds.courseId(1)
@@ -171,9 +172,15 @@ class JsonRoundTripTest {
 
     @Test
     fun `an ID map key in the TypeID form fails deserialisation`() {
-        val json = """{"${TestIds.courseId(1)}":1}"""
+        val typeId = TestIds.courseId(1).toString()
+        val json = """{"$typeId":1}"""
 
-        shouldThrow<JacksonException> { mapper.readValue<Map<CourseId, Int>>(json) }
+        val failure = shouldThrow<JacksonException> { mapper.readValue<Map<CourseId, Int>>(json) }
+
+        val invalid = failure.invalidFormat()
+        invalid.value shouldBe typeId
+        invalid.targetType shouldBe UUID::class.java
+        invalid.message shouldContain "Map key"
     }
 
     private fun Throwable.invalidFormat(): InvalidFormatException =
