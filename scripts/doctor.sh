@@ -494,10 +494,11 @@ check_gsd_defaults() {
 }
 
 # mcp (local only, AIDEV-04): the binary of every server in .mcp.json resolves. A server started through
-# `mise x -- <binary>` is resolved with `mise which`, any other command through PATH.
+# `mise x -- <binary>` is resolved with `mise which`, any other command through PATH. A server without a `command` (an
+# HTTP or SSE server that has a url) has no binary to resolve; its url can carry a credential and is never read.
 check_mcp() {
   local_only mcp && return
-  local file=$ROOT/.mcp.json jq servers name binary wrapped total=0 unresolved=''
+  local file=$ROOT/.mcp.json jq servers kind name binary total=0 remote=0 unresolved=''
   if [[ ! -f $file ]]; then
     report ok mcp "no .mcp.json, so no project MCP servers"
     return
@@ -508,30 +509,47 @@ check_mcp() {
   fi
   # The shape check: an object whose `mcpServers`, when present, is an object of server objects. Anything else would end
   # the run under set -e (or, for an array of servers, be counted as zero servers).
+  # Every server is one line of three tab-separated fields: its kind (mise, path or none), its name and the binary to
+  # resolve. No field is ever empty, because `read` with a tab as separator would drop an empty field and shift the
+  # ones behind it; a server that has nothing to resolve gets `-` as its binary, and the url never leaves jq.
   # shellcheck disable=SC2016 # a jq program, not shell
   if ! servers=$("$jq" -r '
+    def text: if type == "string" and . != "" then . else null end;
     if type == "object" and ((.mcpServers // {}) | type == "object" and all(.[]; type == "object")) then
-      .mcpServers // {} | to_entries[] | (.value.args // []) as $args
-      | if .value.command == "mise" and ($args[0] == "x" or $args[0] == "exec") and $args[1] == "--"
-        then [.key, $args[2], "mise"] else [.key, .value.command, "path"] end | @tsv
+      .mcpServers // {} | to_entries[]
+      | ((.value.args // []) | if type == "array" then . else [] end) as $args
+      | (.value.command | text) as $command
+      | (.key | text // "(unnamed)") as $name
+      | if $command == null then ["none", $name, "-"]
+        elif $command == "mise" and ($args[0] == "x" or $args[0] == "exec") and $args[1] == "--"
+             and ($args[2] | text) != null then ["mise", $name, $args[2]]
+        else ["path", $name, $command] end | @tsv
     else error("not MCP server configuration") end' "$file" 2>/dev/null); then
     report warn mcp ".mcp.json cannot be read as MCP server configuration (not JSON, or not an object of server objects)" \
       "repair .mcp.json, or restore the committed version: git restore .mcp.json"
     return
   fi
-  while IFS=$'\t' read -r name binary wrapped; do
-    [[ -n $name ]] || continue
+  while IFS=$'\t' read -r kind name binary; do
+    [[ -n $kind ]] || continue
     total=$((total + 1))
-    if [[ $wrapped == mise ]]; then
+    case $kind in
+    none) remote=$((remote + 1)) ;;
+    mise)
       if ! has mise || ! (cd "$ROOT" && mise which "$binary" >/dev/null 2>&1); then
         unresolved+="${unresolved:+, }$name ($binary)"
       fi
-    elif ! has "$binary"; then
-      unresolved+="${unresolved:+, }$name ($binary)"
-    fi
+      ;;
+    *)
+      if ! has "$binary"; then
+        unresolved+="${unresolved:+, }$name ($binary)"
+      fi
+      ;;
+    esac
   done <<<"$servers"
   if [[ -n $unresolved ]]; then
     report warn mcp "servers in .mcp.json whose binary cannot be resolved: $unresolved" "mise install"
+  elif [[ $remote -gt 0 ]]; then
+    report ok mcp "all $total servers in .mcp.json resolve through mise or PATH, or have no command to resolve ($remote)"
   else
     report ok mcp "all $total servers in .mcp.json resolve through mise or PATH"
   fi

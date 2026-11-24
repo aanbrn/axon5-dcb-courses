@@ -474,6 +474,49 @@ assert_code "unresolved MCP binary" 0
 assert_out "unresolved MCP binary" "^warn  mcp: .*context7.*context7-mcp"
 assert_out "unresolved MCP binary" "^      fix: mise install"
 
+# A server without `command` (an HTTP or SSE server with a url) has no binary to resolve: it is no unresolved binary, and
+# its url, which can carry a credential, never reaches the output (WR-01 of the Phase 2 review).
+fresh
+printf '{"mcpServers": {"context7": {"command": "mise", "args": ["x", "--", "context7-mcp"]},
+  "playwright": {"command": "mise", "args": ["x", "--", "playwright-mcp"]},
+  "remote": {"type": "http", "url": "https://example.invalid/mcp?token=secret-value"}}}\n' >"$ENV/repo/.mcp.json"
+run_doctor "$ENV"
+assert_code "url-only MCP server with stdio servers" 0
+assert_out "url-only MCP server with stdio servers" "^ok  mcp: "
+assert_no_out "url-only MCP server with stdio servers" "^warn  mcp:"
+assert_no_out "url-only MCP server with stdio servers" "secret-value"
+
+fresh
+printf '{"mcpServers": {"remote": {"type": "sse", "url": "https://example.invalid/sse?token=secret-value"}}}\n' \
+  >"$ENV/repo/.mcp.json"
+run_doctor "$ENV"
+assert_code "only a url-only MCP server" 0
+assert_out "only a url-only MCP server" "^ok  mcp: "
+assert_no_out "only a url-only MCP server" "^warn  mcp:"
+assert_no_out "only a url-only MCP server" "secret-value|example\\.invalid"
+
+# A url-only server in front of an unresolved one must not shift the fields of the next line.
+fresh
+printf '{"mcpServers": {"remote": {"type": "http", "url": "https://example.invalid/mcp"},
+  "context7": {"command": "mise", "args": ["x", "--", "missing-mcp"]}}}\n' >"$ENV/repo/.mcp.json"
+run_doctor "$ENV"
+assert_out "url-only MCP server before an unresolved one" "^warn  mcp: .*context7 \\(missing-mcp\\)"
+assert_no_out "url-only MCP server before an unresolved one" "remote"
+
+# `mise x --` without a binary argument resolves `mise` itself.
+fresh
+printf '{"mcpServers": {"bare": {"command": "mise", "args": ["x", "--"]}}}\n' >"$ENV/repo/.mcp.json"
+run_doctor "$ENV"
+assert_code "mise x -- without a binary" 0
+assert_out "mise x -- without a binary" "^ok  mcp: "
+assert_no_out "mise x -- without a binary" "^warn  mcp:"
+
+# A command that cannot be found keeps its real name in the warning.
+fresh
+printf '{"mcpServers": {"plain": {"command": "no-such-server-binary"}}}\n' >"$ENV/repo/.mcp.json"
+run_doctor "$ENV"
+assert_out "unresolved stdio binary" "^warn  mcp: .*plain \\(no-such-server-binary\\)"
+
 # A .mcp.json that is not JSON, or not an object of server objects, is a warning with a fix (the review's WR-01 class).
 for content in '{' '{"mcpServers": {"context7": 1}}' '{"mcpServers": []}'; do
   fresh
