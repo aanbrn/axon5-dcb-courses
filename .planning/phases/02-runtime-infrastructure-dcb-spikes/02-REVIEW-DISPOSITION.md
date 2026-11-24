@@ -3,22 +3,26 @@ phase: 02
 review: 02-REVIEW.md
 titles: json
 findings:
+  - id: WR-01
+    severity: warning
+    disposition: open
+    title: "`check_git` aborts the whole doctor run, with no report, when `git --version` exits non-zero"
+  - id: WR-02
+    severity: warning
+    disposition: open
+    title: "The new KDoc on `CoursesJsonModule` states a wrong map-key behaviour and a remedy that would not round-trip"
+  - id: WR-03
+    severity: warning
+    disposition: open
+    title: "`ImageReferenceCheck` accepts catalog entries that the Renovate manager never matches, though its KDoc says the check exists to catch them"
+  - id: IN-01
+    severity: info
+    disposition: open
+    title: "A shell whose operand comes from an expansion now asks with a misleading reason"
   - id: CR-01
     severity: critical
     disposition: fixed
     title: "`bash -euo pipefail -c '...'` hides the script from the merge hook"
-  - id: WR-01
-    severity: warning
-    disposition: fixed
-    title: "Option forms of `git`, `sudo`, `env` and a `GIT_DIR` prefix make the hook read the wrong repository or none"
-  - id: WR-02
-    severity: warning
-    disposition: fixed
-    title: "Brace expansion assembles a merge command without a trace"
-  - id: WR-03
-    severity: warning
-    disposition: fixed
-    title: "Refs that an earlier part of the same command moves are read before the command runs"
   - id: WR-04
     severity: warning
     disposition: fixed
@@ -59,10 +63,6 @@ findings:
     severity: info
     disposition: fixed
     title: "The hooks need git 2.36 or newer, and `doctor` does not check it"
-  - id: IN-01
-    severity: info
-    disposition: fixed
-    title: "Magic number 12 is suppressed with a justification that argues against it"
   - id: IN-02
     severity: info
     disposition: fixed
@@ -79,22 +79,23 @@ findings:
     severity: info
     disposition: skipped
     title: "Necessity (judgment) - the empty `contracts-queries` module and its rule entries have no instantiation yet"
-open: 10
+open: 4
 total: 19
-recorded: 2026-11-24T07:24:48.477Z
+recorded: 2026-11-24T10:49:07.687Z
 ---
 
 # Phase 02: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-01 | critical | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 9f8be86 (shell option clusters and value-taking long options parsed as bash does; unknown forms ask) |
-| WR-01 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 9f8be86 (`--attr-source`, wrapper option clusters and `--chdir=`, repository environment variables ask or resolve) |
-| WR-02 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 9f8be86 (unquoted brace expansion makes a word dynamic; in-word merge spellings recorded as ADR-0015 residual risks) |
-| WR-03 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 0534a85 (a ref-moving git command anywhere in the same command makes the merge ask) |
-| WR-04 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 996829c (a `**/` match inside an agent worktree is exempt; the five `Edit(/**/...)` ask rules recorded as an ADR-0015 residual risk) |
-| WR-05 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in dd73bcf (the pin must match a plain version before the fix command is built) |
-| WR-06 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in dd73bcf (UP-0001 and UP-0004 record the 2026-11-24 contribution decision) |
+| WR-01 | warning | open | - |
+| WR-02 | warning | open | - |
+| WR-03 | warning | open | - |
+| IN-01 | info | open | - |
+| CR-01 | critical | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 9f8be86 (shell option clusters and value-taking long options parsed as bash does; unknown forms ask) (not in the current review) |
+| WR-04 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 996829c (a `**/` match inside an agent worktree is exempt; the five `Edit(/**/...)` ask rules recorded as an ADR-0015 residual risk) (not in the current review) |
+| WR-05 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in dd73bcf (the pin must match a plain version before the fix command is built) (not in the current review) |
+| WR-06 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in dd73bcf (UP-0001 and UP-0004 record the 2026-11-24 contribution decision) (not in the current review) |
 | WR-07 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in 01bf991 (the early exit tests the command with quotes, backslashes, `$` and line continuations removed, by a linear filter) (not in the current review) |
 | WR-08 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in 55247cc (shells reading standard input, here-strings, `env -S`, `sudo`/`doas` and programs whose arguments run git are analysed or ask; the rest is listed in ADR-0015 residual risks) (not in the current review) |
 | WR-09 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-c1g in bd589d0 (`<<` in arithmetic is not a heredoc; a heredoc without its delimiter line leaves the lexing incomplete) (not in the current review) |
@@ -102,7 +103,6 @@ recorded: 2026-11-24T07:24:48.477Z
 | IN-06 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-nlk in 474c1fc (false positive: catalogProblems trims each line before matching; two TestKit cases now guard indented entries, KDoc states it) (not in the current review) |
 | IN-07 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-nlk in 3f9da9c (KDoc states the ID types are registered as values only; the first ID-keyed map adds addKeyDeserializer) (not in the current review) |
 | IN-08 | info | fixed | 02-REVIEW.md — fixed by quick task 261124-nlk in 04a892d and 3f9da9c (doctor fails on a missing, unparsable or pre-2.36 git; ADR-0015 and docs/tooling.md record the minimum) (not in the current review) |
-| IN-01 | info | fixed | 02-REVIEW.md — fixed by quick task 261123-rzt in f4fa65f (the pool is sized by STUDENTS and the suppression is gone) (not in the current review) |
 | IN-02 | info | fixed | 02-REVIEW.md — fixed by quick task 261123-rzt in f4fa65f (shared fixture barrier and submitDecision in the tests) and 71a11d1 (one .java-version parser in build-logic) (not in the current review) |
 | IN-03 | info | fixed | 02-REVIEW.md — fixed by quick task 261123-rzt in 57fc03f (one shared outline scanner that closes a fence only on its own fence string) (not in the current review) |
 | IN-04 | info | fixed | 02-REVIEW.md — fixed by quick task 261123-rzt in 123680f (doctor lists fixed-upstream records whose markers remain, with their removal criteria) (not in the current review) |
