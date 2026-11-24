@@ -2,11 +2,11 @@
 id: "UP-0012"
 product: "docker"
 product-version: "29.5.2"
-status: "fixed-upstream"
+status: "workaround-removed"
 workaround: true
 upstream: ["https://github.com/moby/moby/issues/52193", "https://github.com/docker/cli/issues/6457"]
 reported: "2026-03-19"
-updated: "2026-11-23"
+updated: "2026-11-24"
 ---
 
 # UP-0012: Docker 29's containerd image store cannot `docker save --platform` the Paketo noble run image
@@ -29,8 +29,7 @@ projects hit the same failure on CI runners that use the containerd store (`kube
 
 The defect is fixed upstream: `moby/moby#52193` was closed as completed on 2026-11-16 with the explanation that
 `moby/moby#53615` ("Always fetch missing layer content", released in Docker 29.9.0) fixes its root cause
-`moby/moby#49784`. This repository's engine (Docker 29.5.2 on colima) is older, so the workaround stays until the
-engines are upgraded and the removal check below passes.
+`moby/moby#49784`. The workaround was removed on 2026-11-24 (see Workaround and Removal criteria below).
 
 ## Minimal reproduction
 
@@ -58,18 +57,26 @@ repository's images.
 
 ## Workaround
 
-This repository uses the classic image store and warns when the containerd store is active.
+This repository used the classic image store and warned when the containerd store was active. Quick task 261124-uwn
+removed the workaround on 2026-11-24:
 
-- `scripts/doctor.sh`: the `image-store` check warns when the engine reports the `overlayfs` driver or the
-  `io.containerd.snapshotter` entry, with the fix for colima and for Docker Desktop, and carries `UPSTREAM: UP-0012`.
-- `scripts/doctor.sh`: the `colima` check reports `docker.features.containerd-snapshotter` when it is not `false`, and
-  carries `UPSTREAM: UP-0012`.
+- `scripts/doctor.sh`: the `image-store` check warned when the engine reported the `overlayfs` driver or the
+  `io.containerd.snapshotter` entry, with the fix for colima and for Docker Desktop, and carried `UPSTREAM: UP-0012`.
+  It now reports `ok` for both stores and names the one that is active.
+- `scripts/doctor.sh`: the `colima` check reported `docker.features.containerd-snapshotter` when it was not `false`,
+  and carried `UPSTREAM: UP-0012`. It now checks only `network.dns` (UP-0011).
+- `docs/tooling.md` states that either image store works and that the containerd store needs Docker 29.9.0 or newer.
 
 ## Removal criteria
 
 Every engine that builds this project's images runs Docker 29.9.0 or newer (the latest release at the time of writing is
 29.10.0): the developer machines and the GitHub-hosted runner images used by the CI image jobs. The status moves to
 `workaround-removed` when the verification below passes with the containerd image store enabled on such an engine.
+
+Decision: the author removed the workaround on 2026-11-24 on the strength of the released fix and the verification
+below. The author's colima engine was upgraded to Docker 29.10.0 on 2026-11-24 (classic store, which the defect never
+affected), so the developer engine meets the criterion. No CI job builds an image yet (CICD-02). Residual: an engine
+older than 29.9.0 with the containerd store can still fail, and `docs/tooling.md` states the requirement.
 
 ## How to verify removal
 
@@ -78,6 +85,17 @@ On an engine of 29.9.0 or newer with the containerd image store enabled (`docker
 the image, and the project's image build (`./gradlew bootBuildImage` and the web image task) succeeds. Then relax the
 `image-store` and `colima` checks of `scripts/doctor.sh` to accept both stores, drop both markers, and update the
 quick start.
+
+Result (2026-11-24, Docker 29.10.0 on colima, classic store `overlay2` locally, `docker version` client and server
+29.10.0): on a throwaway privileged `docker:29.10.0-dind` container (server 29.10.0, linux/arm64, driver `overlayfs`,
+driver status `io.containerd.snapshotter.v1`, so the containerd image store), `docker pull --platform linux/arm64
+paketobuildpacks/ubuntu-noble-run:latest` succeeded and `docker save --platform linux/arm64 ... -o /tmp/run.tar` exited
+0; `tar tf` listed 11 entries. As a control, `docker:29.5.2-dind` (server 29.5.2, linux/arm64, driver `overlayfs`)
+did not fail either: the same pull and save printed no `no suitable export target` error and the archive listed 11
+entries. The control does not reproduce the defect, probably because a fresh data root has no layers that another image
+already unpacked, the condition the upstream report names (not checked). So this run shows that the fixed engine
+exports the image, not that the older engine fails on a fresh data root. The project's image build (`./gradlew bootBuildImage` and the web image task) was not
+run on the containerd store: no CI job builds an image yet.
 
 ## Upstream issue draft
 

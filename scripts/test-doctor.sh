@@ -606,7 +606,9 @@ printf 'network:\n  dns:\n    - 8.8.8.8\ndocker:\n  features:\n    containerd-sn
   >"$ENV/home/.colima/default/colima.yaml"
 run_doctor "$ENV"
 assert_code "colima with the containerd snapshotter" 0
-assert_out "colima with the containerd snapshotter" "^warn  colima: .*containerd-snapshotter is not false"
+assert_out "colima with the containerd snapshotter" "^ok  colima: network\\.dns lists 1 servers"
+assert_no_out "colima with the containerd snapshotter" "^warn  colima:"
+assert_no_out "colima with the containerd snapshotter" "snapshotter"
 
 fresh
 if make_unreadable "$ENV/home/.colima/default/colima.yaml"; then
@@ -624,7 +626,8 @@ echo overlayfs >"$ENV/docker-driver"
 echo '[["driver-type","io.containerd.snapshotter.v1"]]' >"$ENV/docker-driver-status"
 run_doctor "$ENV"
 assert_code "containerd image store" 0
-assert_out "containerd image store" "^warn  image-store: the containerd image store is active"
+assert_out "containerd image store" "^ok  image-store: the containerd image store is active"
+assert_no_out "containerd image store" "^warn  image-store:"
 
 # Another engine than colima has no colima configuration to check.
 fresh
