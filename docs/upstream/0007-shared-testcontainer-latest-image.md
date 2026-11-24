@@ -6,7 +6,7 @@ status: "reported"
 workaround: true
 upstream: ["https://github.com/AxonIQ/axoniq-framework/issues/812"]
 reported: "2026-11-23"
-updated: "2026-11-23"
+updated: "2026-11-24"
 ---
 
 # UP-0007: The shared Axon Server test container of axoniq-testcontainer hard-codes the floating latest image
@@ -58,7 +58,8 @@ honoured. The holder of `axoniq-testcontainer` is deliberately not used.
 
 An Axoniq Framework release in which the shared holder takes its image from a parameter, for example a system property
 or a method that is called before `INSTANCE` is used, and keeps the reuse hash stable across modules. The release notes
-or the changed `SharedAxonServerContainer` show it.
+or the changed `SharedAxonServerContainer` show it. Upstream plans it for Axoniq Framework 5.5.0 (milestone on
+2026-11-24).
 
 ## How to verify removal
 
@@ -69,6 +70,12 @@ run, `docker ps --format '{{.Image}}'` shows the tag and digest of the catalog i
 ## Upstream issue draft
 
 Target: `AxonIQ/axoniq-framework`, as an enhancement request. Published as https://github.com/AxonIQ/axoniq-framework/issues/812 on 2026-11-23.
+
+Maintainer response on 2026-11-23 ([comment](https://github.com/AxonIQ/axoniq-framework/issues/812#issuecomment-7105926655)):
+the maintainer considers a selectable image a fair addition to `SharedAxonServerContainer`. No pull request was
+requested.
+
+Status on 2026-11-24: open, milestone "Release 5.5.0", label "Priority 3: Could".
 
 ### Let SharedAxonServerContainer use a pinned Axon Server image
 
