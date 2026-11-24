@@ -73,14 +73,14 @@ level 1 (grep depth against the implementation, tests and configuration).
 | T-02-26 | Information Disclosure | Secrets leaking into containers or repo | high | mitigate | No `env_file: .env` (only `compose/versions.env`); token is bare pass-through (`infra.yaml:22`); gitleaks | closed |
 | T-02-27 | Spoofing | Development database passwords | low | accept | See Accepted Risks AR-02-02 | closed |
 | T-02-28 | Information Disclosure | Platform token in tracked files or logs | high | mitigate | `.env.example:18` commented only; gitleaks | closed |
-| T-02-29 | Denial of Service | Empty token zombies Axon Server | medium | mitigate | Commented example, healthcheck; `test-doctor.sh:383-388` asserts `doctor` fails on empty token | closed |
+| T-02-29 | Denial of Service | Empty token zombies Axon Server | medium | mitigate | Commented example, healthcheck; `test-doctor.sh:411-418` asserts `doctor` fails on empty token | closed |
 | T-02-30 | Elevation of Privilege | `compose-smoke` job token | medium | mitigate | `contents: read`, `persist-credentials: false`, SHA-pinned actions, no new secrets | closed |
 | T-02-31 | Tampering | Image updates without digest / partial updates | medium | mitigate | One Renovate regex manager over catalog and `compose/versions.env` (`renovate.json5:70-74`); consistency checks | closed |
 | T-02-32 | Tampering | Forbidden or unknown licences | high | mitigate | Fail-closed `checkDependencyLicences` per module, named in CI (`ci.yml:73`); `DependencyLicenceCheckFunctionalTest` | closed |
 | T-02-33 | Repudiation | Licence exceptions without justification | medium | mitigate | Reasons in governed `governance/dependency-licences.json`; `checkNotice` mirrors `NOTICE` | closed |
-| T-02-34 | Information Disclosure | Token / defaults values in doctor output | high | mitigate | Presence-only checks; `test-doctor.sh:112,367` sentinel never appears in output | closed |
+| T-02-34 | Information Disclosure | Token / defaults values in doctor output | high | mitigate | Presence-only checks; `test-doctor.sh:125,379,395,409` sentinels never appears in output | closed |
 | T-02-35 | Tampering | Modified or extra GSD hooks and files | high | mitigate | SHA-256 manifest verification, unexpected-file detection, pinned `governance/gsd-version` (1.22.0) | closed |
-| T-02-36 | Tampering | Diagnostic tool mutating the environment | medium | mitigate | `doctor.sh` is read-only by contract; `test-doctor.sh:183` tree-hash idempotency comparison | closed |
+| T-02-36 | Tampering | Diagnostic tool mutating the environment | medium | mitigate | `doctor.sh` is read-only by contract; `test-doctor.sh:195,630-637` tree-hash idempotency comparison | closed |
 | T-02-37 | Elevation of Privilege | `doctor` CI job token | medium | mitigate | `contents: read`, `persist-credentials: false`, SHA-pinned actions | closed |
 | T-02-38 | Tampering | Front-matter parsing | medium | mitigate | Fail-closed parser; TestKit malformed-input cases | closed |
 | T-02-39 | Repudiation | Stale or orphaned workarounds | medium | mitigate | Two-way consistency rules in `check`, governed path | closed |
