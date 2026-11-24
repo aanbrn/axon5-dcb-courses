@@ -6,7 +6,7 @@ status: "reported"
 workaround: true
 upstream: ["https://github.com/AxonIQ/AxonFramework/issues/5327"]
 reported: "2026-11-23"
-updated: "2026-11-23"
+updated: "2026-11-24"
 ---
 
 # UP-0002: ConflictDiagnosingEventStorageEngine does not unwrap CompletionException, so it never diagnoses on Axon Server
@@ -89,7 +89,8 @@ re-raises the original failure.
 
 An Axon Framework release in which `ConflictDiagnosingEventStorageEngine`, or its public successor, finds the
 rejection in the cause chain, so that a rejected append on Axon Server carries its conflicting event. The release notes
-or the changed `diagnose` method show it.
+or the changed `diagnose` method show it. Upstream plans the fix for Axon Framework 5.4.3 (milestone on 2026-11-24), so
+the release notes of that version are the first place to check.
 
 ## How to verify removal
 
@@ -102,6 +103,13 @@ record still names the conflicting event.
 ## Upstream issue draft
 
 Target: `AxonIQ/AxonFramework`, as a bug report. Published as https://github.com/AxonIQ/AxonFramework/issues/5327 on 2026-11-23.
+
+Maintainer response on 2026-11-23 ([comment](https://github.com/AxonIQ/AxonFramework/issues/5327#issuecomment-7105876689)):
+the maintainer agrees that "this should definitely be fixed". The priority is Could, because
+`ConflictDiagnosingEventStorageEngine` is typically not used in production, and the fix is wanted for 5.4.3, the
+upcoming patch release.
+
+Status on 2026-11-24: open, milestone "Release 5.4.3", label "Priority 3: Could".
 
 ### ConflictDiagnosingEventStorageEngine never diagnoses a rejection that arrives as a CompletionException
 
