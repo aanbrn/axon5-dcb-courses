@@ -47,15 +47,15 @@ level 1 (grep depth against the implementation, tests and configuration).
 | T-02-SC | Tampering | npm/pip/cargo installs | high | mitigate | Only the two MCP npm packages (02-02), behind the blocking legitimacy checkpoint, exact versions and `mise.lock` digests; every other plan installs none | closed |
 | T-02-01 | Tampering | Dependency resolution of new libraries | medium | mitigate | Catalog-only versions through `:platform`; `checkBuildScripts` rejects literals (`BuildScriptLintCheckFunctionalTest`) | closed |
 | T-02-02 | Tampering | TypeID vector files | low | mitigate | `REUSE.toml` records upstream commit `26a84e8…`; vectors in `backend/contracts/kernel/src/test/resources/typeid/` | closed |
-| T-02-03 | Tampering | `TypeId.decode` / `parse` input validation | medium | mitigate | Fail-closed codec in `TypeId.kt:83`, `TypedId.kt:53`; invalid vectors tested | closed |
+| T-02-03 | Tampering | `TypeId.decode` / `parse` input validation | medium | mitigate | Fail-closed codec in `TypeId.kt:83`, `TypedId.kt:54`; invalid vectors tested | closed |
 | T-02-04 | Tampering | npm packages of the MCP servers | high | mitigate | Blocking checkpoint (02-02 SUMMARY); `mise.toml:44-45` exact versions; `mise.lock:307-316` digests | closed |
 | T-02-05 | Information Disclosure | `.mcp.json` secrets | high | mitigate | `.mcp.json` has no `env` block and no `${...}`; gitleaks on every commit | closed |
 | T-02-06 | Elevation of Privilege | Playwright MCP browser automation | medium | mitigate | `--isolated --output-dir .playwright-mcp` in `.mcp.json`; `.gitignore:21` | closed |
-| T-02-07 | Tampering | Unattended MCP updates | medium | mitigate | `renovate.json5:228-232` `automerge: false` for both packages | closed |
+| T-02-07 | Tampering | Unattended MCP updates | medium | mitigate | `renovate.json5:252-256` `automerge: false` for both packages | closed |
 | T-02-08 | Repudiation | Silently skipped property tests | medium | mitigate | `runBlocking<Unit>` block bodies (`TypeIdPropertyTest`, `TypedIdTest`, `JsonRoundTripTest`) | closed |
 | T-02-09 | Tampering | Test-suite convention regressions | medium | mitigate | TestKit `GradleFixture` runs with configuration cache and isolated projects in `build-logic` `check` | closed |
-| T-02-10 | Tampering | ID deserialisation | medium | mitigate | Deserialisers call `parse`; `JsonRoundTripTest:57` asserts "Wrong TypeID prefix" | closed |
-| T-02-11 | Elevation of Privilege | Polymorphic deserialisation | high | mitigate | No default typing in `backend/`; `@JsonTypeInfo` only on sealed results; `JsonRoundTripTest:122` rejects unknown `@type` | closed |
+| T-02-10 | Tampering | ID deserialisation | medium | mitigate | Deserialisers call `parse`; `JsonRoundTripTest:58-60` asserts "Wrong TypeID prefix" | closed |
+| T-02-11 | Elevation of Privilege | Polymorphic deserialisation | high | mitigate | No default typing in `backend/`; `@JsonTypeInfo` only on sealed results; `JsonRoundTripTest:124-125` rejects unknown `@type` | closed |
 | T-02-12 | Tampering | Marketplace content drift | high | mitigate | `.claude/settings.json` marketplace `ref`s are full commit SHAs; no auto-update keys | closed |
 | T-02-13 | Elevation of Privilege | Plugins shipping hooks, scripts or MCP servers | high | mitigate | Markdown-only review criteria and per-plugin author approval (02-05 SUMMARY) | closed |
 | T-02-14 | Tampering | Incorrect third-party guidance | medium | mitigate | Documented precedence: spike-findings skill and ADRs win; quality gates still apply | closed |
@@ -73,14 +73,14 @@ level 1 (grep depth against the implementation, tests and configuration).
 | T-02-26 | Information Disclosure | Secrets leaking into containers or repo | high | mitigate | No `env_file: .env` (only `compose/versions.env`); token is bare pass-through (`infra.yaml:22`); gitleaks | closed |
 | T-02-27 | Spoofing | Development database passwords | low | accept | See Accepted Risks AR-02-02 | closed |
 | T-02-28 | Information Disclosure | Platform token in tracked files or logs | high | mitigate | `.env.example:18` commented only; gitleaks | closed |
-| T-02-29 | Denial of Service | Empty token zombies Axon Server | medium | mitigate | Commented example, healthcheck; `test-doctor.sh:411-418` asserts `doctor` fails on empty token | closed |
+| T-02-29 | Denial of Service | Empty token zombies Axon Server | medium | mitigate | Commented example, healthcheck; `test-doctor.sh:428-435` asserts `doctor` fails on empty token | closed |
 | T-02-30 | Elevation of Privilege | `compose-smoke` job token | medium | mitigate | `contents: read`, `persist-credentials: false`, SHA-pinned actions, no new secrets | closed |
-| T-02-31 | Tampering | Image updates without digest / partial updates | medium | mitigate | One Renovate regex manager over catalog and `compose/versions.env` (`renovate.json5:70-74`); consistency checks | closed |
+| T-02-31 | Tampering | Image updates without digest / partial updates | medium | mitigate | One Renovate regex manager over catalog and `compose/versions.env` (`renovate.json5:80-84`); consistency checks | closed |
 | T-02-32 | Tampering | Forbidden or unknown licences | high | mitigate | Fail-closed `checkDependencyLicences` per module, named in CI (`ci.yml:73`); `DependencyLicenceCheckFunctionalTest` | closed |
 | T-02-33 | Repudiation | Licence exceptions without justification | medium | mitigate | Reasons in governed `governance/dependency-licences.json`; `checkNotice` mirrors `NOTICE` | closed |
-| T-02-34 | Information Disclosure | Token / defaults values in doctor output | high | mitigate | Presence-only checks; `test-doctor.sh:125,379,395,409` sentinels never appears in output | closed |
+| T-02-34 | Information Disclosure | Token / defaults values in doctor output | high | mitigate | Presence-only checks; `test-doctor.sh:135,396,412,426` sentinels never appears in output | closed |
 | T-02-35 | Tampering | Modified or extra GSD hooks and files | high | mitigate | SHA-256 manifest verification, unexpected-file detection, pinned `governance/gsd-version` (1.22.0) | closed |
-| T-02-36 | Tampering | Diagnostic tool mutating the environment | medium | mitigate | `doctor.sh` is read-only by contract; `test-doctor.sh:195,630-637` tree-hash idempotency comparison | closed |
+| T-02-36 | Tampering | Diagnostic tool mutating the environment | medium | mitigate | `doctor.sh` is read-only by contract; `test-doctor.sh:205,666-673` tree-hash idempotency comparison | closed |
 | T-02-37 | Elevation of Privilege | `doctor` CI job token | medium | mitigate | `contents: read`, `persist-credentials: false`, SHA-pinned actions | closed |
 | T-02-38 | Tampering | Front-matter parsing | medium | mitigate | Fail-closed parser; TestKit malformed-input cases | closed |
 | T-02-39 | Repudiation | Stale or orphaned workarounds | medium | mitigate | Two-way consistency rules in `check`, governed path | closed |
@@ -102,9 +102,9 @@ level 1 (grep depth against the implementation, tests and configuration).
 | T-02-55 | Repudiation | Stale cached integration-test results | medium | mitigate | Images as `@Input`; `ContainerImageInputsFunctionalTest` | closed |
 | T-02-56 | Information Disclosure | Private data in host/tooling records | medium | mitigate | Placeholders in reproductions; private-data grep empty | closed |
 | T-02-57 | Tampering | Marker edits to governed configuration | low | mitigate | Comment-only diffs verified by actionlint, zizmor, `test-doctor.sh`, `docker compose config`, build; label gate | closed |
-| T-02-58 | Elevation of Privilege | Switching off the per-module licence gate | medium | mitigate | `courses.licences.gradle.kts` governed (`governed-paths.txt:120`) with ask rule (`.claude/settings.json:43`); CI names `checkDependencyLicences` | closed |
+| T-02-58 | Elevation of Privilege | Switching off the per-module licence gate | medium | mitigate | `courses.licences.gradle.kts` governed (`governed-paths.txt:159`) with ask rule (`.claude/settings.json:43`); CI names `checkDependencyLicences` | closed |
 | T-02-59 | Elevation of Privilege | `courses.licences.gradle.kts` ungoverned window | low | accept | See Accepted Risks AR-02-03; window now closed by T-02-58 | closed |
-| T-02-60 | Tampering | Silently relaxing detekt | medium | mitigate | `config/detekt/**` governed (`governed-paths.txt:143`) with one ask rule (`.claude/settings.json:57`) | closed |
+| T-02-60 | Tampering | Silently relaxing detekt | medium | mitigate | `config/detekt/**` governed (`governed-paths.txt:182`) with one ask rule (`.claude/settings.json:57`) | closed |
 
 *Status: open · closed · open — below high threshold (non-blocking)*
 *Severity: critical > high > medium > low — only open threats at or above workflow.security_block_on count toward threats_open*
