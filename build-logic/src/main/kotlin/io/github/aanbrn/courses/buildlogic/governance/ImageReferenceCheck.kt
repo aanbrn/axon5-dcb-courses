@@ -24,9 +24,10 @@ import org.gradle.api.tasks.TaskAction
  *   check, so the reference comes from the generated `compose/versions.env` and never from a literal;
  * - every `image-*` key of the `[versions]` table of the [catalog] is a double-quoted string of the form
  *   `<name>:<tag>@sha256:<64 hex digits>`, so the tag names the version for readers and Renovate, and the digest fixes
- *   the content. Every such key is matched, bare or quoted, and a value of any other shape (a literal string, an inline
- *   table, a multi-line string) is reported, because the Renovate custom manager reads only the double-quoted form and
- *   such an entry would never be updated.
+ *   the content. Every such key is matched, bare or quoted and at any indentation, because `catalogProblems` trims each
+ *   catalog line before it is matched, and a value of any other shape (a literal string, an inline table, a multi-line
+ *   string) is reported, because the Renovate custom manager reads only the double-quoted form and such an entry would
+ *   never be updated.
  *
  * Compose files are read line by line instead of with a YAML library: only `image:` entries are needed, and an extra
  * parser dependency in `build-logic` is not worth that. Commented-out lines are skipped. Findings are written as
@@ -140,7 +141,9 @@ abstract class ImageReferenceCheck @Inject constructor(private val layout: Proje
 
         /**
          * An `image-*` entry of a TOML table, whatever its value: the quote of the key (empty for a bare key, the same
-         * quote on both sides otherwise), the key, and the rest of the line after the equals sign.
+         * quote on both sides otherwise), the key, and the rest of the line after the equals sign. It is matched
+         * against a catalog line whose leading and trailing blanks `catalogProblems` has already removed, so the `^`
+         * anchor does not skip an indented entry.
          */
         val CATALOG_ENTRY = Regex("""^(["']?)(image-[A-Za-z0-9_.-]+)\1\s*=\s*(.*)$""")
 

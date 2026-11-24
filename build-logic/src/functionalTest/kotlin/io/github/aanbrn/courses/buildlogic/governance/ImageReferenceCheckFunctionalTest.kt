@@ -102,6 +102,42 @@ class ImageReferenceCheckFunctionalTest {
     }
 
     @Test
+    fun `an indented catalog image that is not pinned fails naming the key, also under an indented header`() {
+        fixture.file(INFRA, services($$"    image: ${AXONSERVER_IMAGE}"))
+        fixture.file(
+            CATALOG,
+            listOf(
+                    "  [versions]",
+                    "  junit = \"6.0.3\"",
+                    "  image-axonserver = \"$AXONSERVER\"",
+                    "  image-spaces = \"postgres:18.7\"",
+                    "\timage-tab = 'postgres:18.7@sha256:$DIGEST'",
+                )
+                .joinToString("\n", postfix = "\n"),
+        )
+
+        val output = fixture.runAndFail(TASK).output
+
+        output shouldContain
+            "gradle/libs.versions.toml: image-spaces must be <name>:<tag>@sha256:<64 hex digits>, but is 'postgres:18.7'"
+        output shouldContain "image-tab must be a double-quoted <name>:<tag>@sha256:<64 hex digits>"
+        output shouldNotContain "image-axonserver must"
+    }
+
+    @Test
+    fun `an indented pinned catalog image passes`() {
+        fixture.file(INFRA, services($$"    image: ${AXONSERVER_IMAGE}"))
+        fixture.file(
+            CATALOG,
+            catalog("  image-axonserver = \"$AXONSERVER\"", "\timage-postgres = \"postgres:18.7@sha256:$DIGEST\""),
+        )
+
+        val result = fixture.run(TASK)
+
+        result.task(":$TASK")?.outcome shouldBeIn GradleFixture.PASSED
+    }
+
+    @Test
     fun `keys that do not start with image- and entries of other tables are not image references`() {
         fixture.file(INFRA, services($$"    image: ${AXONSERVER_IMAGE}"))
         fixture.file(
