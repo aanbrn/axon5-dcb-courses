@@ -218,6 +218,12 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
+      # See docs/adr/0016-ci-dependency-downloads.md.
+      - name: Use the Maven Central mirror (CI only)
+        run: >-
+          install -D -m 0644 scripts/ci/maven-central-mirror.init.gradle.kts
+          "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/maven-central-mirror.init.gradle.kts"
+
       - name: Start the stack
         run: docker compose up -d --wait
 
