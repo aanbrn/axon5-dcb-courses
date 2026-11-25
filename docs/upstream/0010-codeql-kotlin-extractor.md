@@ -6,10 +6,10 @@ status: "open"
 workaround: true
 upstream: []
 reported: null
-updated: "2026-11-23"
+updated: "2026-11-25"
 ---
 
-# UP-0010: The CodeQL Kotlin extractor does not cover Kotlin 2.4.21 and extracted no sources from the Gradle build
+# UP-0010: The CodeQL Kotlin extractor extracted no sources from the Kotlin 2.4.21 Gradle build
 
 ## Symptom
 
@@ -26,8 +26,10 @@ analysis of Kotlin.
 
 Two conditions of the spike could each explain the result, and the spike did not separate them:
 
-- the CodeQL bundle that matches `github/codeql-action` 4.39.4 (CodeQL bundle 2.27.5) documents Kotlin extractor
-  support from 1.8.0 to 2.4.20, while the build uses Kotlin 2.4.21;
+- the build uses Kotlin 2.4.21, and the Kotlin extractor range of the CodeQL bundle that matches
+  `github/codeql-action` 4.39.4 (CodeQL bundle 2.27.5) was first read as 1.8.0 to 2.4.20; the check of 2026-11-25
+  (Root cause) found that the bundle documents 1.8.0 to 2.4.2x, which includes 2.4.21, so this condition is probably
+  not the cause;
 - the build runs with Gradle's Isolated Projects, which forces the configuration cache on and rejects
   `--no-configuration-cache`, the flag the spike first used to force a fresh, observable compile.
 
@@ -56,6 +58,27 @@ CodeQL 2.27.1 about a month after the release (`github/codeql#22381`), and the m
 substantial amount of work (`github/codeql#21938`). No upstream issue for Kotlin 2.4.21 exists at the time of writing
 (searched on 2026-11-23), and none describes the Isolated Projects interaction.
 
+Bundle check of 2026-11-25. The latest `github/codeql-action` release is v4.39.5 (published 2026-11-24), which moves the
+default CodeQL bundle to 2.27.6 (the latest bundle release, published 2026-11-24); the repository pins v4.39.4, which
+uses bundle 2.27.5. The Kotlin row of the CodeQL supported-languages page reads "Kotlin 1.8.0 to 2.4.2x", and the
+same row in `docs/codeql/reusables/supported-versions-compilers.rst` of the `codeql-cli/v2.27.5` and `codeql-cli/v2.27.6`
+tags reads `Kotlin 1.8.0 to 2.4.2\ *x*`, so both bundles document a range that includes Kotlin 2.4.21. The range was
+widened from "1.8.0 to 2.4.20" by `github/codeql#23092` (merged 2026-11-13, "Kotlin: update test compiler and
+documentation to 2.4.21"), whose description says that Kotlin 2.4.21 was already supported by the extractor and that
+the full K2 suite of 205 tests passed with it. Bundle 2.27.5 contains that change, and the CodeQL CLI changelog for
+2.27.5 and 2.27.6 lists no Kotlin extractor change. The conclusion for this record: the first removal criterion
+(a bundle whose Kotlin range includes the build's Kotlin version) is met by the documentation already, and the unproven
+cause is the Isolated Projects interaction, which no upstream issue or CodeQL documentation addresses. The second
+removal criterion, a throwaway `workflow_dispatch` run of a `java-kotlin` leg on Linux x86-64 with bundle 2.27.6 (action
+v4.39.5), is the next step and is an outward action that needs its own approval; it is not done here. The spike itself
+ran on bundle 2.27.5 and was not repeated on 2.27.6.
+
+Sources: `https://codeql.github.com/docs/codeql-overview/supported-languages-and-frameworks/`,
+`https://github.com/github/codeql-action/releases/tag/v4.39.5`,
+`https://github.com/github/codeql-action/releases/tag/codeql-bundle-v2.27.6`,
+`https://github.com/github/codeql-cli-binaries/blob/HEAD/CHANGELOG.md`, `https://github.com/github/codeql/pull/23092`
+and `https://github.com/github/codeql/pull/22404` (support for Kotlin 2.4.20).
+
 ## Workaround
 
 CodeQL analyses `actions` only, until Kotlin extraction works for this build.
@@ -82,6 +105,10 @@ greater than zero and the step ends without `could not process any of it`. Then 
 markers and set the record to `workaround-removed`.
 
 ## Upstream issue draft
+
+The author decided on 2026-11-25 not to publish this draft for now. Its Analysis section reflects the bundle check of
+the same date: the Kotlin range no longer explains the result, and the draft has to be narrowed to the Isolated Projects
+interaction (and re-run on bundle 2.27.6 and Linux x86-64) before it could be published.
 
 ````markdown
 # Java/Kotlin extraction finds no sources for a Kotlin 2.4.21 build under Gradle Isolated Projects
@@ -120,8 +147,9 @@ The two-step project above. To be added before publication: a repository that va
 
 ## Analysis
 
-Two causes are possible and not yet separated: Kotlin 2.4.21 is outside the documented extractor range (1.8.0 to
-2.4.20), and the Isolated Projects requirement for the configuration cache keeps the compile from being observed.
+Two causes were possible and are not yet separated: the Kotlin version of the build, and the Isolated Projects
+requirement for the configuration cache, which keeps the compile from being observed. The documented extractor range
+(1.8.0 to 2.4.2x) includes Kotlin 2.4.21, so the Isolated Projects interaction is the likelier cause.
 
 ## Proposed fix
 
