@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: MIT
 package io.github.aanbrn.courses.buildlogic
 
+import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
+import java.nio.file.Files
 import java.nio.file.Path
 import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.Test
@@ -151,5 +154,64 @@ class FormattingFunctionalTest {
 
         // The task is up to date: the excluded files are not even inputs of it.
         fixture.run("spotlessMiscCheck").task(":spotlessMiscCheck")?.outcome shouldBe TaskOutcome.UP_TO_DATE
+    }
+
+    @Test
+    fun `untracked files that git ignores are never formatted`() {
+        git(projectDir, "init")
+        val fixture = GradleFixture.standard(projectDir)
+        fixture.file(".gitignore", ".playwright-mcp/\nscratch/\n")
+        fixture.run("spotlessApply")
+        // A Playwright MCP session writes unformatted files into a git-ignored directory of the repository.
+        fixture.file(".playwright-mcp/page.json", MESSY_JSON)
+        fixture.file("scratch/notes.md", MESSY_MARKDOWN)
+
+        // The task is up to date: the ignored files are not even inputs of it.
+        fixture.run("spotlessPrettierCheck").task(":spotlessPrettierCheck")?.outcome shouldBe TaskOutcome.UP_TO_DATE
+    }
+
+    @Test
+    fun `a tracked file is formatted even where gitignore matches it`() {
+        git(projectDir, "init")
+        val fixture = GradleFixture.standard(projectDir)
+        fixture.file(".gitignore", ".playwright-mcp/\nscratch/\n")
+        fixture.run("spotlessApply")
+        fixture.file(".playwright-mcp/page.json", MESSY_JSON)
+        fixture.file("scratch/notes.md", MESSY_MARKDOWN)
+        fixture.file("scratch/tracked.json", MESSY_JSON)
+        git(projectDir, "add", "-f", "scratch/tracked.json")
+
+        val failed = fixture.runAndFail("spotlessPrettierCheck")
+
+        failed.output shouldContain "tracked.json"
+        failed.output shouldNotContain "notes.md"
+        failed.output shouldNotContain "page.json"
+    }
+
+    @Test
+    fun `a project directory below the git work tree root keeps only the static exclusions`() {
+        git(projectDir, "init")
+        projectDir.resolve(".gitignore").toFile().writeText("scratch/\n")
+        val nested = projectDir.resolve("nested").also { Files.createDirectories(it) }
+        val fixture = GradleFixture.standard(nested)
+        fixture.run("spotlessApply")
+        fixture.file("scratch/notes.md", MESSY_MARKDOWN)
+
+        fixture.runAndFail("spotlessPrettierCheck").output shouldContain "notes.md"
+    }
+
+    private fun git(directory: Path, vararg args: String) {
+        val process =
+            ProcessBuilder("git", "-c", "init.defaultBranch=main", *args)
+                .directory(directory.toFile())
+                .redirectErrorStream(true)
+                .start()
+        val output = process.inputStream.bufferedReader().readText()
+        withClue("git ${args.joinToString(" ")}: $output") { process.waitFor() shouldBe 0 }
+    }
+
+    private companion object {
+        const val MESSY_JSON = "{\"name\":\"x\",   \"items\":[1,2,3]}\n"
+        const val MESSY_MARKDOWN = "#   Title\n\n\n\n*   first\n*   second\n"
     }
 }

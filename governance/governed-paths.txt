@@ -70,8 +70,8 @@
 #     evaluating;
 #   - the local pre-commit hook (lefthook.yml, scripts/format-staged.sh): CI runs every check itself;
 #   - .gitignore: CI checks out tracked files only and every gate selects tracked files, through git
-#     for editorconfig-checker and shellcheck, reuse lint skipping only untracked ignored files, or a
-#     file set fixed in courses.root.gradle.kts for Spotless;
+#     for editorconfig-checker and shellcheck, and reuse lint and Spotless skip only untracked ignored
+#     files (Spotless through GitIgnoredPaths, which lists untracked paths only);
 #   - configuration names the gates do not read here: `.ecrc` (editorconfig-checker 4 reads only
 #     `.editorconfig-checker.json`), `taplo.toml` (Spotless passes `--config .taplo.toml`), other
 #     Prettier config names and `.prettierignore` (Spotless passes `.prettierrc.yaml` and never runs
@@ -221,9 +221,11 @@ zizmor.yaml
 
 # The build job's formatters. Spotless hands the Prettier and taplo configuration to the tools explicitly from
 # courses.root.gradle.kts, together with the licence header templates; shfmt reads the `.editorconfig` files above.
+# GitIgnoredPaths decides which untracked files Spotless skips, so an edit to it alone could empty the Spotless file sets.
 .prettierrc.yaml
 .taplo.toml
 config/spotless/**
+build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/GitIgnoredPaths.kt
 
 # The secrets job. gitleaks reads both from the repository root; an allowlist or a fingerprint drops findings.
 .gitleaks.toml

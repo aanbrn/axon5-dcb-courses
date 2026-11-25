@@ -2,6 +2,7 @@
 import io.github.aanbrn.courses.buildlogic.ComposeVersions
 import io.github.aanbrn.courses.buildlogic.ExecutableOnPath
 import io.github.aanbrn.courses.buildlogic.GenerateComposeVersions
+import io.github.aanbrn.courses.buildlogic.GitIgnoredPaths
 import io.github.aanbrn.courses.buildlogic.VerifyFormatterBinary
 import io.github.aanbrn.courses.buildlogic.VerifyNodeVersion
 import io.github.aanbrn.courses.buildlogic.readJavaMajorVersion
@@ -19,26 +20,44 @@ val libs = the<org.gradle.accessors.dm.LibrariesForLibs>()
 // owned by GSD, which would otherwise fail `spotlessCheck` on every generated document.
 // `.gsd` holds GSD's self-ignored runtime state, such as dispatch sentinels.
 // `gradle-user-home` and `profile-out*` are written into the project by gradle-profiler.
-val excluded =
+// Untracked files that git ignores are skipped as well (`gitIgnored` below); tracked files are always formatted.
+val excludedDirectoryNames =
     listOf(
-        "**/build/**",
-        "**/.gradle/**",
-        "**/.kotlin/**",
-        "**/node_modules/**",
-        "**/.git/**",
-        "**/.idea/**",
-        "**/.planning/**",
-        "**/.claude/**",
-        "**/.gsd/**",
-        "**/.mise/**",
-        "**/gradle-user-home/**",
-        "**/profile-out*/**",
-        "gradle/wrapper/**",
-        "LICENSES/**",
+        "build",
+        ".gradle",
+        ".kotlin",
+        "node_modules",
+        ".git",
+        ".idea",
+        ".planning",
+        ".claude",
+        ".gsd",
+        ".mise",
+        "gradle-user-home",
+        "profile-out*",
     )
+val excluded = excludedDirectoryNames.map { "**/$it/**" } + listOf("gradle/wrapper/**", "LICENSES/**")
+
+/** The absolute path of [name] on the build's `PATH`, absent when the executable is not installed. */
+fun executableOnPath(name: String): Provider<String> =
+    providers.of(ExecutableOnPath::class.java) { parameters.executableName.set(name) }
+
+// The untracked paths that git ignores, for example the `.playwright-mcp` directory of a Playwright MCP session.
+// They are read once, at configuration, because Spotless needs a concrete file tree, as `taploPath.get()` below
+// does. The value source leaves out the directories that are excluded by name already, so build outputs never
+// change it, and it is empty outside the root of a git work tree, where only the static exclusions apply.
+val gitIgnored: List<String> =
+    providers
+        .of(GitIgnoredPaths::class.java) {
+            parameters.gitExecutable.set(executableOnPath("git"))
+            parameters.workTree.set(layout.projectDirectory)
+            parameters.coveredDirectoryNames.set(excludedDirectoryNames)
+        }
+        .get()
 
 /**
- * Selects the repository files matching [globs] outside the [excluded] directories.
+ * Selects the repository files matching [globs] outside the [excluded] directories and the untracked [gitIgnored]
+ * paths. A tracked file is always selected, even one that `.gitignore` matches.
  *
  * A FileTree is used because a string glob starting with `**` makes Spotless touch `Project.layout` on subprojects,
  * which isolated projects forbid.
@@ -47,11 +66,8 @@ fun sources(vararg globs: String): FileTree =
     layout.projectDirectory.asFileTree.matching {
         include(*globs)
         exclude(excluded)
+        exclude(gitIgnored)
     }
-
-/** The absolute path of [name] on the build's `PATH`, absent when the executable is not installed. */
-fun executableOnPath(name: String): Provider<String> =
-    providers.of(ExecutableOnPath::class.java) { parameters.executableName.set(name) }
 
 // `node` is resolved once from the build's `PATH` through `ExecutableOnPath`. The same path goes
 // to `verifyNodeVersion` and to Spotless's Prettier step, so the guard checks the binary that
