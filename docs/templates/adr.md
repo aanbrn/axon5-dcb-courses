@@ -11,8 +11,9 @@ Template for an architecture decision record in docs/adr/. It follows MADR 4.0.0
 to docs/adr/NNNN-<slug>.md (four digits, numbered from 0001 without gaps, lowercase slug), replace every placeholder
 and delete this comment. `./gradlew checkAdrs` validates the result.
 
-Front matter: only flat `key: value` lines and one-line lists are accepted, with double-quoted strings. `status`, `date`
-and `decision-makers` are required; `consulted` and `informed` are optional.
+Front matter: only flat `key: value` lines and lists, on one line or in the multi-line form Prettier writes for a long
+list, are accepted, with double-quoted strings. `status`, `date` and `decision-makers` are required; `consulted` and
+`informed` are optional.
 - status: one of proposed, accepted, rejected, deprecated, or `superseded by ADR-NNNN`, where that ADR exists.
 - date: YYYY-MM-DD, the day the decision was last updated.
 - decision-makers: who made the decision, for example the repository author and the decision identifier.
