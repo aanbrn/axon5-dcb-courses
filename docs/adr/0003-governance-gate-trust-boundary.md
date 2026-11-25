@@ -1,12 +1,12 @@
+---
+status: "accepted"
+date: "2026-11-23"
+decision-makers: ["repository author (gap-closure decision on review finding WR-06)"]
+---
+
 # ADR-0003: The governance gate runs from the pull request's own tree
 
-- Status: accepted
-- Date: 2026-11-21
-- Deciders: repository author (gap-closure decision on review finding WR-06)
-
-This is a minimal record. Phase 2 introduces the ADR templates and normalises the format of this note.
-
-## Context
+## Context and Problem Statement
 
 `governance.yml` triggers on `pull_request`. Its checkout takes the default ref, which for that event is the
 merge of the pull request head into the base (`refs/pull/<number>/merge`). The workflow definition,
@@ -36,27 +36,10 @@ What else holds such a pull request today:
 Plan 01-09 accepted this residual as threat T-01-20 at ASVS level 1. Review finding WR-06 asked for it to be
 fixed or recorded.
 
-## Decision
+## Considered Options
 
-Keep the `pull_request` trigger and the checkout of the pull request's merge ref, and accept the residual for
-this one-maintainer repository.
-
-The boundary is stated plainly: the gate guards against accidental governed changes and against an agent that
-does not tamper with the gate. It is not a security boundary against a pull request crafted to rewrite it.
-
-Reasons:
-
-- The single maintainer merges every pull request. Through the ruleset, every change to `main` arrives as a
-  squash-merged pull request whose diff the maintainer reads, including a rewrite of the gate.
-- Claude Code's ask rules cover every governed path for the agent's file-edit tool (`.claude/settings.json`,
-  kept in step with `governance/governed-paths.txt` by `checkClaudeAskRules`), so an edit to the gate through
-  that tool needs the author's confirmation (AIDEV-08). The rules do not match shell commands that write files,
-  so they make an unconfirmed change unlikely rather than impossible; they are a guard rail, not a security
-  boundary, and the maintainer's review of the diff remains the control.
-- T-01-20 already accepted the residual at ASVS L1. The alternatives below either run pull request-adjacent
-  logic in a privileged context or do not close the gap.
-
-## Rejected alternatives
+The chosen option, described under Decision Outcome, keeps the `pull_request` trigger and accepts the residual.
+The rejected alternatives:
 
 1. `pull_request_target` with a checkout of the base commit only. The workflow file would come from the base
    branch, but the trigger runs in the base repository's context, with access to its secrets and a token that
@@ -71,7 +54,31 @@ Reasons:
    owner is also the author of the pull requests, and GitHub does not accept an author's approval of their own
    pull request. Every governed change would need the admin bypass, and the rule adds no second reviewer.
 
-## Consequences
+## Decision Outcome
+
+Keep the `pull_request` trigger and the checkout of the pull request's merge ref, and accept the residual for
+this one-maintainer repository.
+
+The boundary is stated plainly: the gate guards against accidental governed changes and against an agent that
+does not tamper with the gate. It is not a security boundary against a pull request crafted to rewrite it.
+
+Reasons:
+
+- The single maintainer merges every pull request. Through the ruleset, every change to `main` arrives as a
+  squash-merged pull request whose diff the maintainer reads, including a rewrite of the gate.
+- Claude Code's ask rules and the governance hooks of [ADR-0015](0015-governance-hooks-for-worktrees-and-merges.md)
+  cover every governed path (`.claude/settings.json`, kept in step with `governance/governed-paths.txt` by
+  `checkClaudeAskRules`) for the agent's file-edit tools in the main checkout and in worktrees that are not agent
+  worktrees, governed changes made in an agent worktree when a merge brings them into the main checkout, and the
+  merges that bring changes to one into a worktree, so an edit to the gate through those tools needs the author's
+  confirmation (AIDEV-08).
+  They match neither every shell command that writes files nor every git command that integrates changes, so they
+  make an unconfirmed change unlikely rather than impossible; they are a guard rail, not a security boundary, and
+  the maintainer's review of the diff remains the control.
+- T-01-20 already accepted the residual at ASVS L1. The alternatives under Considered Options either run pull
+  request-adjacent logic in a privileged context or do not close the gap.
+
+### Consequences
 
 - `governance-success` stays one of the two required contexts (ADR-0001) and keeps catching unlabelled
   governed changes made in good faith, whether by the maintainer or by the agent. It does not stop an agent
@@ -84,8 +91,29 @@ Reasons:
   applies to changes in `.github/**`.
 - The approval label is not bound to a commit (review finding WR-02). That is a separate residual, deferred by
   the author.
+- The renovate[bot] version-only exemption of `scripts/governance/check-pr.sh` deliberately excludes
+  `governance/gsd-version` (`NEVER_EXEMPT_PATHS`, author decision of 2026-11-24). The pin selects the GSD release
+  whose hooks and agents run in the maintainer's Claude Code session, so a Renovate bump of it always needs
+  `governance-approved`, after the review described in `docs/tooling.md` (GSD updates). Every other governed file
+  keeps the exemption for version-only diffs.
+- The governed list also covers the configuration of every job that `ci-success` requires and the launchers those
+  jobs run, under every file name and directory level the tool reads (EditorConfig and editorconfig-checker, git
+  attributes, REUSE, Prettier, taplo, the Spotless licence headers, shellcheck, zizmor, gitleaks, Qodana, and the
+  doctor job's `scripts/doctor.sh` and `tooling/doctor/**`), by author decision of 2026-11-24. An unlabelled edit
+  to one of them could otherwise relax a required gate while CI stays green. `governance/governed-paths.txt` names
+  the paths and records the exclusions. No Renovate manager reads a version from these files, so the version-only
+  exemption needs no new exception.
+- The module convention plugin `build-logic/src/main/kotlin/courses.kotlin-library.gradle.kts` is governed too, by
+  author decision of 2026-11-24, although module convention plugins otherwise stay outside because under isolated
+  projects they cannot reach the root project's governance tasks. It applies detekt with the governed rule set, sets
+  `allWarningsAsErrors` and applies `courses.licences` in every Kotlin module, so an unlabelled edit to it could
+  switch off two required gates while CI stays green. A module's own build script stays outside, and
+  `governance/governed-paths.txt` records that residual. No Renovate manager reads a version from the file, so the
+  version-only exemption needs no new exception.
 
-## When to revisit
+## More Information
+
+### When to revisit
 
 Revisit this decision when either of these holds:
 

@@ -5,6 +5,18 @@ name: CI
 # `governance-success`, see docs/adr/0001-workflow-permissions-and-required-checks.md). There are no
 # path filters on purpose: a documentation-only pull request still runs every job and still reports
 # `ci-success`.
+#
+# Dependency downloads of the five Gradle jobs (docs/adr/0016-ci-dependency-downloads.md). Pull-request runs of the
+# jobs that main does not run yet start with an empty cache (the `cache-read-only` comment below explains why a pull
+# request never writes the cache) and download the whole classpath, which is when Maven Central rate-limits a runner.
+# Gradle does not move on to the next repository after an HTTP 429 or 5xx, so two mechanisms cover it. First, a step
+# after setup-gradle installs scripts/ci/maven-central-mirror.init.gradle.kts into the runner's Gradle user home, which
+# puts Google's Maven Central mirror first in every build's plugin and dependency repositories with the declared ones
+# behind it; local builds and Renovate never see it. Second, every Gradle step runs through
+# scripts/ci/retry-on-rate-limit.sh, which runs the step once more after a delay, and only then, when Gradle reports
+# HTTP 429; any other failure fails at once. The cache is written from main only. The `qodana` job is the exception to
+# both: it runs Gradle inside its own container through scripts/qodana.sh, a retry would repeat an analysis of up to 60
+# minutes, and its cache is restored from main, where the job already runs.
 on:
   push:
     branches: [main]
@@ -63,10 +75,23 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-      # Compile, unit tests, TestKit tests, Spotless, detekt, Dokka and the governance checks.
-      # Build Scans are never published from CI.
+      # See docs/adr/0016-ci-dependency-downloads.md.
+      - name: Use the Maven Central mirror (CI only)
+        run: >-
+          install -D -m 0644 scripts/ci/maven-central-mirror.init.gradle.kts
+          "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/maven-central-mirror.init.gradle.kts"
+
+      # Compile, unit and component tests (Testcontainers needs only the runner's Docker), Spotless, detekt,
+      # Dokka and the governance checks. The integration tests run in the parallel `integration-test` job and
+      # the TestKit tests of build-logic in the parallel `functional-test` job (D-20); locally, `check` still
+      # runs both (D-19). Build Scans are never published from CI.
+      # `checkDependencyLicences` is named although `check` already runs it in every module: Gradle fails
+      # with "Task 'checkDependencyLicences' not found" when no module registers it, so a build that lost
+      # the licence gate fails instead of skipping it. The check does not run a second time.
       - name: Build
-        run: ./gradlew build --console=plain
+        run: >-
+          scripts/ci/retry-on-rate-limit.sh ./gradlew build checkDependencyLicences
+          -x integrationTest -x :build-logic:functionalTest --console=plain
 
       - name: Upload build reports
         if: failure()
@@ -76,6 +101,171 @@ jobs:
           path: "**/build/reports/**"
           retention-days: 7
           if-no-files-found: ignore
+
+  # The integration tests against a real Axon Server, in their own job so that they run in parallel with
+  # `build` (D-20). The image is pinned by tag and digest in gradle/libs.versions.toml and pulled
+  # anonymously, so the job needs no registry login, no token and no .env file.
+  integration-test:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The JDK comes from .java-version; the integration tests need no mise tools.
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version-file: .java-version
+
+      # The cache is written from main only, so a pull request can never poison what main restores.
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          cache-provider: basic
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # See docs/adr/0016-ci-dependency-downloads.md.
+      - name: Use the Maven Central mirror (CI only)
+        run: >-
+          install -D -m 0644 scripts/ci/maven-central-mirror.init.gradle.kts
+          "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/maven-central-mirror.init.gradle.kts"
+
+      - name: Integration tests
+        run: scripts/ci/retry-on-rate-limit.sh ./gradlew integrationTest --console=plain
+
+      - name: Upload integration test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: integration-test-reports
+          path: "**/build/reports/**"
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # The TestKit tests of build-logic, in their own job so that they run in parallel with `build` (D-20). The suite
+  # runs its fixtures one at a time because each includes the real build-logic, and at about nine minutes it was
+  # most of the `build` job. Locally, `check` still runs it (D-19).
+  functional-test:
+    name: Functional tests (build-logic)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      # The JDK comes from .java-version and Node.js from .nvmrc through setup-java and setup-node;
+      # mise only provides the CLI tools (INFRA-09).
+      MISE_DISABLE_TOOLS: java,node
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version-file: .java-version
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Read the mise version
+        id: mise-version
+        run: |
+          version="$(sed -nE 's/^min_version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' mise.toml)"
+          test -n "${version}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      # The fixtures run Spotless with Prettier, taplo and shfmt and resolve node, taplo and shfmt from PATH.
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
+        with:
+          version: ${{ steps.mise-version.outputs.version }}
+          install_args: aqua:mvdan/sh aqua:tamasfe/taplo
+
+      # The cache is written from main only, so a pull request can never poison what main restores.
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          cache-provider: basic
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # See docs/adr/0016-ci-dependency-downloads.md.
+      - name: Use the Maven Central mirror (CI only)
+        run: >-
+          install -D -m 0644 scripts/ci/maven-central-mirror.init.gradle.kts
+          "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/maven-central-mirror.init.gradle.kts"
+
+      - name: Functional tests
+        run: scripts/ci/retry-on-rate-limit.sh ./gradlew :build-logic:functionalTest --console=plain
+
+      - name: Upload functional test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: functional-test-reports
+          path: "**/build/reports/**"
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # Proves both connection scenarios (D-26, D-46) against the compose stack exactly as a contributor starts it: the
+  # host scenario through the conditional-append integration test against localhost:8124, and the in-network scenario
+  # through the `probe` service on the compose network. No token, no .env file and no secret: an unregistered Axon
+  # Server is enough for a job that lives a few minutes.
+  compose-smoke:
+    name: Compose smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The JDK comes from .java-version; the host scenario test needs no mise tools.
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version-file: .java-version
+
+      # The cache is written from main only, so a pull request can never poison what main restores.
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          cache-provider: basic
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # See docs/adr/0016-ci-dependency-downloads.md.
+      - name: Use the Maven Central mirror (CI only)
+        run: >-
+          install -D -m 0644 scripts/ci/maven-central-mirror.init.gradle.kts
+          "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/maven-central-mirror.init.gradle.kts"
+
+      - name: Start the stack
+        run: docker compose up -d --wait
+
+      # Through the rate-limit wrapper like every Gradle step, see the header of this file.
+      - name: Host scenario (test against localhost:8124)
+        run: >-
+          scripts/ci/retry-on-rate-limit.sh ./gradlew :command-service:integrationTest
+          -Pcourses.axonserver.external=localhost:8124
+          --tests '*ConditionalAppendIntegrationTest*' --console=plain
+
+      - name: In-network scenario (probe on the compose network)
+        run: docker compose --profile probe run --rm probe
+
+      - name: Show the container logs
+        if: failure()
+        run: docker compose --profile probe logs --no-color --tail=200
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose --profile probe down -v
 
   lint:
     name: Lint
@@ -141,9 +331,92 @@ jobs:
       - name: Validate the Renovate configuration
         run: renovate-config-validator --strict renovate.json5
 
+      # No .env exists on the runner and no secret is involved: compose/versions.env supplies the image references and
+      # every other variable has a default. Fails on an unresolvable include, a missing variable or a schema error.
+      - name: Validate compose files
+        run: docker compose config --quiet
+
       # Every tracked shell test runs, so a new scripts/**/test-*.sh joins CI without editing this file.
       - name: Run shell tests
         run: git ls-files -z -- 'scripts/test-*.sh' 'scripts/*/test-*.sh' | xargs -0 -r -n1 bash
+
+  # Proves that the environment description holds on a clean runner (TOOL-03, D-29): the pinned tools, a Java runtime,
+  # Docker, the image store and Testcontainers connectivity through `./gradlew doctor`. The checks that only make
+  # sense on a developer machine (GSD, MCP servers, the Platform token, colima, Claude Code) report skip in `--ci`.
+  # Nothing here installs or changes anything beyond what the setup steps do, and no secret is involved.
+  doctor:
+    name: Doctor
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      # The JDK comes from .java-version and Node.js from .nvmrc through setup-java and setup-node;
+      # mise provides every other pinned tool (INFRA-09).
+      MISE_DISABLE_TOOLS: java,node
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version-file: .java-version
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Read the mise version
+        id: mise-version
+        run: |
+          version="$(sed -nE 's/^min_version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' mise.toml)"
+          test -n "${version}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      # No install_args: every tool of mise.toml is installed, so the tools check of doctor has all of them to verify.
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
+        with:
+          version: ${{ steps.mise-version.outputs.version }}
+
+      # The cache is written from main only, so a pull request can never poison what main restores.
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          cache-provider: basic
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # See docs/adr/0016-ci-dependency-downloads.md.
+      - name: Use the Maven Central mirror (CI only)
+        run: >-
+          install -D -m 0644 scripts/ci/maven-central-mirror.init.gradle.kts
+          "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/maven-central-mirror.init.gradle.kts"
+
+      - name: Diagnose the environment
+        run: scripts/ci/retry-on-rate-limit.sh scripts/doctor.sh --ci
+
+  # Advisory only (UPS-04, D-32): when a change moves a pinned version, lists the upstream records of that product
+  # (docs/upstream) with their removal criteria in the job summary and as warnings, so a reviewer can see which
+  # workarounds might now be removable. It never fails on a match, posts no comment and has no write permission or
+  # secret. The base commit reaches the script through the environment, never through the script text; an empty or
+  # all-zero base (workflow_dispatch, a new branch) makes the script skip.
+  upstream-records:
+    name: Upstream records advisory
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: List the upstream records the change touches
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: scripts/upstream/changed-dependencies.sh "${BASE_SHA}" HEAD
 
   secrets:
     name: Secret scan
@@ -220,7 +493,7 @@ jobs:
 
   ci-success:
     name: ci-success
-    needs: [build, lint, secrets, qodana]
+    needs: [build, functional-test, lint, secrets, qodana, integration-test, compose-smoke, doctor, upstream-records]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

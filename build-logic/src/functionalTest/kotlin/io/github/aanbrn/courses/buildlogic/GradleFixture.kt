@@ -15,13 +15,22 @@ import org.gradle.testkit.runner.TaskOutcome
  * injecting a plugin classpath, because the typed `libs` accessor used by the precompiled script plugins fails to
  * resolve with an injected classpath.
  *
- * @param projectDir the empty directory the fixture build is written to, normally a JUnit temporary directory.
+ * @property projectDir the empty directory the fixture build is written to, normally a JUnit temporary directory.
  */
-class GradleFixture(private val projectDir: Path) {
+class GradleFixture(val projectDir: Path) {
     private val buildLogic = requiredProperty("buildLogic")
     private val repoRoot = Path.of(requiredProperty("repoRoot"))
-    private val catalog = requiredProperty("catalog")
     private val includedProjects = mutableListOf<String>()
+
+    /**
+     * The absolute path of the version catalog the fixture build reads as `libs`: the repository's own until a test
+     * replaces it, for example through [changeCatalog]. Assigning a path rewrites the fixture settings.
+     */
+    var catalog: String = requiredProperty("catalog")
+        set(value) {
+            field = value
+            writeSettings()
+        }
 
     init {
         writeSettings()
@@ -112,6 +121,9 @@ class GradleFixture(private val projectDir: Path) {
             plugins { id("courses.settings") }
 
             dependencyResolutionManagement {
+                // A fixture may carry its own gradle/libs.versions.toml, which Gradle imports under the default
+                // extension name. Renaming that default keeps it from colliding with the repository catalog below.
+                defaultLibrariesExtensionName.set("fixtureLibs")
                 versionCatalogs { create("libs") { from(files("$catalog")) } }
             }
 
@@ -136,8 +148,9 @@ class GradleFixture(private val projectDir: Path) {
          * `:platform` project, and a `:lib` project that applies `courses.kotlin-library` and declares no dependencies
          * of its own.
          *
-         * The shared Spotless headers, the shared detekt, Prettier, taplo and editor configuration, `.nvmrc`, and a JDK
-         * 25 `.java-version` are copied or written as the real repository has them.
+         * The shared Spotless headers, the shared detekt, Prettier, taplo and editor configuration, `.nvmrc`, the
+         * dependency licence policy, and a JDK 25 `.java-version` are copied or written as the real repository has
+         * them.
          */
         fun standard(projectDir: Path): GradleFixture =
             GradleFixture(projectDir).apply {
@@ -148,6 +161,7 @@ class GradleFixture(private val projectDir: Path) {
                 copyFromRepo(".editorconfig")
                 copyFromRepo("config/spotless/license-header-shell.txt")
                 copyFromRepo(".nvmrc")
+                copyFromRepo("governance/dependency-licences.json")
                 file(".java-version", "25\n")
                 file("build.gradle.kts", "$HEADER\nplugins { id(\"courses.root\") }\n")
                 copyFromRepo("platform/build.gradle.kts")
@@ -161,6 +175,63 @@ class GradleFixture(private val projectDir: Path) {
                 )
                 include(":platform")
                 include(":lib")
+            }
+
+        /**
+         * Creates a fixture in [projectDir] like [standard], except that `:lib` applies `courses.test-suites`, which
+         * adds the `componentTest` and `integrationTest` suites to the three it starts with, and `java-test-fixtures`,
+         * which gives it the `testFixtures` source set that every suite then sees. A test that needs a module without
+         * fixtures rewrites `lib/build.gradle.kts`.
+         *
+         * `:lib` has a documented class in `src/main` (`fixture.Library`) and a documented object in `src/testFixtures`
+         * (`fixture.fixtures.Samples`); no test exists, so each test adds the ones it needs with [addTest]. A `doFirst`
+         * action on every `Test` task prints `FORKS <task>=<maxParallelForks>` when the task really runs.
+         */
+        fun testSuites(projectDir: Path): GradleFixture =
+            standard(projectDir).apply {
+                file(
+                    "lib/build.gradle.kts",
+                    $$"""
+                    $$HEADER
+                    plugins {
+                        id("courses.test-suites")
+                        `java-test-fixtures`
+                    }
+
+                    tasks.withType<Test>().configureEach {
+                        doFirst { println("FORKS $name=$maxParallelForks") }
+                    }
+                    """
+                        .trimIndent() + "\n",
+                )
+                file(
+                    "lib/src/main/kotlin/fixture/Library.kt",
+                    """
+                    $HEADER
+                    package fixture
+
+                    /** A documented public class. */
+                    class Library {
+                        /** Adds [left] and [right]. */
+                        fun add(left: Int, right: Int): Int = left + right
+                    }
+                    """
+                        .trimIndent() + "\n",
+                )
+                file(
+                    "lib/src/testFixtures/kotlin/fixture/fixtures/Samples.kt",
+                    """
+                    $HEADER
+                    package fixture.fixtures
+
+                    /** Sample values shared by the tests of every suite. */
+                    object Samples {
+                        /** Returns the sample value. */
+                        fun sample(): String = listOf("sam", "ple").joinToString("")
+                    }
+                    """
+                        .trimIndent() + "\n",
+                )
             }
 
         /**
@@ -185,4 +256,64 @@ class GradleFixture(private val projectDir: Path) {
                 "System property '$name' is not set; run the fixture through the functionalTest task."
             }
     }
+}
+
+/**
+ * Writes a JUnit test class with one test to the source set of the suite [suite] of the `:lib` project, and returns the
+ * absolute path of the file.
+ *
+ * The class lives in the package `fixture` and carries a one-line KDoc, as every test class in this repository does.
+ * The test is named in backticked prose and has a block body, and it has no KDoc, as the tests of the real suites do.
+ *
+ * @param suite the name of the suite, which is also the name of its source set, for example `componentTest`
+ * @param className the simple name of the test class
+ * @param testName the prose name of the single test function
+ * @param body the single line of Kotlin that makes up the test function
+ * @param imports the import lines the [body] needs, without the `import` keyword
+ */
+fun GradleFixture.addTest(
+    suite: String,
+    className: String,
+    testName: String,
+    body: String,
+    imports: List<String> = emptyList(),
+): Path {
+    val importLines = (listOf("org.junit.jupiter.api.Test") + imports).map { "import $it" }
+    val lines = buildList {
+        add(GradleFixture.HEADER)
+        add("package fixture")
+        add("")
+        addAll(importLines)
+        add("")
+        add("/** A test in the $suite suite. */")
+        add("class $className {")
+        add("    @Test")
+        add("    fun `$testName`() {")
+        add("        $body")
+        add("    }")
+        add("}")
+    }
+    return file("lib/src/$suite/kotlin/fixture/$className.kt", lines.joinToString("\n", postfix = "\n"))
+}
+
+/** Where [changeCatalog] writes the fixture's own copy of the version catalog, relative to the fixture root. */
+private const val CATALOG_COPY = "fixture-libs.versions.toml"
+
+/**
+ * Makes the fixture use its own copy of the version catalog, rewritten by [transform], from the next run on.
+ *
+ * The first call copies the repository's catalog into the fixture; every call applies [transform] to the current text
+ * of the copy and points the fixture settings at it. The copy is how a test changes a catalog entry, such as a
+ * container image, between two runs of the same fixture without touching the real catalog.
+ *
+ * @param transform maps the current catalog text to the new one; it must change the text, which this function checks so
+ *   that a transformation that matches nothing cannot pass a test for the wrong reason.
+ */
+fun GradleFixture.changeCatalog(transform: (String) -> String) {
+    val current = Files.readString(Path.of(catalog))
+    val changed = transform(current)
+    check(changed != current) { "The catalog transformation changed nothing" }
+    val copy = projectDir.resolve(CATALOG_COPY)
+    Files.writeString(copy, changed)
+    catalog = copy.toAbsolutePath().toString()
 }

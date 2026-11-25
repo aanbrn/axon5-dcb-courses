@@ -34,6 +34,16 @@ class ConventionsFunctionalTest {
     }
 
     @Test
+    fun `a java-version file that is not a numeric JDK major version fails the build with its text`() {
+        val fixture = GradleFixture.standard(projectDir)
+        fixture.file(".java-version", "temurin-25\n")
+
+        val output = fixture.runAndFail(":lib:build").output
+
+        output shouldContain ".java-version must hold a numeric JDK major version, but it holds 'temurin-25'"
+    }
+
+    @Test
     fun `a module without dependencies gets the platform on implementation exactly once`() {
         val fixture = GradleFixture.standard(projectDir)
 

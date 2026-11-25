@@ -19,11 +19,11 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **INFRA-14**: `.gitignore` comprehensively covers Gradle, Kotlin, Node/pnpm, IDE files, `.env`, test/Playwright/coverage artifacts and local tool state; `.editorconfig` explicitly defines settings for every file type in the repository, and formatter configurations are verified not to conflict with it
 - [ ] **INFRA-15**: Shared IDE run configurations are versioned (IntelliJ run configurations for services, compose and test suites; recommended VS Code extensions), while all other IDE state stays ignored
 - [x] **INFRA-10**: The Gradle build uses every applicable speed-up mechanism: configuration cache enabled with problems failing the build; local and CI build cache (`gradle/actions/setup-gradle`, encrypted configuration cache, cache writes from `main` only); parallel execution and file-system watching; isolated-projects-compatible build logic (no cross-project configuration; isolated projects evaluated in Phase 1); convention plugins in an included `build-logic` build (no `buildSrc`); lazy configuration API and cacheable tasks with declared inputs/outputs (including frontend, client generation and docs tasks); Gradle daemon JVM criteria and tuned daemon/Kotlin daemon JVM args; K2 incremental compilation without kapt; parallel test forks and separately parallelised test suites in CI; Testcontainers singletons (and local reuse); reused buildpack caches; build performance tracked with gradle-profiler scenarios; Build Scans optional and only with author approval
-- [ ] **INFRA-02**: Shared contracts (commands, events, queries, shared kernel with tag constants and sealed result types) live in dedicated modules with no Spring or framework logic
-- [ ] **INFRA-03**: Developer can start Axon Server (pinned version, DCB context created automatically, correct hostname) and PostgreSQL with one docker compose command
-- [ ] **INFRA-04**: An automated smoke test proves that a conflicting conditional append is rejected by the DCB event store
-- [ ] **INFRA-05**: Axoniq licensing behaviour (unlicensed limits, AxonIQ Platform licence delivery) is verified by a spike and recorded in an ADR, with the outcome reflected in the quick start
-- [ ] **INFRA-06**: Kotlin event/tag serialization round-trip (including value-class IDs) is verified and fixed by convention
+- [x] **INFRA-02**: Shared contracts (commands, events, queries, shared kernel with tag constants and sealed result types) live in dedicated modules with no Spring or framework logic
+- [x] **INFRA-03**: Developer can start Axon Server (pinned version, DCB context created automatically, correct hostname) and PostgreSQL with one docker compose command
+- [x] **INFRA-04**: An automated smoke test proves that a conflicting conditional append is rejected by the DCB event store
+- [x] **INFRA-05**: Axoniq licensing behaviour (unlicensed limits, AxonIQ Platform licence delivery) is verified by a spike and recorded in an ADR, with the outcome reflected in the quick start
+- [x] **INFRA-06**: Kotlin event/tag serialization round-trip (including value-class IDs) is verified and fixed by convention
 - [ ] **INFRA-07**: User can start the entire system (all services, UI, infrastructure) with one `docker compose up`, with secrets supplied only via an untracked `.env` (template `.env.example` committed)
 - [ ] **INFRA-08**: Frontend (and the documentation site) are Gradle subprojects: pinned Node.js/pnpm managed by the Gradle Node plugin, pnpm install/build/test/lint wired into `check`/`build` with declared inputs/outputs, API client generation depending on the BFF OpenAPI spec task, and frontend image build exposed as a Gradle task; `./gradlew build` verifies the whole system while `pnpm dev` remains available for local UI work
 
@@ -80,7 +80,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **IDEM-01**: Every state-changing API call accepts an idempotency key (`Idempotency-Key`); retrying the same command returns the original outcome without appending duplicate events, enforced inside the DCB decision (key tag in the consistency boundary) rather than a separate dedup table
 - [ ] **IDEM-02**: Entity IDs (courses, students) are client-generated so that create commands are safely repeatable
-- [ ] **IDEM-04**: Entity IDs use the TypeID format (type prefix + UUIDv7 in Crockford base32, e.g. `course_01jdq8x6v2f3k9m4r7t5w0y1zb`), modelled as Kotlin value classes with validation of prefix and format; the canonical TypeID string is the only representation used in DCB tags, events, API and UI (never `toString()` of a wrapper); read models store IDs as native PostgreSQL `uuid` with the prefix implied by the column (any text storage uses `COLLATE "C"`); Kotlin and TypeScript generators come from vetted libraries (maturity verified in Phase 1), and validation rejects malformed or wrong-type IDs at the API boundary
+- [x] **IDEM-04**: Entity IDs use the TypeID format (type prefix + UUIDv7 in Crockford base32, e.g. `course_01jdq8x6v2f3k9m4r7t5w0y1zb`), modelled as Kotlin value classes with validation of prefix and format; the canonical TypeID string is the only representation used in DCB tags, events, API and UI (never `toString()` of a wrapper); read models store IDs as native PostgreSQL `uuid` with the prefix implied by the column (any text storage uses `COLLATE "C"`); the Kotlin codec is the project's own, verified against the official TypeID test vectors because no mature JVM library exists (ADR-0007), and TypeScript uses the official `typeid-js` library, and validation rejects malformed or wrong-type IDs at the API boundary
 - [ ] **IDEM-03**: Projections are idempotent under at-least-once delivery and replay (token and projection updated in one transaction, upsert semantics)
 
 ### Resilience
@@ -136,10 +136,10 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **TEST-09**: All produced artifacts (Kotlin, Gradle KTS, TS/TSX, JSON, YAML, Markdown) are automatically formatted by one command and checked for style compliance, with a shared `.editorconfig`, a pre-commit hook formatting changed files, CI failing on violations, and generated code excluded
 - [x] **TEST-10**: Code is idiomatic Kotlin with KDoc on public contracts and decision logic; KDoc is auto-formatted (formatter with KDoc support, e.g. ktfmt, instead of ktlint), its presence and quality on public API are enforced by static analysis (detekt `comments` rules), and broken KDoc references fail the build (Dokka `failOnWarning`)
 - [ ] **TEST-18**: Mapping between layers (API ↔ commands/queries, query results ↔ DTOs) is done by explicit Kotlin extension functions next to the layer boundary (`toCommand`, `toDto`, `toView`), without mapping generators; naming and placement are enforced by architecture tests
-- [ ] **TEST-11**: JVM test levels (unit, component, integration) are separate Gradle JVM Test Suites with their own dependencies and tasks, all included in coverage
-- [ ] **TEST-12**: Shared test data builders and test helpers are published via Gradle Java Test Fixtures (`testFixtures`) instead of being duplicated across modules
+- [x] **TEST-11**: JVM test levels (unit, component, integration) are separate Gradle JVM Test Suites with their own dependencies and tasks, all included in coverage
+- [x] **TEST-12**: Shared test data builders and test helpers are published via Gradle Java Test Fixtures (`testFixtures`) instead of being duplicated across modules
 - [x] **TEST-13**: Static analysis runs for Kotlin (detekt or equivalent) and TypeScript (Biome) with the build failing on violations
-- [ ] **TEST-14**: Test toolchain is standardised: JUnit 6 (Jupiter) as the only JVM runner, Kotest Assertions for assertions, `kotest-property` for property-based invariant tests, AxonTestFixture for DCB decisions, MockK (minimal mocking), Awaitility for async, Testcontainers for infrastructure; frontend uses Vitest, Testing Library and MSW
+- [x] **TEST-14**: Test toolchain is standardised: JUnit 6 (Jupiter) as the only JVM runner, Kotest Assertions for assertions, `kotest-property` for property-based invariant tests, AxonTestFixture for DCB decisions, MockK (minimal mocking), Awaitility for async, Testcontainers for infrastructure; frontend uses Vitest, Testing Library and MSW
 - [ ] **TEST-15**: Tests read as a business specification: Kotlin test methods and `@Nested` classes use backticked prose names in business language (no JVM-forbidden characters; prose names only in test sources, enforced by static analysis/Konsist); tests are tagged with the business rule ID they prove (`@Tag`) to feed the rule → test catalogue
 
 ### CI/CD & Supply Chain
@@ -153,7 +153,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **CICD-06**: Secret leaks are detected in the repository (full history) and in PRs
 - [ ] **CICD-07**: SBOMs are generated and images are signed with provenance attestations
 - [x] **CICD-08**: Workflows and scripts are linted locally (pre-commit) and in CI: actionlint for GitHub Actions workflows (with shellcheck for `run:` blocks), zizmor for Actions security issues (template injection, excessive permissions, unpinned actions, cache poisoning, dangerous triggers), shellcheck for all shell scripts, and `docker compose config` validation for compose files; tool versions pinned in `mise.toml`
-- [ ] **CICD-09**: Dependency licences (JVM and npm) are reported and checked in CI against an allowlist, with Axoniq commercial-terms modules explicitly listed and justified; a NOTICE file lists third-party attributions and the Axoniq terms
+- [x] **CICD-09**: Dependency licences (JVM and npm) are reported and checked in CI against an allowlist, with Axoniq commercial-terms modules explicitly listed and justified; a NOTICE file lists third-party attributions and the Axoniq terms
 
 ### Observability
 
@@ -165,7 +165,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **DOC-01**: Presentable README with the "why DCB" pitch, architecture overview, screenshots/diagrams, quick start (verified in CI) and an honest licensing note
 - [ ] **DOC-02**: Documentation site explaining DCB concepts as applied in this project
-- [ ] **DOC-03**: ADRs record every significant decision
+- [x] **DOC-03**: ADRs record every significant decision
 - [ ] **DOC-04**: C4 diagrams as code (context, container, component)
 - [ ] **DOC-05**: Event Modeling artifacts describe every slice
 - [ ] **DOC-06**: Consistency boundary table: for each command, which tags and event types form its boundary and why
@@ -185,7 +185,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **GH-09**: YAML issue forms exist for bug report (mandatory reproduction and versions), feature request and documentation feedback; blank issues are disabled and `config.yml` routes questions to Discussions and vulnerabilities to private vulnerability reporting
 - [ ] **GH-10**: GitHub Discussions is enabled with categories (Q&A, Ideas, Show and tell) and discussion templates
 - [x] **GH-11**: Labels are managed as code (`labels.yml` synced by CI), aligned with Conventional Commit types, release-please, Renovate and the upstream register
-- [ ] **GH-12**: In-repository templates exist for ADRs (MADR), documentation pages, Event Modeling slice descriptions, upstream records (`docs/upstream/`) and upstream issues (minimal reproduction), and are used by the project skills
+- [x] **GH-12**: In-repository templates exist for ADRs (MADR), documentation pages, Event Modeling slice descriptions, upstream records (`docs/upstream/`) and upstream issues (minimal reproduction), and are used by the project skills
 - [ ] **GH-13**: `CITATION.cff` enables GitHub's "Cite this repository" for references from articles and talks
 - [ ] **GH-04**: Documentation site is published to GitHub Pages automatically from CI
 - [ ] **GH-05**: Commits and PR titles follow Conventional Commits (checked locally by the pre-commit tooling and in CI); release-please exclusively owns version tags (`vX.Y.Z`), changelogs and GitHub Releases (GSD milestone tagging disabled); release images are published to GHCR, signed and attested
@@ -194,27 +194,27 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Upstream-first
 
-- [ ] **UPS-01**: Each upstream case (defect, gap or documentation issue in a used product) has its own record `docs/upstream/NNNN-<slug>.md` with machine-readable front matter (ID `UP-NNNN`, product and version, status `open` → `reported` → `fixed-upstream` → `workaround-removed` / `wont-fix`, upstream issue/PR links, dates) and a full body: symptom, minimal reproduction, root-cause analysis, workaround and all its code locations, removal criteria and how to verify them
-- [ ] **UPS-02**: Workarounds are marked in code/config by record ID (`UPSTREAM: UP-NNNN`), and a CI check enforces consistency in both directions (every marker references an existing record; open records with a workaround have markers; closed records have none); the index with statuses is generated for the documentation site
-- [ ] **UPS-03**: Defects and documentation gaps found in used products are reported upstream with a minimal reproduction (issue or PR), preferring upstream fixes over local workarounds; drafts are prepared by the AI and published only after the author's explicit approval
-- [ ] **UPS-04**: Dependency updates include a check whether recorded workarounds can be removed according to their removal criteria
+- [x] **UPS-01**: Each upstream case (defect, gap or documentation issue in a used product) has its own record `docs/upstream/NNNN-<slug>.md` with machine-readable front matter (ID `UP-NNNN`, product and version, status `open` → `reported` → `fixed-upstream` → `workaround-removed` / `wont-fix`, upstream issue/PR links, dates) and a full body: symptom, minimal reproduction, root-cause analysis, workaround and all its code locations, removal criteria and how to verify them
+- [x] **UPS-02**: Workarounds are marked in code/config by record ID (`UPSTREAM: UP-NNNN`), and a CI check enforces consistency in both directions (every marker references an existing record; open records with a workaround have markers; closed records have none); the index with statuses is generated for the documentation site
+- [x] **UPS-03**: Defects and documentation gaps found in used products are reported upstream with a minimal reproduction (issue or PR), preferring upstream fixes over local workarounds; drafts are prepared by the AI and published only after the author's explicit approval
+- [x] **UPS-04**: Dependency updates include a check whether recorded workarounds can be removed according to their removal criteria
 
 ### Developer Tooling
 
 - [x] **TOOL-01**: All developer and CI tools are inventoried in `docs/tooling.md` (purpose, version source, installation): git, gh, Docker-compatible engine (colima/OrbStack/Docker Desktop), docker compose, pack, JDK, Node.js/pnpm, lefthook, gitleaks, trivy, grype, syft, cosign, Structurizr, act, etc.
 - [x] **TOOL-02**: CLI tools not managed by Gradle are pinned in `mise.toml` and kept up to date by Renovate
-- [ ] **TOOL-03**: A `doctor` command verifies the local environment (required tools and versions, Docker engine, Testcontainers connectivity) and explains how to fix problems
-- [ ] **TOOL-04**: The setup works with colima (Testcontainers `DOCKER_HOST`/Ryuk configuration documented and verified) as well as Docker Desktop
+- [x] **TOOL-03**: A `doctor` command verifies the local environment (required tools and versions, Docker engine, Testcontainers connectivity) and explains how to fix problems
+- [x] **TOOL-04**: The setup works with colima (Testcontainers `DOCKER_HOST`/Ryuk configuration documented and verified) as well as Docker Desktop
 
 ### AI Development Tooling
 
-- [ ] **AIDEV-01**: Claude Code skills for the project's stack are surveyed (Axon, Kotlin, Gradle, Spring Boot, Playwright, React/shadcn, FSD, GitHub Actions, Paketo), and each candidate is reviewed before installation; third-party skills are installed as plugins from their marketplaces (nothing copied into `.claude/`), with pinned source/version, only with the author's approval, and documented in the tooling inventory
+- [x] **AIDEV-01**: Claude Code skills for the project's stack are surveyed (Axon, Kotlin, Gradle, Spring Boot, Playwright, React/shadcn, FSD, GitHub Actions, Paketo), and each candidate is reviewed before installation; third-party skills are installed as plugins from their marketplaces (nothing copied into `.claude/`), with pinned source/version, only with the author's approval, and documented in the tooling inventory
 - [ ] **AIDEV-02**: Project-specific skills encode the project's conventions (e.g. add a DCB command slice, add a projection, write an ADR, draft an upstream issue) and live in a repository-local Claude Code plugin outside `.claude/` (e.g. `tooling/claude-plugin/` with its own marketplace file), so they never mix with GSD-managed files
-- [ ] **AIDEV-03**: `.claude/` is tracked selectively: only `.claude/settings.json` (marketplace and plugin registration) and `.claude/CLAUDE.md` are committed; the GSD installation and `settings.local.json` are ignored, and the GSD version and install command are recorded in the tooling inventory and checked by `doctor`
-- [ ] **AIDEV-04**: Shared MCP servers (Context7 for up-to-date library documentation, Playwright for browser-driven UI verification) are configured in the project-scope `.mcp.json` at the repository root with pinned versions and no secrets (environment variable references only); personal MCP servers (IntelliJ, optionally GitHub) are configured in local scope and documented with setup instructions; all MCP servers are listed in the tooling inventory, checked by `doctor`, and added only with the author's approval
+- [x] **AIDEV-03**: `.claude/` is tracked selectively: only `.claude/settings.json` (marketplace and plugin registration) and `.claude/CLAUDE.md` are committed; the GSD installation and `settings.local.json` are ignored, and the GSD version and install command are recorded in the tooling inventory and checked by `doctor`
+- [x] **AIDEV-04**: Shared MCP servers (Context7 for up-to-date library documentation, Playwright for browser-driven UI verification) are configured in the project-scope `.mcp.json` at the repository root with pinned versions and no secrets (environment variable references only); personal MCP servers (IntelliJ, optionally GitHub) are configured in local scope and documented with setup instructions; all MCP servers are listed in the tooling inventory, checked by `doctor`, and added only with the author's approval
 - [x] **AIDEV-05**: GSD project settings are enforced as policy: a CI test validates `.planning/config.json` against an explicit policy (e.g. branching strategy, tagging, commit_docs, runtime, no foreign model overrides) and fails on any deviation until the policy itself is deliberately changed
 - [x] **AIDEV-06**: Changes to governance files (`.planning/config.json`, `.claude/settings.json`, `.mcp.json`, `.github/**`, `mise.toml`, Renovate config, CODEOWNERS) fail a CI governance check unless the PR carries a `governance-approved` label applied by a maintainer
-- [ ] **AIDEV-07**: GSD installation integrity is protected: GSD is installed at a pinned version (never `@latest`), `doctor` verifies installed files against the SHA-256 hashes in `gsd-file-manifest.json` and reports modified hooks or unexpected files, `doctor` warns about global `~/.gsd/defaults.json` keys that leak into projects, and GSD updates happen only deliberately via `/gsd-update` with changelog and hook diff review
+- [x] **AIDEV-07**: GSD installation integrity is protected: GSD is installed at a pinned version (never `@latest`), `doctor` verifies installed files against the SHA-256 hashes in `gsd-file-manifest.json` and reports modified hooks or unexpected files, `doctor` warns about global `~/.gsd/defaults.json` keys that leak into projects, and GSD updates happen only deliberately via `/gsd-update` with changelog and hook diff review
 - [x] **AIDEV-08**: Claude Code permission rules in `.claude/settings.json` require explicit confirmation (`ask`) for edits to governance files and for GSD `config-set` calls, so the agent cannot silently change project settings
 
 ## v2 Requirements
@@ -280,11 +280,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-14 | Phase 1 | Complete |
 | INFRA-15 | Phase 6 | Pending |
 | INFRA-10 | Phase 1 | Complete |
-| INFRA-02 | Phase 2 | Pending |
-| INFRA-03 | Phase 2 | Pending |
-| INFRA-04 | Phase 2 | Pending |
-| INFRA-05 | Phase 2 | Pending |
-| INFRA-06 | Phase 2 | Pending |
+| INFRA-02 | Phase 2 | Complete |
+| INFRA-03 | Phase 2 | Complete |
+| INFRA-04 | Phase 2 | Complete |
+| INFRA-05 | Phase 2 | Complete |
+| INFRA-06 | Phase 2 | Complete |
 | INFRA-07 | Phase 6 | Pending |
 | INFRA-08 | Phase 5 | Pending |
 | COURSE-01 | Phase 3 | Pending |
@@ -320,7 +320,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | READ-06 | Phase 4 | Pending |
 | IDEM-01 | Phase 3 | Pending |
 | IDEM-02 | Phase 3 | Pending |
-| IDEM-04 | Phase 2 | Pending |
+| IDEM-04 | Phase 2 | Complete |
 | IDEM-03 | Phase 4 | Pending |
 | RES-01 | Phase 6 | Pending |
 | RES-07 | Phase 6 | Pending |
@@ -361,10 +361,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-09 | Phase 1 | Complete |
 | TEST-10 | Phase 1 | Complete |
 | TEST-18 | Phase 5 | Pending |
-| TEST-11 | Phase 2 | Pending |
-| TEST-12 | Phase 2 | Pending |
+| TEST-11 | Phase 2 | Complete |
+| TEST-12 | Phase 2 | Complete |
 | TEST-13 | Phase 1 | Complete |
-| TEST-14 | Phase 2 | Pending |
+| TEST-14 | Phase 2 | Complete |
 | TEST-15 | Phase 3 | Pending |
 | CICD-01 | Phase 1 | Complete |
 | CICD-02 | Phase 6 | Pending |
@@ -375,13 +375,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CICD-06 | Phase 1 | Complete |
 | CICD-07 | Phase 12 | Pending |
 | CICD-08 | Phase 1 | Complete |
-| CICD-09 | Phase 2 | Pending |
+| CICD-09 | Phase 2 (JVM), Phase 5 (npm) | Complete |
 | OBS-01 | Phase 12 | Pending |
 | OBS-02 | Phase 12 | Pending |
 | OBS-03 | Phase 12 | Pending |
 | DOC-01 | Phase 13 | Pending |
 | DOC-02 | Phase 13 | Pending |
-| DOC-03 | Phase 2 | Pending |
+| DOC-03 | Phase 2 | Complete |
 | DOC-04 | Phase 13 | Pending |
 | DOC-05 | Phase 3 | Pending |
 | DOC-06 | Phase 11 | Pending |
@@ -398,27 +398,27 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GH-09 | Phase 13 | Pending |
 | GH-10 | Phase 13 | Pending |
 | GH-11 | Phase 1 | Complete |
-| GH-12 | Phase 2 | Pending |
+| GH-12 | Phase 2 | Complete |
 | GH-13 | Phase 13 | Pending |
 | GH-04 | Phase 7 | Pending |
 | GH-05 | Phase 12 | Pending |
 | GH-06 | Phase 1 | Complete |
 | GH-07 | Phase 1 | Complete |
-| UPS-01 | Phase 2 | Pending |
-| UPS-02 | Phase 2 | Pending |
-| UPS-03 | Phase 2 | Pending |
-| UPS-04 | Phase 2 | Pending |
+| UPS-01 | Phase 2 | Complete |
+| UPS-02 | Phase 2 (markers, check, index), Phase 5 (index on the documentation site) | Complete |
+| UPS-03 | Phase 2 | Complete |
+| UPS-04 | Phase 2 | Complete |
 | TOOL-01 | Phase 1 | Complete |
 | TOOL-02 | Phase 1 | Complete |
-| TOOL-03 | Phase 2 | Pending |
-| TOOL-04 | Phase 2 | Pending |
-| AIDEV-01 | Phase 2 | Pending |
+| TOOL-03 | Phase 2 | Complete |
+| TOOL-04 | Phase 2 | Complete |
+| AIDEV-01 | Phase 2 | Complete |
 | AIDEV-02 | Phase 8 | Pending |
-| AIDEV-03 | Phase 2 | Pending |
-| AIDEV-04 | Phase 2 | Pending |
+| AIDEV-03 | Phase 2 | Complete |
+| AIDEV-04 | Phase 2 | Complete |
 | AIDEV-05 | Phase 1 | Complete |
 | AIDEV-06 | Phase 1 | Complete |
-| AIDEV-07 | Phase 2 | Pending |
+| AIDEV-07 | Phase 2 | Complete |
 | AIDEV-08 | Phase 1 | Complete |
 
 **Coverage:**
@@ -426,6 +426,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Mapped to phases: 150
 - Unmapped: 0 ✓
 
+**Scope notes:**
+- IDEM-04, GH-12 and TEST-14 are Complete for their Phase 2 scope, as recorded in 02-VERIFICATION.md.
+- IDEM-04's PostgreSQL `uuid` storage, API-boundary and `typeid-js` clauses, GH-12's skill-use clause, and TEST-14's
+  AxonTestFixture, Awaitility and MockK arrive with the phases that first use them.
+
 ---
 *Requirements defined: 2026-11-20*
-*Last updated: 2026-11-21 after roadmap creation (traceability filled)*
+*Last updated: 2026-11-23 after the interim milestone audit (Phase 2 statuses)*

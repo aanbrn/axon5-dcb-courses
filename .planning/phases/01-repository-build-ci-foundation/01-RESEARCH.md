@@ -955,7 +955,7 @@ Not applicable. This phase is greenfield (no rename or migration); the only pre-
 ## Project Constraints (from CLAUDE.md)
 
 Extracted from `/Users/afanasyev/Development/axon5-dcb-courses/.claude/CLAUDE.md` and the global instructions; treat them as locked.
-- Communicate with the user in Russian; code, comments, commit messages, PRs, repository documents and subagent prompts in English.
+- Code, comments, commit messages, PRs, repository documents and subagent prompts in English.
 - Idiomatic Kotlin; reference-quality artifacts; every artifact auto-formatted and style-checked locally (hook) and in CI.
 - Gradle JVM Test Suites for test levels and Java Test Fixtures for shared test helpers (Phase 2 owns the levels; Phase 1 conventions must not block them).
 - Decision Precedence overrides the generated stack section: container images via Cloud Native Buildpacks (not relevant to Phase 1), **ktfmt via Spotless (not ktlint)**, JDK only from `.java-version`, Node only from `.nvmrc`, pnpm only from `packageManager`, everything else Gradle consumes from the version catalog via `:platform`, **TypeID** IDs, no MapStruct/mapping generators, no kapt, tags and releases owned by release-please, GSD works on one branch per phase with squash merges.

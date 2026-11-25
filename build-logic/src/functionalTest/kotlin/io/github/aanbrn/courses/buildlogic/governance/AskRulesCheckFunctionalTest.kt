@@ -14,7 +14,8 @@ import org.junit.jupiter.api.io.TempDir
 
 /**
  * Proves `checkClaudeAskRules` keeps the Claude Code ask rules in `.claude/settings.json` in sync with the governed
- * paths: one `Edit(/<path>)` rule per path, plus `Bash(*config-set*)`.
+ * paths: one `Edit(/<path>)` rule per path, plus `Bash(*config-set*)`. Every fixture also registers the governance
+ * hooks, which `AskRulesCheckHooksFunctionalTest` covers.
  */
 class AskRulesCheckFunctionalTest {
     @TempDir lateinit var projectDir: Path
@@ -26,6 +27,7 @@ class AskRulesCheckFunctionalTest {
         GradleFixture.governance(projectDir).apply {
             file(".claude/settings.json", settings)
             file("governance/governed-paths.txt", paths)
+            writeHookScripts()
         }
 
     @Test
@@ -75,8 +77,9 @@ class AskRulesCheckFunctionalTest {
 
     @Test
     fun `additional ask rules and other permission lists are allowed`() {
-        val rules = (EXPECTED + "Bash(rm *)").joinToString { "\"$it\"" }
-        val extended = """{"permissions": {"ask": [$rules], "allow": ["Bash(ls)"], "deny": ["Read(/.env)"]}}"""
+        val permissions =
+            mapOf("ask" to EXPECTED + "Bash(rm *)", "allow" to listOf("Bash(ls)"), "deny" to listOf("Read(/.env)"))
+        val extended = json(mapOf("permissions" to permissions, "hooks" to hooksSetting()))
 
         val result = fixture(extended).run(TASK)
 
@@ -117,7 +120,7 @@ class AskRulesCheckFunctionalTest {
 
     private companion object {
         const val TASK = "checkClaudeAskRules"
-        const val CONFIG_SET = "Bash(*config-set*)"
+        const val CONFIG_SET = CONFIG_SET_RULE
 
         val GOVERNED =
             """
@@ -127,6 +130,7 @@ class AskRulesCheckFunctionalTest {
             .github/**
             mise.toml
             mise.lock
+            scripts/governance/**
             """
                 .trimIndent() + "\n"
 
@@ -138,10 +142,10 @@ class AskRulesCheckFunctionalTest {
                 "Edit(/.github/**)",
                 "Edit(/mise.toml)",
                 "Edit(/mise.lock)",
+                HOOK_SCRIPTS_RULE,
                 CONFIG_SET,
             )
 
-        fun settings(vararg rules: String): String =
-            """{"permissions": {"ask": [${rules.joinToString { "\"$it\"" }}]}}""" + "\n"
+        fun settings(vararg rules: String): String = claudeSettings(rules.toList())
     }
 }

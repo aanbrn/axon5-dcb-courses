@@ -11,6 +11,9 @@ dependencies {
     implementation(libs.spotless.gradle.plugin)
     implementation(libs.detekt.gradle.plugin)
     implementation(libs.dokka.gradle.plugin)
+    implementation(libs.kover.gradle.plugin)
+    implementation(libs.cyclonedx.gradle.plugin)
+    // UPSTREAM: UP-0008 Gradle exposes no typed `libs` accessor to precompiled script plugins (gradle/gradle#15383).
     // Required for the typed `libs` accessor inside precompiled script plugins (still needed on
     // Gradle 9.9.2).
     implementation(files(libs.javaClass.superclass.protectionDomain.codeSource.location))
@@ -60,10 +63,14 @@ testing {
                         .files(
                             "../gradle/libs.versions.toml",
                             "../platform/build.gradle.kts",
+                            "../governance/dependency-licences.json",
+                            "../NOTICE",
                             "../.prettierrc.yaml",
                             "../.taplo.toml",
                             "../.editorconfig",
                             "../.nvmrc",
+                            "../renovate.json5",
+                            "../scripts/ci/maven-central-mirror.init.gradle.kts",
                         )
                         .withPropertyName("repoFiles")
                         .withPathSensitivity(PathSensitivity.RELATIVE)

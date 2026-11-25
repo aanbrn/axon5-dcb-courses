@@ -5,10 +5,34 @@ plugins { id("courses.settings") }
 
 rootProject.name = "axon5-dcb-courses"
 
+// Role-based layout (D-01, D-03). Backend code lives under `backend/`:
+//   backend/contracts/{kernel,commands,events,queries}                  flat projects `:contracts-*`
+//   backend/{command-service,query-service,automation-service,bff}      flat projects named like their compose
+//                                                                       services and images
+// `platform/`, `build-logic/`, `frontend/`, `docs-site/` and `tooling/` stay at the top level. Each phase adds the
+// modules it needs; flat names are mapped to their directories through `projectDir`.
+
 include(
     ":platform",
-    ":tooling:convention-sample",
+    ":contracts-kernel",
+    ":contracts-events",
+    ":contracts-commands",
+    ":contracts-queries",
+    ":serialization-jackson",
+    ":tooling:test-support",
+    ":tooling:architecture",
+    ":tooling:doctor",
+    ":command-service",
 )
 
-// Anticipated role-based layout (D-03); each phase adds the modules it needs:
-//   services/{command,query,automation,bff}, contracts/*, frontend, docs-site
+project(":contracts-kernel").projectDir = file("backend/contracts/kernel")
+
+project(":contracts-events").projectDir = file("backend/contracts/events")
+
+project(":contracts-commands").projectDir = file("backend/contracts/commands")
+
+project(":contracts-queries").projectDir = file("backend/contracts/queries")
+
+project(":serialization-jackson").projectDir = file("backend/serialization-jackson")
+
+project(":command-service").projectDir = file("backend/command-service")

@@ -100,7 +100,7 @@ status: complete
 
 ## Approval (Task 1, verbatim)
 
-Author's decision: **"apply-without-ruleset, пункт 4 с точкой"**, that is:
+Author's decision: **"apply-without-ruleset, item 4 with the period"**, that is:
 
 | Item | Decision |
 | --- | --- |

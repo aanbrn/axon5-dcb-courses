@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
+import io.github.aanbrn.courses.buildlogic.readJavaMajorVersion
+
 plugins {
     `java-library`
     id("org.jetbrains.kotlin.jvm")
     id("dev.detekt")
     id("org.jetbrains.dokka")
+    id("courses.licences")
 }
-
-val libs = the<org.gradle.accessors.dm.LibrariesForLibs>()
 
 // Every `implementation` and `*Implementation` configuration (main, test, and the test suites and
 // fixtures later phases add) is aligned through the `:platform` module (INFRA-11).
@@ -16,12 +17,6 @@ configurations
     .matching { it.name == "implementation" || it.name.endsWith("Implementation") }
     .configureEach { this.dependencies.add(project.dependencies.platform(platformProject)) }
 
-dependencies {
-    testImplementation(libs.junit.jupiter)
-    testRuntimeOnly(libs.junit.platform.launcher)
-    testImplementation(libs.kotest.assertions.core)
-}
-
 // The root directory through the isolated-projects view, the only safe way to read root files under isolated
 // projects. Gradle still marks `Project.isolated` @Incubating; a Gradle upgrade that changes it fails this build
 // in its Renovate pull request.
@@ -30,12 +25,7 @@ dependencies {
 // `.java-version` is the only place the JDK version lives (INFRA-09).
 val javaLanguageVersion: Provider<JavaLanguageVersion> =
     providers.fileContents(rootDirectory.file(".java-version")).asText.map { text ->
-        val major =
-            text.trim().substringBefore('.').toIntOrNull()
-                ?: throw GradleException(
-                    ".java-version must hold a numeric JDK major version, but it holds '${text.trim()}'",
-                )
-        JavaLanguageVersion.of(major)
+        JavaLanguageVersion.of(readJavaMajorVersion(text))
     }
 
 kotlin {

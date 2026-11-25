@@ -3,29 +3,49 @@
 # A pull request that touches one of these paths needs the `governance-approved` label
 # (scripts/governance/check-pr.sh), and Claude Code asks before it edits one
 # (.claude/settings.json, kept in sync by the checkClaudeAskRules Gradle task: exactly one
-# `Edit(/<entry>)` ask rule per entry).
+# `Edit(/<entry>)` ask rule per entry, plus the hooks of ADR-0015, which ask before an edit in
+# the main checkout or in a worktree that is not an agent worktree, and before a merge that
+# brings a change to one into a worktree).
 #
 # Format. One glob per line. `**` matches any characters including `/`; every other character
 # is literal. Blank lines and lines starting with `#` are ignored. Leading and trailing spaces,
 # tabs and carriage returns are stripped. Entries must be printable ASCII. A file without any
-# entry fails closed. The shell gate and the Gradle check read this file with one grammar.
+# entry fails closed. The shell gate, the Claude Code hooks and the Gradle check read this file
+# with one grammar. An entry that starts with `**/` matches the name in every subdirectory but not
+# at the repository root, so a root file needs an entry of its own.
 #
 # Boundary rule. A path is governed when a change to it alone can rewrite the policy, stop a
 # governance check from running, or make one pass without evaluating. That covers the policy
 # files, the checks and their wiring, the root build configuration that applies and selects
 # them, the build that compiles them, the convention plugins applied to the root project and to
-# settings, and the launcher CI runs them with. The policy files include the tool pins and the
-# Renovate update policy, under every file name mise and Renovate read them from.
+# settings, the module convention plugin that wires the detekt, compiler and licence gates into
+# every Kotlin module, and the launcher CI runs them with. The policy files include the tool pins and the
+# Renovate update policy, under every file name mise and Renovate read them from. The boundary also
+# covers the configuration of every job that `ci-success` requires, under every file name and
+# directory level its tool reads, and the launchers those jobs run (author decision of
+# 2026-11-24): an edit to one alone can add an exclusion, an override or an ignore entry, switch a
+# rule off, or make the job pass without analysing while CI stays green.
 #
 # Outside the boundary, on purpose:
 #   - module convention plugins: under isolated projects they cannot reach the root project's
-#     tasks, and checkBuildScripts rejects allprojects, subprojects and afterEvaluate;
+#     tasks, and checkBuildScripts rejects allprojects, subprojects and afterEvaluate. Two are
+#     governed below, each for its own reason: courses.licences registers a per-module governance
+#     check (checkDependencyLicences); courses.kotlin-library is governed for its gate wiring
+#     rather than for reach (it applies detekt with the governed rule set, sets
+#     allWarningsAsErrors, applies courses.licences and sets Dokka's failOnWarning in every Kotlin
+#     module, so one edit there could switch two required gates off while CI stays green; author
+#     decision of 2026-11-24). The line that applies courses.licences therefore lives in a
+#     governed file, and CI still names checkDependencyLicences explicitly, so a build in which no
+#     module registers it fails. The other module convention plugins (courses.test-suites,
+#     courses.architecture-tests) stay outside;
 #   - functional tests: a deleted test cannot make a check pass;
 #   - the version catalog (gradle/libs.versions.toml): dependency integrity is CICD-05 in
 #     Phase 6, and the catalog carries the D-12 automerge updates;
 #   - gradlew.bat: CI runs on ubuntu only (D-10);
 #   - scripts/test-apply-github-settings.sh: a test of the settings writer, not the writer;
-#   - module build scripts: they cannot reach the root project under isolated projects;
+#   - module build scripts: they cannot reach the root project under isolated projects. The exception
+#     is tooling/doctor: its build script registers the `doctor` task that the required doctor job
+#     runs, so it is governed below with its probe;
 #   - mise environment files (mise.<env>.toml, mise.<env>.local.toml): mise reads them only for a
 #     selected environment, and CI can select one only through a governed file, that is a
 #     workflow's MISE_ENV or the mise-action `mise_env` input under .github/**, or the `env` key
@@ -42,11 +62,34 @@
 #     setup-node read them and mise's java and node are disabled (MISE_DISABLE_TOOLS). mise reads
 #     idiomatic version files only for the tools the governed mise.toml enables;
 #   - a `renovate` section in a package.json below the repository root: Renovate reads repository
-#     config from the root only.
+#     config from the root only;
+#   - the files the checks read as data rather than as configuration: NOTICE (checkNotice),
+#     docs/adr/** (checkAdrs), docs/upstream/** (checkUpstreamRecords), compose.yaml and compose/**
+#     (checkComposeVersions, checkImageReferences and the compose-smoke job). An edit to them is
+#     what those checks evaluate, so it cannot switch a check off or make one pass without
+#     evaluating;
+#   - the local pre-commit hook (lefthook.yml, scripts/format-staged.sh): CI runs every check itself;
+#   - .gitignore: CI checks out tracked files only and every gate selects tracked files, through git
+#     for editorconfig-checker and shellcheck, reuse lint skipping only untracked ignored files, or a
+#     file set fixed in courses.root.gradle.kts for Spotless;
+#   - configuration names the gates do not read here: `.ecrc` (editorconfig-checker 4 reads only
+#     `.editorconfig-checker.json`), `taplo.toml` (Spotless passes `--config .taplo.toml`), other
+#     Prettier config names and `.prettierignore` (Spotless passes `.prettierrc.yaml` and never runs
+#     the Prettier CLI);
+#   - .idea/: it is git-ignored, and scripts/qodana.sh refuses a project directory that contains it,
+#     so a committed inspection profile fails the gate;
+#   - the shell tests outside scripts/governance (scripts/test-doctor.sh) and the architecture tests
+#     under tooling/architecture: test code, like the functional tests;
+#   - scripts/upstream/**: the upstream-records job is advisory and never fails on a match (UPS-04).
 #
 # Accepted residual. Build code can always subvert in-build checks by other means, for example
 # through reflection or daemon-wide hooks. The list makes the direct routes visible changes, and
-# the maintainer's review covers the rest.
+# the maintainer's review covers the rest. A module's own build script can still switch off that
+# module's detekt task, licence task or compiler options, because module build scripts stay
+# outside the boundary; such a line shows in the reviewed diff. Suppression markers inside the files they suppress
+# (shellcheck directives, editorconfig-checker disable comments, `gitleaks:allow`, REUSE ignore
+# blocks, zizmor ignore comments) are not governed; they appear in the reviewed diff of the file
+# they suppress.
 
 # Project policy and agent settings. GitHub reads CODEOWNERS from the root, `.github/` and `docs/`.
 .planning/config.json
@@ -111,7 +154,9 @@ scripts/apply-github-settings.sh
 scripts/governance/**
 
 # The Gradle governance checks and their wiring: dropping a check from `check` switches it off.
+# courses.licences registers the per-module licence check and wires it into `check`.
 build-logic/src/main/kotlin/courses.governance.gradle.kts
+build-logic/src/main/kotlin/courses.licences.gradle.kts
 build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/governance/**
 
 # Root build configuration. It applies the checks, selects the build that provides them and
@@ -132,6 +177,76 @@ build-logic/settings.gradle.kts
 build-logic/settings.gradle
 build-logic/src/main/kotlin/courses.root.gradle.kts
 build-logic/src/main/kotlin/courses.settings.settings.gradle.kts
+
+# The detekt rule set: an edit to it alone can switch rules off, so detekt passes without evaluating them.
+config/detekt/**
+
+# The module convention plugin that wires required build-job gates into every Kotlin module. It applies detekt
+# with the rule set above, sets allWarningsAsErrors, applies courses.licences and sets Dokka's failOnWarning, so an
+# edit to it alone can switch detekt or the compiler gate off while CI stays green (author decision of
+# 2026-11-24). Renovate extracts it as a gradle package file without dependencies, so the renovate[bot]
+# version-only exemption never applies to it.
+build-logic/src/main/kotlin/courses.kotlin-library.gradle.kts
+
+# The configuration of the other jobs that ci-success requires, under every file name and directory level the tool reads
+# (author decision of 2026-11-24). No Renovate manager reads a version from any of these files
+# (`tooling/doctor/build.gradle.kts` is a gradle package file without versioned dependencies), so the renovate[bot]
+# version-only exemption never applies to them and NEVER_EXEMPT_PATHS is unchanged.
+#
+# The lint job's linters:
+#   - editorconfig-checker reads `.editorconfig-checker.json` at the root and every `.editorconfig` from a file's
+#     directory up to the one with `root = true`; shfmt in the build job reads the same files, so a nested
+#     `.editorconfig` can relax a subtree;
+#   - the line-ending renormalisation check reads every `.gitattributes`, and attributes also hide diffs in the pull
+#     request view (`linguist-generated`, `-diff`), while `export-ignore` drops files from the archive that a local
+#     Qodana run analyses;
+#   - reuse lint reads a `REUSE.toml` in any directory, which annotates its subtree, and the deprecated `.reuse/dep5`;
+#   - shellcheck, run directly and by actionlint for workflow scripts, reads `.shellcheckrc` or `shellcheckrc` in a
+#     script's directory or any parent;
+#   - zizmor reads a root `zizmor.yml` or `zizmor.yaml`; the `.github/` names are covered by `.github/**`.
+.editorconfig
+**/.editorconfig
+.editorconfig-checker.json
+.gitattributes
+**/.gitattributes
+REUSE.toml
+**/REUSE.toml
+.reuse/**
+.shellcheckrc
+shellcheckrc
+**/.shellcheckrc
+**/shellcheckrc
+zizmor.yml
+zizmor.yaml
+
+# The build job's formatters. Spotless hands the Prettier and taplo configuration to the tools explicitly from
+# courses.root.gradle.kts, together with the licence header templates; shfmt reads the `.editorconfig` files above.
+.prettierrc.yaml
+.taplo.toml
+config/spotless/**
+
+# The secrets job. gitleaks reads both from the repository root; an allowlist or a fingerprint drops findings.
+.gitleaks.toml
+.gitleaksignore
+
+# The Qodana gate, which the required `qodana` job of ci-success runs: its configuration (the digest-pinned image, the
+# inspection profile, the exclusions and the fail threshold) and the launcher that CI and developers run it with. An
+# edit to either alone can switch inspections off or make the job pass without analysing. The Qodana CLI reads
+# `qodana.yml` before `qodana.yaml`, so an added `qodana.yml` would replace the governed configuration while
+# `scripts/qodana.sh` still validates `qodana.yaml`.
+qodana.yaml
+qodana.yml
+scripts/qodana.sh
+
+# The doctor gate. The required `doctor` job runs `scripts/doctor.sh --ci`, which runs `./gradlew doctor`, registered
+# with its Testcontainers probe in tooling/doctor; an edit to either alone can make the job green without evaluating.
+scripts/doctor.sh
+tooling/doctor/**
+
+# The CI launchers of the required jobs. scripts/ci/retry-on-rate-limit.sh decides the exit status of every Gradle step of
+# `build`, `integration-test`, `functional-test`, `compose-smoke` and `doctor`: an edit to it alone can make those jobs
+# pass without running Gradle or fail on a retry that hides a real failure.
+scripts/ci/**
 
 # The launcher CI runs the checks with. A no-op gradlew alone would make the build step green.
 gradlew

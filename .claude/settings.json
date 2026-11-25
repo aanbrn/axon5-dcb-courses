@@ -40,6 +40,7 @@
       "Edit(/scripts/apply-github-settings.sh)",
       "Edit(/scripts/governance/**)",
       "Edit(/build-logic/src/main/kotlin/courses.governance.gradle.kts)",
+      "Edit(/build-logic/src/main/kotlin/courses.licences.gradle.kts)",
       "Edit(/build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/governance/**)",
       "Edit(/build.gradle.kts)",
       "Edit(/build.gradle)",
@@ -53,10 +54,85 @@
       "Edit(/build-logic/settings.gradle)",
       "Edit(/build-logic/src/main/kotlin/courses.root.gradle.kts)",
       "Edit(/build-logic/src/main/kotlin/courses.settings.settings.gradle.kts)",
+      "Edit(/config/detekt/**)",
+      "Edit(/build-logic/src/main/kotlin/courses.kotlin-library.gradle.kts)",
+      "Edit(/.editorconfig)",
+      "Edit(/**/.editorconfig)",
+      "Edit(/.editorconfig-checker.json)",
+      "Edit(/.gitattributes)",
+      "Edit(/**/.gitattributes)",
+      "Edit(/REUSE.toml)",
+      "Edit(/**/REUSE.toml)",
+      "Edit(/.reuse/**)",
+      "Edit(/.shellcheckrc)",
+      "Edit(/shellcheckrc)",
+      "Edit(/**/.shellcheckrc)",
+      "Edit(/**/shellcheckrc)",
+      "Edit(/zizmor.yml)",
+      "Edit(/zizmor.yaml)",
+      "Edit(/.prettierrc.yaml)",
+      "Edit(/.taplo.toml)",
+      "Edit(/config/spotless/**)",
+      "Edit(/.gitleaks.toml)",
+      "Edit(/.gitleaksignore)",
+      "Edit(/qodana.yaml)",
+      "Edit(/qodana.yml)",
+      "Edit(/scripts/qodana.sh)",
+      "Edit(/scripts/doctor.sh)",
+      "Edit(/tooling/doctor/**)",
+      "Edit(/scripts/ci/**)",
       "Edit(/gradlew)",
       "Edit(/gradle/wrapper/**)",
       "Edit(/gradle/gradle-daemon-jvm.properties)",
       "Bash(*config-set*)"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": ["${CLAUDE_PROJECT_DIR}/scripts/governance/ask-governed-edit.sh"],
+            "timeout": 30,
+            "onFailure": "block"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": ["${CLAUDE_PROJECT_DIR}/scripts/governance/ask-governed-merge.sh"],
+            "timeout": 60,
+            "onFailure": "block"
+          }
+        ]
+      }
+    ]
+  },
+  "extraKnownMarketplaces": {
+    "axoniq": {
+      "source": {
+        "source": "github",
+        "repo": "AxonIQ/agent-skills",
+        "ref": "59e7beb6bb487894aeb1294918463af1432bdece"
+      }
+    },
+    "gradle-skills": {
+      "source": {
+        "source": "github",
+        "repo": "gradle/gradle-skills",
+        "ref": "00b7790139dff32063976f98334b2a2301b50a9d"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "axoniq-app-development@axoniq": true,
+    "gradle-skills@gradle-skills": true
   }
 }

@@ -1,0 +1,51 @@
+Axon 5 DCB Courses
+Copyright (c) 2026 Alexey Afanasyev
+
+This project is licensed under the MIT licence; see LICENSE. It builds on the third-party components listed below, each
+under its own licence. The list names the components by group of artifacts; the exact versions and licences of every
+module's runtime classpath are in its CycloneDX SBOM, build/licences/bom.json, which ./gradlew check regenerates and
+checks against governance/dependency-licences.json (CICD-09).
+
+Third-party components
+
+  Kotlin and kotlinx (org.jetbrains.kotlin, org.jetbrains.kotlinx, org.jetbrains)          Apache-2.0
+  Axon Framework (org.axonframework)                                                        Apache-2.0
+  Jackson (com.fasterxml.jackson, tools.jackson)                                            Apache-2.0
+  java-uuid-generator (com.fasterxml.uuid)                                                  Apache-2.0
+  Spring Boot (org.springframework.boot)                                                    Apache-2.0
+  gRPC and Protocol Buffers (io.grpc, com.google.protobuf)                                  Apache-2.0, BSD-3-Clause
+  Testcontainers and docker-java (org.testcontainers, com.github.docker-java)               MIT, Apache-2.0
+  JNA (net.java.dev.jna), used through Testcontainers in tests                              Apache-2.0 (also offered under
+                                                                                            LGPL-2.1-or-later; the Apache-2.0
+                                                                                            alternative is the one used)
+  Konsist (com.lemonappdev), architecture rules                                             Apache-2.0
+  Kotest (io.kotest), assertions and property tests                                         Apache-2.0
+  JUnit (org.junit, org.junit.jupiter, org.junit.platform)                                  EPL-2.0
+  logback (ch.qos.logback), test logging                                                    EPL-2.0 (also offered under
+                                                                                            LGPL-2.1-only; the EPL-2.0
+                                                                                            alternative is the one used)
+  SLF4J (org.slf4j)                                                                         MIT
+  PostgreSQL JDBC driver (org.postgresql), tests                                            BSD-2-Clause
+  Awaitility (org.awaitility), tests                                                        Apache-2.0
+
+Test data
+
+  The official TypeID test vectors in backend/contracts/kernel/src/test/resources/typeid/ are copied byte for byte from
+  https://github.com/jetify-com/typeid (spec/valid.yml and spec/invalid.yml, spec v0.3.0) and stay under the Apache-2.0
+  licence of that project; REUSE.toml records this.
+
+Axoniq Framework terms
+
+  The Axoniq Framework modules and the Axon Server client are not open source. They are provided under the Axoniq
+  Terms of Service, https://www.axoniq.io/legal/terms-of-service: free for development, demonstrations and CI, and
+  a licence is required to run them in production. This repository uses them for development and CI only. The policy
+  governance/dependency-licences.json lists each of them as an exception with its reason, and ./gradlew checkNotice
+  fails when an exception is missing here.
+
+  - `io.axoniq:axonserver-connector-java`: the gRPC client of Axon Server
+  - `io.axoniq.framework:axon-server-connector`: the connection to the DCB-capable Axon Server
+  - `io.axoniq.framework:axoniq-distributed-messaging`: command, event and query routing through Axon Server
+  - `io.axoniq.framework:axoniq-framework-bom`: the bill of materials aligning the Axoniq Framework artifacts
+  - `io.axoniq.framework:axoniq-testcontainer`: the Axon Server container of the integration tests (test scope)
+
+Axon Server itself runs as a container image pinned in gradle/libs.versions.toml and is not part of this repository.

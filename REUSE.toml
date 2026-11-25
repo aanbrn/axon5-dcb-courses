@@ -27,3 +27,12 @@ path = ".planning/**"
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Alexey Afanasyev"
 SPDX-License-Identifier = "MIT"
+
+# The official TypeID test vectors are copied byte for byte from jetify-com/typeid, spec/valid.yml and
+# spec/invalid.yml at commit 26a84e85491203834ed0d1c3423ba5f679a67114 (spec v0.3.0). They stay under the upstream
+# licence and cannot carry a header without ceasing to be byte-identical copies.
+[[annotations]]
+path = "backend/contracts/kernel/src/test/resources/typeid/*.yml"
+precedence = "override"
+SPDX-FileCopyrightText = "Jetify Inc. and the TypeID contributors"
+SPDX-License-Identifier = "Apache-2.0"

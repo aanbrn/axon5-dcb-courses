@@ -4,10 +4,27 @@
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: ["config:best-practices", "helpers:pinGitHubActionDigestsToSemver"],
   // Never propose a release younger than seven days. Set at the top level so it applies to every
-  // manager, including GitHub Actions digest updates (CICD-04).
+  // manager, including GitHub Actions digest updates (CICD-04). Package rules override it, and
+  // `config:best-practices` lowers npm packages to three days through one, so the first package rule
+  // below restores seven days for them.
   minimumReleaseAge: "7 days",
   // Do not let a pending minimum-release-age check create a branch or PR early.
   internalChecksFilter: "strict",
+  // The CI-only Maven Central mirror init script (docs/adr/0016-ci-dependency-downloads.md) is a Gradle file, so the
+  // gradle manager would add its mirror URL to the registries it looks every Gradle dependency up in. Renovate must
+  // read only the repositories the settings files declare. An array here replaces the one `config:best-practices`
+  // brings through `:ignoreModulesAndTests`, so that preset's paths are listed again first.
+  ignorePaths: [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "**/examples/**",
+    "**/__tests__/**",
+    "**/test/**",
+    "**/tests/**",
+    "**/__fixtures__/**",
+    "scripts/ci/**",
+  ],
 
   // PR conventions: titles read `build(deps): ...`, every PR carries `deps` plus an ecosystem label
   // from .github/labels.yml, and nothing merges itself unless a rule below opts in (D-12).
@@ -38,6 +55,14 @@
     },
     {
       customType: "regex",
+      description: "GSD version pin in governance/gsd-version, read as the npm package @opengsd/gsd-core (the GSD installation under .claude/ is not committed)",
+      managerFilePatterns: ["/^governance/gsd-version$/"],
+      matchStrings: ["^(?<currentValue>\\d+\\.\\d+\\.\\d+)\\s*$"],
+      depNameTemplate: "@opengsd/gsd-core",
+      datasourceTemplate: "npm",
+    },
+    {
+      customType: "regex",
       description: "Versions annotated with '# renovate: datasource=... depName=...' in the Gradle version catalog",
       managerFilePatterns: ["/(^|/)gradle/libs\\.versions\\.toml$/"],
       matchStrings: [
@@ -61,11 +86,39 @@
       matchStrings: ["linter: (?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"],
       datasourceTemplate: "docker",
     },
+    {
+      // The same reference sits in two files on purpose: gradle/libs.versions.toml is the source (the integration
+      // tests read it) and compose/versions.env is generated from it. Both match the same depName, so Renovate
+      // updates tag and digest in both files in ONE pull request and `checkComposeVersions` stays green. The
+      // `image-*` catalog keys and the `*_IMAGE` variables are the only lines this manager reads.
+      customType: "regex",
+      description: "Container images: tag and digest in the version catalog and compose/versions.env",
+      managerFilePatterns: ["/(^|/)gradle/libs\\.versions\\.toml$/", "/(^|/)compose/versions\\.env$/"],
+      matchStrings: [
+        '\\bimage-[a-z0-9-]+ = "(?<depName>[^:"@\\s]+):(?<currentValue>[^@"\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"',
+        "\\b[A-Z0-9_]+_IMAGE=(?<depName>[^:@\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})",
+      ],
+      datasourceTemplate: "docker",
+    },
   ],
 
-  // Rules apply in order and later rules win, so labels and groups come first, then automerge, then
-  // the JDK restrictions.
+  // Rules apply in order and later rules win, so the npm cooldown comes first, then labels and groups,
+  // then automerge, then the JDK restrictions.
   packageRules: [
+    // Cooldown (CICD-04). The package rules of extended presets come before these and later rules win,
+    // so this rule overrides the three days that `security:minimumReleaseAgeNpm` (part of
+    // `config:best-practices`) sets for the npm datasource. It is limited to major, minor and patch so the
+    // preset's opt-outs for pin, replacement, lock file maintenance, bump, lockfileUpdate and rollback stay
+    // intact: those update types carry no release timestamp and would wait forever. It covers the mise `npm:`
+    // tools, the GSD pin and any future package.json dependency. The npm datasource reports release
+    // timestamps, so the default timestamp-required behaviour applies.
+    {
+      description: "npm packages: restore the seven-day cooldown that security:minimumReleaseAgeNpm lowers to three days",
+      matchDatasources: ["npm"],
+      matchUpdateTypes: ["major", "minor", "patch"],
+      minimumReleaseAge: "7 days",
+    },
+
     // Generated sidecar lockfiles of the mise npm and pipx tools: their versions are managed through
     // mise.toml, so Renovate must not open PRs against the generated package.json and pyproject.toml.
     {
@@ -208,6 +261,32 @@
       automerge: true,
     },
 
+    // Later rules win: this one must stay after every automerge rule above. Every Playwright MCP
+    // release is a 0.0.N patch bump, so the patch automerge rule for mise tools would otherwise
+    // merge an agent-facing server (and its alpha Playwright dependency) unreviewed.
+    {
+      description: "Agent tooling (MCP servers): never automerge",
+      matchManagers: ["mise"],
+      matchPackageNames: ["@upstash/context7-mcp", "@playwright/mcp"],
+      automerge: false,
+      prBodyNotes: [
+        "MCP server update: read the changelog, then re-run `claude mcp list` and confirm both project servers still connect before merging by hand.",
+      ],
+    },
+
+    // A GSD release replaces the commands, agents and hooks that run in the maintainer's Claude Code session, so its
+    // pull request is reviewed and merged by hand and never takes the governance exemption
+    // (scripts/governance/check-pr.sh). The flow is in docs/tooling.md (GSD updates). Like the rule above, it stays
+    // after every automerge rule because later rules win.
+    {
+      description: "GSD (agent commands, agents and hooks): never automerge, with the review steps",
+      matchDepNames: ["@opengsd/gsd-core"],
+      automerge: false,
+      prBodyNotes: [
+        "This pull request changes only `governance/gsd-version`, because the GSD installation is not committed. Before merging, read the release notes, review the hook diff with `npm diff --ignore-scripts --diff=@opengsd/gsd-core@{{{currentVersion}}} --diff=@opengsd/gsd-core@{{{newVersion}}} hooks`, check out this branch, install the release with `npx -y @opengsd/gsd-core@{{{newVersion}}} --claude --local` and run `scripts/doctor.sh` until it is green. The pin never takes the governance exemption, so add the `governance-approved` label and merge by hand (docs/tooling.md, GSD updates).",
+      ],
+    },
+
     // JDK: LTS majors only, written as a bare major in .java-version.
     {
       description: "JDK updates: LTS majors only, with the daemon JVM reminder",
@@ -220,6 +299,35 @@
       prBodyNotes: [
         "Run `./gradlew updateDaemonJvm` on this branch and commit the regenerated `gradle/gradle-daemon-jvm.properties`: `checkDaemonJvm` fails until then. If the JDK major changed, also refresh `mise.lock` with `mise lock`.",
       ],
+    },
+
+    // Container images of the local runtime and the test suites: one pull request per image (Renovate keys the branch
+    // by dependency, and the dependency is the same in both files), never merged by a rule. Placed after the
+    // automerge rules so that it wins.
+    {
+      description: "Container images in the catalog and compose/versions.env: one reviewed pull request each",
+      matchManagers: ["custom.regex"],
+      matchDatasources: ["docker"],
+      matchFileNames: ["gradle/libs.versions.toml", "compose/versions.env"],
+      automerge: false,
+      prBodyNotes: [
+        "The tag and digest change in `gradle/libs.versions.toml` and `compose/versions.env` together. `./gradlew checkComposeVersions checkImageReferences` must stay green; if it fails, run `./gradlew generateComposeVersions` on this branch and commit the result.",
+      ],
+    },
+    {
+      // docker.axoniq.io is an alias of Docker Hub's axoniq/axonserver that lists tags but answers every manifest
+      // request from Renovate with 429, so digests could never be looked up. The files keep the official host; the
+      // lookup goes to Docker Hub, which serves the identical digest.
+      description: "Axon Server: look up tags and digests on Docker Hub",
+      matchDepNames: ["docker.axoniq.io/axoniq/axonserver"],
+      overridePackageName: "axoniq/axonserver",
+    },
+    {
+      // A major PostgreSQL upgrade needs a dump and restore of every data volume, so it is a deliberate decision made
+      // in a change of its own, not a Renovate pull request.
+      description: "PostgreSQL: stay on the current major (a major upgrade is a deliberate decision)",
+      matchDepNames: ["postgres"],
+      allowedVersions: "/^18\\./",
     },
 
     // Qodana: the image tag must match the IntelliJ IDEA release used for development (docs/tooling.md).

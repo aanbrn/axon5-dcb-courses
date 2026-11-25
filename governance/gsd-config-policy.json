@@ -83,7 +83,28 @@
   },
   "project_code": null,
   "phase_naming": "sequential",
-  "agent_skills": {},
+  "agent_skills": {
+    "gsd-planner": [
+      ".claude/skills/spike-findings-axon5-dcb-courses",
+      "global:axoniq-app-development:axoniq-app-dev",
+      "global:gradle-skills:gradle-best-practices"
+    ],
+    "gsd-executor": [
+      ".claude/skills/spike-findings-axon5-dcb-courses",
+      "global:axoniq-app-development:axoniq-app-dev",
+      "global:gradle-skills:gradle-best-practices"
+    ],
+    "gsd-phase-researcher": [
+      ".claude/skills/spike-findings-axon5-dcb-courses",
+      "global:axoniq-app-development:axoniq-app-dev"
+    ],
+    "gsd-pattern-mapper": [".claude/skills/spike-findings-axon5-dcb-courses"],
+    "gsd-code-reviewer": [
+      ".claude/skills/spike-findings-axon5-dcb-courses",
+      "global:gradle-skills:gradle-best-practices"
+    ],
+    "gsd-verifier": [".claude/skills/spike-findings-axon5-dcb-courses"]
+  },
   "claude_md_path": "./.claude/CLAUDE.md",
   "plan_review": {
     "source_grounding": true,

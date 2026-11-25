@@ -7,7 +7,8 @@
 #      carries the tool version counts as modified, not renamed, when its old and new paths differ
 #      only in that version. A list at the files API limit (3000 entries) may hide a governed
 #      file, so it needs the label and is never exempt. A list that cannot be read completely fails,
-#      with or without the label.
+#      with or without the label. The paths in NEVER_EXEMPT_PATHS (the GSD version pin) never take the
+#      exemption, because a new GSD release changes hooks that execute in the maintainer's session.
 #   2. A PR from a branch of this repository must come from a GSD phase branch or a bot branch.
 # All inputs arrive through environment variables, never arguments:
 #   PR_FILES_JSON        path to the JSON array returned by the pull request files API
@@ -17,17 +18,22 @@
 #   PR_HEAD_REPO         full name of the repository the head branch lives in
 #   PR_BASE_REPO         full name of the repository the pull request targets
 #   GOVERNED_PATHS_FILE  list of governed path globs (default: governance/governed-paths.txt)
-# PR data is read with jq only and is never evaluated by the shell.
+# PR data is read with jq only and is never evaluated by the shell. The governed paths grammar and the glob matcher come
+# from governed-paths.sh next to this script, which the Claude Code hooks share.
 set -euo pipefail
 
 # Byte-wise comparison: look-alike Unicode characters never match an ASCII pattern.
 export LC_ALL=C
 
-# load_globs strips padding with the extended pattern `*(...)`.
-shopt -s extglob
+# shellcheck source=/dev/null
+source "$(dirname -- "${BASH_SOURCE[0]}")/governed-paths.sh"
 
 readonly APPROVAL_LABEL="governance-approved"
 readonly BOT_AUTHOR="renovate[bot]"
+# Governed paths that never take the renovate[bot] exemption, compared byte for byte as whole paths. The GSD pin
+# selects the release whose hooks and agents run in the maintainer's Claude Code session, so its bump is reviewed like
+# code (docs/tooling.md, GSD updates; ADR-0003).
+readonly NEVER_EXEMPT_PATHS=(governance/gsd-version)
 readonly PHASE_BRANCH_PATTERN='^gsd/phase-[0-9]+(\.[0-9]+)?-[a-z0-9][a-z0-9-]*$'
 readonly RENOVATE_BRANCH_PATTERN='^renovate/.+$'
 readonly RELEASE_BRANCH_PATTERN='^release-please--.+$'
@@ -49,78 +55,20 @@ cleanup() {
   [[ -z $RECORDS_FILE ]] || rm -f -- "$RECORDS_FILE"
 }
 
-# Succeeds when the path matches the glob. `**` matches any characters including `/`; every other
-# character is literal, so a plain name matches exactly.
-glob_match() {
-  local path=$1 glob=$2
-  if [[ $glob != *'**'* ]]; then
-    [[ $path == "$glob" ]]
-    return
-  fi
-  local -a parts=()
-  local rest=$glob
-  while [[ $rest == *'**'* ]]; do
-    parts+=("${rest%%'**'*}")
-    rest=${rest#*'**'}
-  done
-  parts+=("$rest")
-  local last_index=$((${#parts[@]} - 1))
-  local first=${parts[0]} last=${parts[last_index]} i
-  [[ $path == "$first"* ]] || return 1
-  path=${path#"$first"}
-  for ((i = 1; i < last_index; i++)); do
-    [[ $path == *"${parts[i]}"* ]] || return 1
-    path=${path#*"${parts[i]}"}
-  done
-  [[ $path == *"$last" ]]
-}
-
 # Succeeds when the path matches any governed glob.
 is_governed() {
-  local path=$1 glob
-  for glob in "${GLOBS[@]}"; do
-    if glob_match "$path" "$glob"; then
-      return 0
-    fi
-  done
-  return 1
+  first_governed_glob "$1" "${GLOBS[@]}" >/dev/null
 }
 
-# Reads the governed path globs. The grammar is shared with `GovernedPaths.parse` in build-logic's
-# governance package, which backs `checkClaudeAskRules`; both must change together (WR-04):
-#   1. Lines are split on LF only.
-#   2. Leading and trailing space, tab and carriage return are stripped and nothing else
-#      (`[:space:]` would also strip vertical tab and form feed).
-#   3. Empty lines and lines starting with `#` are ignored.
-#   4. Every other entry must be printable ASCII (0x20 to 0x7E), checked byte-wise under LC_ALL=C.
-#      A NUL byte, which `read` would silently drop, is turned into a non-printable byte first.
-#      Every offending line is reported in ascending order and the gate fails closed.
-#   5. A file without entries fails closed.
+# Reads the governed path globs into GLOBS, through the grammar in governed-paths.sh. A missing or unusable file has
+# already been reported on standard error, so the gate fails closed.
 load_globs() {
-  local file=$1 line number=0
-  local -a offending=()
-  [[ -f $file ]] || die "governed paths file not found: $file"
+  local text glob
+  text=$(governed_globs "$1") || exit 1
   GLOBS=()
-  while IFS= read -r line || [[ -n $line ]]; do
-    number=$((number + 1))
-    line=${line##*([ $'\t\r'])}
-    line=${line%%*([ $'\t\r'])}
-    if [[ -z $line || $line == '#'* ]]; then
-      continue
-    fi
-    if [[ $line == *[![:print:]]* ]]; then
-      offending+=("$number")
-    else
-      GLOBS+=("$line")
-    fi
-  done < <(tr '\0' '\001' <"$file")
-  if [[ ${#offending[@]} -gt 0 ]]; then
-    for number in "${offending[@]}"; do
-      echo "governance: $file line $number: entry contains a character outside printable ASCII" >&2
-    done
-    exit 1
-  fi
-  [[ ${#GLOBS[@]} -gt 0 ]] || die "governed paths file lists no governed path: $file"
+  while IFS= read -r glob; do
+    GLOBS+=("$glob")
+  done <<<"$text"
 }
 
 validate_inputs() {
@@ -136,6 +84,16 @@ validate_inputs() {
 
 has_label() {
   printf '%s' "$PR_LABELS_JSON" | jq -e --arg label "$1" 'index($label) != null' >/dev/null
+}
+
+# Succeeds when the path equals an entry of NEVER_EXEMPT_PATHS exactly (no glob matching); fails for an empty path.
+is_never_exempt() {
+  local entry
+  [[ -n ${1:-} ]] || return 1
+  for entry in "${NEVER_EXEMPT_PATHS[@]}"; do
+    [[ $1 == "$entry" ]] && return 0
+  done
+  return 1
 }
 
 # Reads a diff on standard input and writes each line as a version-independent token stream: commit
@@ -263,8 +221,8 @@ check_governed_files() {
     return 1
   fi
 
-  local -a touched=() blocked=() exempt=()
-  local filename previous status has_patch patch is_touched is_exempt mode seen=0
+  local -a touched=() blocked=() exempt=() never_exempt=()
+  local filename previous status has_patch patch is_touched is_exempt mode seen=0 hit
   while IFS= read -r -d '' filename &&
     IFS= read -r -d '' previous &&
     IFS= read -r -d '' status &&
@@ -282,8 +240,20 @@ check_governed_files() {
     fi
     [[ $is_touched -eq 1 ]] || continue
 
+    hit=0
+    if [[ ${PR_AUTHOR:-} == "$BOT_AUTHOR" ]]; then
+      if is_never_exempt "$filename"; then
+        never_exempt+=("$filename")
+        hit=1
+      fi
+      if is_never_exempt "$previous"; then
+        never_exempt+=("$previous")
+        hit=1
+      fi
+    fi
+
     is_exempt=0
-    if [[ ${PR_AUTHOR:-} == "$BOT_AUTHOR" && $has_patch == 1 ]] &&
+    if [[ $hit -eq 0 && ${PR_AUTHOR:-} == "$BOT_AUTHOR" && $has_patch == 1 ]] &&
       { [[ $status == modified && -z $previous ]] ||
         { [[ $status == renamed ]] && is_sidecar_version_move "$previous" "$filename"; }; }; then
       mode=plain
@@ -324,6 +294,13 @@ check_governed_files() {
   {
     echo "governance: this pull request touches governed files:"
     printf '  %s\n' "${blocked[@]}"
+    if [[ ${#never_exempt[@]} -gt 0 ]]; then
+      local path
+      for path in "${never_exempt[@]}"; do
+        echo "governance: never exempt: $path" \
+          "(a GSD release replaces the hooks that run in the maintainer's Claude Code session)"
+      done
+    fi
     echo "governance: ask a maintainer to add the '$APPROVAL_LABEL' label, then this check re-runs."
   } >&2
   return 1

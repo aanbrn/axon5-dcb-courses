@@ -21,11 +21,11 @@ noop_build {
   iterations = 5
 }
 
-# An ABI-visible change to the sample library, measuring incremental compilation and the tasks that
-# depend on the changed API.
+# An ABI-visible change to the kernel, measuring incremental compilation and the tasks that depend on
+# the changed API.
 abi_change {
   tasks = ["assemble"]
-  apply-abi-change-to = "tooling/convention-sample/src/main/kotlin/io/github/aanbrn/courses/sample/Greeting.kt"
+  apply-abi-change-to = "backend/contracts/kernel/src/main/kotlin/io/github/aanbrn/courses/contracts/kernel/TypeId.kt"
   warm-ups = 2
   iterations = 5
 }

@@ -1,12 +1,12 @@
+---
+status: "accepted"
+date: "2026-11-23"
+decision-makers: ["repository author (decision D-14 and the planner web-search setting)"]
+---
+
 # ADR-0004: GSD configuration as a decision
 
-- Status: accepted
-- Date: 2026-11-21
-- Deciders: repository author (decision D-14 and the planner web-search setting)
-
-This is a minimal record. Phase 2 introduces the ADR templates and normalises the format of this note.
-
-## Context
+## Context and Problem Statement
 
 GSD reads `.planning/config.json` in every workflow, so a changed key changes how later phases are planned,
 executed and verified. GSD also writes keys at runtime through `config-set`, for example
@@ -16,7 +16,22 @@ update can add keys.
 Requirement AIDEV-05 asks for the project settings to be enforced as policy: a check must fail on any deviation
 until the policy itself is changed deliberately.
 
-## Decision: the policy pins the whole file
+## Considered Options
+
+The chosen options are the two decisions under Decision Outcome. The rejected alternatives:
+
+1. Pinning only selected keys, as the examples in AIDEV-05 suggest. Unlisted keys, and keys added by a GSD
+   update, could then change silently.
+2. Ignoring keys that start with an underscore automatically. That would make the check lenient by convention.
+   It is not adopted, and adopting it would itself be a deliberate policy change.
+3. No web access for the planner. Plans would rest on training data alone, and the WR-01 and WR-07 facts were
+   not in the repository.
+4. Web access for every agent. It would widen the channel through which outside content can steer code changes
+   without a gain, because executors prove facts by running tools.
+
+## Decision Outcome
+
+### Decision: the policy pins the whole file
 
 This implements decision D-14.
 
@@ -27,10 +42,13 @@ This implements decision D-14.
 - The whole file is pinned rather than a list of keys. Keys added by a GSD update and keys written at runtime
   then become visible, reviewable diffs instead of silent drift.
 
-## Changing the configuration deliberately
+### Changing the configuration deliberately
 
 1. Change `.planning/config.json`, through GSD or by hand. The ask rules in `.claude/settings.json` (AIDEV-08)
-   make the author confirm both routes: the rule for edits to the file and the rule for `config-set` calls.
+   make the author confirm both routes: the rule for edits to the file and the rule for `config-set` calls. In an
+   agent worktree the edit rule does not match and the edit hook of
+   [ADR-0015](0015-governance-hooks-for-worktrees-and-merges.md) does not ask at edit time. The `config-set` rule
+   (path-independent) still asks, and the merge hook of ADR-0015 asks when the change is merged into the main checkout.
 2. Make the same change to `governance/gsd-config-policy.json` in the same pull request.
    `checkGsdConfigPolicy` passes only when the two agree.
 3. Both files are governed paths, so the pull request needs the `governance-approved` label for
@@ -43,7 +61,7 @@ Transient runtime keys such as `workflow._auto_chain_active` are never committed
 and never copy them into the policy to make the check pass. The failure message of the check names the
 offending key path.
 
-## Decision: the planner may search the web
+### Decision: the planner may search the web
 
 `agent_tools` gives the `gsd-planner` agent the `WebSearch` tool, and no other agent gets it. The external
 search-provider keys in the same file (`brave_search`, `firecrawl`, `exa_search`, `tavily_search`, `ref_search`,
@@ -75,31 +93,55 @@ Mitigations:
 - Only the planner has the tool.
 - The maintainer reviews the diff of every pull request ([ADR-0003](0003-governance-gate-trust-boundary.md)).
 
-## Rejected alternatives
+### Decision: GSD agents load skills through `agent_skills`
 
-1. Pinning only selected keys, as the examples in AIDEV-05 suggest. Unlisted keys, and keys added by a GSD
-   update, could then change silently.
-2. Ignoring keys that start with an underscore automatically. That would make the check lenient by convention.
-   It is not adopted, and adopting it would itself be a deliberate policy change.
-3. No web access for the planner. Plans would rest on training data alone, and the WR-01 and WR-07 facts were
-   not in the repository.
-4. Web access for every agent. It would widen the channel through which outside content can steer code changes
-   without a gain, because executors prove facts by running tools.
+`agent_skills` maps a GSD agent to the skills GSD injects into that agent's context at every spawn. The author
+approved the mapping below on 2026-11-23, after the skills survey of plan 02-05 (decision D-41). A project skill is
+referenced by its directory path. A plugin skill is referenced as `global:<plugin>:<skill>`, and GSD emits it on
+the Claude runtime only.
 
-## Consequences
+| Agent                  | Skills                                                                    | Reason                                                                              |
+| ---------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `gsd-planner`          | spike findings, `axoniq-app-dev` (Axon), `gradle-best-practices` (Gradle) | Plans must reflect the proven Axon, DCB and build facts and conventions.            |
+| `gsd-executor`         | spike findings, `axoniq-app-dev`, `gradle-best-practices`                 | It writes the Kotlin and Axon code and the Gradle changes.                          |
+| `gsd-phase-researcher` | spike findings, `axoniq-app-dev`                                          | Research starts from verified facts and Axon 5 guidance.                            |
+| `gsd-pattern-mapper`   | spike findings                                                            | It maps new work to the patterns the spikes proved.                                 |
+| `gsd-code-reviewer`    | spike findings, `gradle-best-practices`                                   | It reviews code and build files against the proven constraints and build practices. |
+| `gsd-verifier`         | spike findings                                                            | It checks the result against verified requirements and constraints.                 |
+
+The spike findings skill is the project's own `spike-findings-axon5-dcb-courses`. The two plugin skills come from
+the plugins approved in plan 02-05: `axoniq-app-dev` from `AxonIQ/agent-skills` at commit `59e7beb` and
+`gradle-best-practices` from `gradle/gradle-skills` at commit `00b7790`. The `gradle-wrapper-upgrade` skill of
+the Gradle plugin is deliberately not mapped: no agent needs it, because wrapper upgrades are not agent work.
+
+Caveats:
+
+- Plugin skills are machine-specific. They resolve only where the plan 02-05 plugins are installed, which each
+  contributor does once per clone at project scope (see "How skills are installed" in `docs/tooling.md`), because
+  enabling a plugin in `.claude/settings.json` does not install it. `scripts/doctor.sh` warns while one is missing.
+  Where they are not installed, the `global:` entries have no effect: GSD still tells the agent to load them, and the
+  load finds no such skill. The project skill is tracked in the repository and always resolves.
+- `axoniq-app-dev` targets Axon 5.2.x while the project pins 5.4.2. Where the plugin guidance and the project
+  disagree, the spike findings skill and the ADRs win.
+- The mapped skills enter every agent spawn, so the mapping is a trust boundary. It is limited to the project skill
+  and the approved plugins, and the whole-file policy pin makes any change a reviewed diff.
+
+### Consequences
 
 - Every configuration change is a reviewed two-file pull request that carries the `governance-approved` label.
 - A GSD update that adds keys fails `check` until the policy is updated deliberately.
 - Planning runs cost more.
 - Plans may cite web sources, and the executors' runs remain the proof.
 
-## Recording later keys
+## More Information
+
+### Recording later keys
 
 Further non-obvious keys get a short section in this ADR, in the same pull request that changes the key. The
 section states the decision, the reason and a revisit trigger. `model_profile`, `git.branching_strategy` and
 `workflow.security_enforcement` are examples of keys that may need one. No decision is recorded for them now.
 
-## When to revisit
+### When to revisit
 
 - Web search: revisit when a plan proves to have been steered by wrong web content that no gate caught, when the
   plan checker or source grounding is switched off, when planning cost becomes a problem, or when a second

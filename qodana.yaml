@@ -29,7 +29,15 @@ exclude:
       - build
       - build-logic/build
       - platform/build
-      - tooling/convention-sample/build
+      - backend/contracts/kernel/build
+      - backend/contracts/events/build
+      - backend/contracts/commands/build
+      - backend/contracts/queries/build
+      - backend/serialization-jackson/build
+      - backend/command-service/build
+      - tooling/test-support/build
+      - tooling/architecture/build
+      - tooling/doctor/build
       - .gradle
       - build-logic/.gradle
       - .kotlin

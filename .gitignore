@@ -4,6 +4,10 @@
 /.claude/*
 !/.claude/settings.json
 !/.claude/CLAUDE.md
+# D-39: the GSD spike wrap-up skill is tracked as a narrow exception
+!/.claude/skills/
+/.claude/skills/*
+!/.claude/skills/spike-findings-*/
 
 # GSD state-contract snapshot: derived from ROADMAP.md/STATE.md and rewritten at every step boundary
 /.planning/state.json
@@ -12,6 +16,9 @@
 # or a tool writes under .mise stays local
 /.mise/*
 !/.mise/locks/
+
+# MCP tool output (Playwright MCP writes snapshots and logs here, relative to its working directory)
+.playwright-mcp/
 
 # Gradle and Kotlin state
 .gradle/
@@ -44,6 +51,9 @@ coverage/
 # gradle-profiler output
 profile-out/
 gradle-user-home/
+
+# Swift Package Manager cache tag that a tool run by the pre-commit hooks leaves in the working directory
+/.build/
 
 # OS files
 .DS_Store

@@ -1,0 +1,89 @@
+# Infrastructure shared by every service: the DCB event store and the database server.
+#
+# Both ports of each service are published on the loopback interface only: the development Axon Server has no access
+# control and the PostgreSQL passwords below are development defaults, so neither may be reachable from the network.
+services:
+  axonserver:
+    image: ${AXONSERVER_IMAGE:?run ./gradlew generateComposeVersions}
+    # Fixed on purpose: Axon Server stores its node name in the control database, and a random container hostname
+    # would orphan the stored contexts when the container is recreated (spike 003).
+    hostname: axonserver
+    environment:
+      # Creates the DCB `default` context at boot. There is no init container: calling /v2/cluster/init a second time
+      # corrupts the single-node Raft group.
+      - AXONIQ_AXONSERVER_STANDALONE_DCB=true
+      - AXONIQ_AXONSERVER_DEVMODE_ENABLED=true
+      - AXONIQ_UPDATE_CHECKER_DISABLED=true
+      # UPSTREAM: UP-0006 an empty value counts as configured and crashes the Platform startup runner.
+      # The optional AxonIQ Platform token (<environment-id>:<token>) lifts the 12 hour limit of an unregistered
+      # server. The bare name passes the variable through only when `.env` or the shell defines it. An empty value must
+      # never reach the container: the server then treats the Platform as configured, fails with an
+      # IndexOutOfBoundsException and stays "running" with HTTP and gRPC dead (spike 004).
+      - AXONIQ_PLATFORM_AUTHENTICATION
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8024/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    ports:
+      - "127.0.0.1:8024:8024"
+      - "127.0.0.1:8124:8124"
+    volumes:
+      - as-data:/axonserver/data
+      - as-events:/axonserver/events
+      - as-log:/axonserver/log
+
+  # Network-level proof of the in-network scenario (D-26, D-46): a container on the compose network reaches Axon Server
+  # by its service name, on the HTTP port and on the gRPC port. It runs only on request, with
+  # `docker compose --profile probe run --rm probe`, and reuses the Axon Server image (it ships `curl`), so no extra
+  # image is pinned. Functional gRPC clients arrive with the services of Phases 3 and 6.
+  probe:
+    image: ${AXONSERVER_IMAGE:?run ./gradlew generateComposeVersions}
+    profiles: [probe]
+    depends_on:
+      axonserver:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        curl -fsS -o /dev/null --max-time 5 http://axonserver:8024/actuator/health
+        echo "probe: http://axonserver:8024/actuator/health is reachable"
+        # gRPC runs over HTTP/2 without TLS here: speaking HTTP/2 to the port proves a listener is accepting connections.
+        # Any answer passes; a refused or timed-out connection exits non-zero.
+        curl -sS -o /dev/null --max-time 5 --retry 5 --retry-delay 1 --retry-connrefused --http2-prior-knowledge \
+          http://axonserver:8124
+        echo "probe: axonserver:8124 accepts connections"
+
+  postgres:
+    image: ${POSTGRES_IMAGE:?run ./gradlew generateComposeVersions}
+    environment:
+      - POSTGRES_USER=postgres
+      # Development defaults, not secrets. Override them in `.env`; production deployment is out of scope.
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres-dev}
+      - QUERY_SERVICE_DB_PASSWORD=${QUERY_SERVICE_DB_PASSWORD:-query-service-dev}
+      - AUTOMATION_SERVICE_DB_PASSWORD=${AUTOMATION_SERVICE_DB_PASSWORD:-automation-service-dev}
+    healthcheck:
+      # Over TCP on purpose: while the init scripts run, the image starts a temporary server that listens on the Unix
+      # socket only, so a socket probe would report healthy before the service databases exist.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # PostgreSQL 18 keeps its data in a versioned directory below /var/lib/postgresql, so the volume goes here and
+      # not at /var/lib/postgresql/data.
+      - pg-data:/var/lib/postgresql
+      # Runs only when the data directory is empty, that is once per volume. `docker compose down -v` re-arms it.
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+
+volumes:
+  as-data: {}
+  as-events: {}
+  as-log: {}
+  pg-data: {}
