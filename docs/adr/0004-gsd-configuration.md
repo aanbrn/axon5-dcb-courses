@@ -116,10 +116,11 @@ the Gradle plugin is deliberately not mapped: no agent needs it, because wrapper
 
 Caveats:
 
-- Plugin skills are machine-specific. They resolve only where the plan 02-05 plugins are installed. On the author's
-  machine they are not installed yet, because the `/plugin` step is a pending human check, so the `global:`
-  entries have no effect until then: GSD still tells the agent to load them, and the load finds no such skill.
-  The project skill is tracked in the repository and always resolves.
+- Plugin skills are machine-specific. They resolve only where the plan 02-05 plugins are installed, which each
+  contributor does once per clone at project scope (see "How skills are installed" in `docs/tooling.md`), because
+  enabling a plugin in `.claude/settings.json` does not install it. `scripts/doctor.sh` warns while one is missing.
+  Where they are not installed, the `global:` entries have no effect: GSD still tells the agent to load them, and the
+  load finds no such skill. The project skill is tracked in the repository and always resolves.
 - `axoniq-app-dev` targets Axon 5.2.x while the project pins 5.4.2. Where the plugin guidance and the project
   disagree, the spike findings skill and the ADRs win.
 - The mapped skills enter every agent spawn, so the mapping is a trust boundary. It is limited to the project skill

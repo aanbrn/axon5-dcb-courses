@@ -118,7 +118,8 @@ FAKE
 
 # make_local_state <dir>: everything the local-only checks read, in a healthy state: a GSD installation that matches
 # its manifest, the pinned version, `.mcp.json`, a `.env` with a token, a colima configuration, Testcontainers
-# settings, and a git repository that tracks only the allowed `.claude` files.
+# settings, install records for the two plugins that `.claude/settings.json` enables, and a git repository that tracks
+# only the allowed `.claude` files.
 make_local_state() {
   local dir=$1 repo=$1/repo
   mkdir -p "$repo/governance" "$repo/.claude/hooks" "$repo/.claude/gsd-core" "$repo/.claude/agents" \
@@ -141,9 +142,38 @@ make_local_state() {
   printf 'tc.host=unix:///var/run/docker.sock\n' >"$dir/home/.testcontainers.properties"
 
   git -C "$repo" init -q
-  echo '{}' >"$repo/.claude/settings.json"
+  printf '{"enabledPlugins": {"axoniq-app-development@axoniq": true, "gradle-skills@gradle-skills": true}}\n' \
+    >"$repo/.claude/settings.json"
+  write_install_records "$dir/home/.claude" project "$repo" axoniq-app-development@axoniq gradle-skills@gradle-skills
   echo '# project' >"$repo/.claude/CLAUDE.md"
   git -C "$repo" add .claude/settings.json .claude/CLAUDE.md
+}
+
+# install_records_json <scope> <projectPath> <plugin id>...: prints Claude Code's `installed_plugins.json` (format
+# version 2) with one record per id. A `user` record carries no projectPath, as in Claude Code's own file.
+install_records_json() {
+  local scope=$1 path=$2
+  shift 2
+  printf '%s\n' "$@" | jq -Rn --arg scope "$scope" --arg path "$path" \
+    '{version: 2, plugins: ([inputs | {(.): [{scope: $scope, installPath: "/fake/plugin-cache", version: "1.0.0",
+      gitCommitSha: "0123456789abcdef"} + (if $scope == "user" then {} else {projectPath: $path} end)]}] | add // {})}'
+}
+
+# write_install_records <claude config dir> <scope> <projectPath> <plugin id>...: writes the install records file
+# under the configuration directory, replacing the one that is there.
+write_install_records() {
+  local config=$1
+  shift
+  mkdir -p "$config/plugins"
+  install_records_json "$@" >"$config/plugins/installed_plugins.json"
+}
+
+# add_install_records <claude config dir> <scope> <projectPath> <plugin id>...: adds records to the existing file.
+add_install_records() {
+  local file=$1/plugins/installed_plugins.json
+  shift
+  jq -s '{version: 2, plugins: (.[0].plugins + .[1].plugins)}' "$file" <(install_records_json "$@") >"$file.new"
+  mv "$file.new" "$file"
 }
 
 # write_manifest <dir> <version>: writes `.claude/gsd-file-manifest.json` over the listed GSD files as they are now.
@@ -371,8 +401,9 @@ assert_out "healthy local state" "^ok  mcp: all 2 servers in \\.mcp\\.json resol
 assert_out "healthy local state" "^ok  platform-token: "
 assert_out "healthy local state" "^ok  claude-code: 2\\.1\\.330"
 assert_out "healthy local state" "^ok  git: 2\\.47\\.1 meets the minimum 2\\.36\\.0"
+assert_out "healthy local state" "^ok  claude-plugins: 2 enabled plugins are installed for this clone \\(axoniq-app-development@axoniq, gradle-skills@gradle-skills\\)"
 assert_out "healthy local state" "^ok  claude-tracking: "
-assert_no_out "healthy local state" "^(warn|fail)  (image-store|colima|gsd|gsd-defaults|mcp|platform-token|claude-code|git|claude-tracking):"
+assert_no_out "healthy local state" "^(warn|fail)  (image-store|colima|gsd|gsd-defaults|mcp|platform-token|claude-code|claude-plugins|git|claude-tracking):"
 
 # --- GSD integrity ---------------------------------------------------------------------------------
 
@@ -763,6 +794,152 @@ assert_code "claude --version fails" 0
 assert_out "claude --version fails" "^warn  claude-code: cannot read the version from 'claude --version'"
 assert_out "claude --version fails" "^summary: "
 
+# --- the project's Claude Code plugins (G-02-2) -------------------------------------------------------
+# `.claude/settings.json` enables the plugins, but Claude Code installs none of them for a clone by itself: each
+# contributor installs them once per clone at project scope. The healthy fixture has both enabled and installed.
+
+PLUGIN_A=axoniq-app-development@axoniq
+PLUGIN_B=gradle-skills@gradle-skills
+RECORDS="home/.claude/plugins/installed_plugins.json"
+
+fresh
+printf '{}\n' >"$ENV/repo/.claude/settings.json"
+run_doctor "$ENV"
+assert_code "no plugin enabled" 0
+assert_out "no plugin enabled" "^ok  claude-plugins: no plugin is enabled in \\.claude/settings\\.json"
+
+fresh
+printf '{"enabledPlugins": {"%s": false}}\n' "$PLUGIN_A" >"$ENV/repo/.claude/settings.json"
+rm "$ENV/$RECORDS"
+run_doctor "$ENV"
+assert_out "only disabled plugins" "^ok  claude-plugins: no plugin is enabled in \\.claude/settings\\.json"
+
+# No install record at all: one warning per enabled plugin, each with the install command, and exit 0.
+fresh
+rm "$ENV/$RECORDS"
+run_doctor "$ENV"
+assert_code "no install records" 0
+assert_out "no install records" "^warn  claude-plugins: $PLUGIN_A is enabled in \\.claude/settings\\.json but not installed for this clone"
+assert_out "no install records" "^warn  claude-plugins: $PLUGIN_B is enabled in \\.claude/settings\\.json but not installed for this clone"
+assert_out "no install records" "^      fix: claude plugin install $PLUGIN_A --scope project \\(once per clone, in the main checkout\\)"
+assert_out "no install records" "^      fix: claude plugin install $PLUGIN_B --scope project \\(once per clone, in the main checkout\\)"
+assert_out "no install records" "^      fix: then run /reload-plugins in Claude Code"
+assert_no_out "no install records" "^ok  claude-plugins: "
+
+# A record of another project does not count; the plugin with a record for this clone is not reported. The path of
+# the foreign record, like every other record field, never reaches the output.
+fresh
+write_install_records "$ENV/home/.claude" project "$ENV/foreign-project-sentinel" "$PLUGIN_A"
+add_install_records "$ENV/home/.claude" project "$ENV/repo" "$PLUGIN_B"
+run_doctor "$ENV"
+assert_code "foreign project record" 0
+assert_out "foreign project record" "^warn  claude-plugins: $PLUGIN_A is enabled in \\.claude/settings\\.json but not installed for this clone"
+assert_no_out "foreign project record" "claude-plugins: $PLUGIN_B"
+assert_no_out "foreign project record" "foreign-project-sentinel|fake/plugin-cache|0123456789abcdef"
+
+# A user-scope record counts for every clone.
+fresh
+write_install_records "$ENV/home/.claude" user "" "$PLUGIN_A" "$PLUGIN_B"
+run_doctor "$ENV"
+assert_out "user scope record" "^ok  claude-plugins: 2 enabled plugins are installed for this clone"
+
+# The records are read from CLAUDE_CONFIG_DIR when it is set, and only from there.
+fresh
+mkdir -p "$ENV/config"
+mv "$ENV/home/.claude/plugins" "$ENV/config/plugins"
+EXTRA_ENV="CLAUDE_CONFIG_DIR=$ENV/config"
+run_doctor "$ENV"
+assert_out "CLAUDE_CONFIG_DIR with the records" "^ok  claude-plugins: 2 enabled plugins are installed for this clone"
+
+fresh
+mkdir -p "$ENV/config"
+EXTRA_ENV="CLAUDE_CONFIG_DIR=$ENV/config"
+run_doctor "$ENV"
+assert_out "CLAUDE_CONFIG_DIR without the records" "^warn  claude-plugins: $PLUGIN_A is enabled"
+
+# A session in a linked worktree uses the install record of the main checkout (observed 2026-11-25).
+fresh
+git -C "$ENV/repo" -c user.name=test -c user.email=test@example.invalid -c commit.gpgsign=false \
+  -c core.hooksPath=/dev/null commit -q -m fixture
+git -C "$ENV/repo" worktree add -q --detach "$ENV/worktree"
+EXTRA_ENV="DOCTOR_ROOT=$ENV/worktree"
+run_doctor "$ENV"
+assert_out "linked worktree" "^ok  claude-plugins: 2 enabled plugins are installed for this clone"
+
+# Paths compare after symlinks are resolved, on both sides.
+fresh
+ln -s "$ENV/repo" "$ENV/link"
+write_install_records "$ENV/home/.claude" project "$ENV/link" "$PLUGIN_A" "$PLUGIN_B"
+run_doctor "$ENV"
+assert_out "record through a symlink" "^ok  claude-plugins: 2 enabled plugins are installed for this clone"
+
+fresh
+ln -s "$ENV/repo" "$ENV/link"
+EXTRA_ENV="DOCTOR_ROOT=$ENV/link"
+run_doctor "$ENV"
+assert_out "root through a symlink" "^ok  claude-plugins: 2 enabled plugins are installed for this clone"
+
+# A key that is no plugin id fails the check and is never echoed, nor reaches a command.
+fresh
+# shellcheck disable=SC2016 # the $( is text of the settings file on purpose, it must never be expanded
+printf '{"enabledPlugins": {"evil\\u001b[31m@m": true, "x$(touch %s/pwned)@m": true, "%s": true}}\n' \
+  "$ENV" "$PLUGIN_B" >"$ENV/repo/.claude/settings.json"
+run_doctor "$ENV"
+assert_code "malformed plugin key" 1
+assert_out "malformed plugin key" "^fail  claude-plugins: 2 enabledPlugins entries in \\.claude/settings\\.json are not of the form"
+assert_out "malformed plugin key" "^      fix: correct the key in \\.claude/settings\\.json"
+assert_no_out "malformed plugin key" "evil|touch|pwned"
+assert_equals "malformed plugin key runs nothing" "absent" "$([[ -e $ENV/pwned ]] && echo present || echo absent)"
+
+# Records that cannot be read are one warning for the whole check, with a manual way to look.
+for content in 'not json' '{"version": 1, "plugins": {}}' '{"version": 2}'; do
+  fresh
+  printf '%s\n' "$content" >"$ENV/$RECORDS"
+  run_doctor "$ENV"
+  assert_code "unreadable install records [$content]" 0
+  assert_out "unreadable install records [$content]" "^warn  claude-plugins: the install records of Claude Code cannot be read"
+  assert_out "unreadable install records [$content]" "^      fix: claude plugin list --json shows the install state"
+  assert_no_out "unreadable install records [$content]" "jq: |not installed for this clone"
+done
+
+fresh
+if make_unreadable "$ENV/$RECORDS"; then
+  run_doctor "$ENV"
+  assert_out "install records mode 000" "^warn  claude-plugins: the install records of Claude Code cannot be read"
+  chmod 644 "$ENV/$RECORDS"
+else
+  skip_unreadable "install records mode 000"
+fi
+
+# The committed settings are expected; nothing is guessed when they are missing or not JSON.
+fresh
+rm "$ENV/repo/.claude/settings.json"
+run_doctor "$ENV"
+assert_code "settings missing" 0
+assert_out "settings missing" "^warn  claude-plugins: \\.claude/settings\\.json cannot be read as JSON"
+
+fresh
+printf 'not json\n' >"$ENV/repo/.claude/settings.json"
+run_doctor "$ENV"
+assert_out "settings not JSON" "^warn  claude-plugins: \\.claude/settings\\.json cannot be read as JSON"
+assert_no_out "settings not JSON" "jq: "
+
+# Without jq the records cannot be read: a warning with the mise fix, not a crash.
+fresh
+mkdir -p "$ENV/nojq"
+for tool in "$SYSBIN"/*; do
+  [[ ${tool##*/} == jq ]] || ln -s "$(readlink "$tool")" "$ENV/nojq/${tool##*/}"
+done
+EXTRA_ENV="PATH=$ENV/bin:$ENV/nojq"
+run_doctor "$ENV"
+assert_out "jq missing" "^warn  claude-plugins: jq is needed to read the plugin install records and is not installed"
+assert_out "jq missing" "^      fix: mise install"
+
+fresh
+rm "$ENV/bin/claude"
+run_doctor "$ENV"
+assert_out "claude missing" "^skip  claude-plugins: the claude CLI is not on PATH, see the claude-code check"
+
 # --- the git version the governance hooks need (ADR-0015) ---------------------------------------------
 
 fresh
@@ -901,7 +1078,7 @@ echo '{"runtime": "x"}' >"$ENV/home/.gsd/defaults.json"
 printf 'jq\n' >"$ENV/mise-binaries"
 run_doctor "$ENV" --ci
 assert_code "--ci" 0
-for check in gsd gsd-defaults mcp platform-token colima claude-code git; do
+for check in gsd gsd-defaults mcp platform-token colima claude-code claude-plugins git; do
   assert_out "--ci skips $check" "^skip  $check: "
 done
 assert_out "--ci still checks the tracked files" "^ok  claude-tracking: "

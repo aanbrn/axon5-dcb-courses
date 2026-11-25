@@ -8,8 +8,9 @@
 #   - This script runs only what must work before Gradle can start (mise and its tools, a Java runtime
 #     for the Gradle wrapper, the Docker engine and its image store) and what Gradle does not own: the
 #     Testcontainers settings, the pinned GSD installation (AIDEV-07), the global GSD defaults, the MCP
-#     servers, the Platform token, colima, the Claude Code version, the git version the governance hooks
-#     need, the tracked `.claude` files, and the upstream-removal reminder (every docs/upstream record that
+#     servers, the Platform token, colima, the Claude Code version, the project's Claude Code plugins (each
+#     one enabled in `.claude/settings.json` has an install for this clone), the git version the governance
+#     hooks need, the tracked `.claude` files, and the upstream-removal reminder (every docs/upstream record that
 #     is fixed upstream while its workaround markers remain, with its removal criteria).
 #   - Everything else runs as `./gradlew doctor`: the Node major (verifyNodeVersion), the formatter
 #     binaries (verifyShfmt, verifyTaplo), the daemon JVM criteria (checkDaemonJvm) and Testcontainers
@@ -18,7 +19,7 @@
 #
 # Usage: doctor.sh [--ci] [--help]
 #   --ci    skip the checks that only make sense on a developer machine (gsd, gsd-defaults, mcp,
-#           platform-token, colima, claude-code and git); CI runs this mode
+#           platform-token, colima, claude-code, claude-plugins and git); CI runs this mode
 #   --help  print this text
 # Environment (for the shell tests): DOCTOR_ROOT is the repository root (default: the parent of
 # this script's directory), DOCTOR_SKIP_GRADLE=1 skips the delegation to Gradle.
@@ -641,6 +642,118 @@ check_claude_code() {
   fi
 }
 
+# resolve_dir <path>: the physical path of an existing directory (symlinks resolved), else the text as it was written.
+resolve_dir() {
+  if [[ -d $1 ]]; then
+    (cd "$1" && pwd -P)
+  else
+    printf '%s\n' "$1"
+  fi
+}
+
+# claude-plugins (local only, G-02-2): every plugin that .claude/settings.json enables has an install record usable from
+# this checkout. The settings only enable the plugins and register their marketplaces: Claude Code never installs a plugin
+# that only repository settings enable when its marketplace is a remote source, so each contributor installs both once per
+# clone with `claude plugin install <id> --scope project`. A project-scope record is keyed by the path of the checkout it was
+# made in, and a session in a linked git worktree resolves to the record of the main checkout (observed 2026-11-25, see
+# docs/tooling.md), so the paths that count are this checkout and the main worktree of its repository. A user-scope record
+# counts everywhere. The check reads Claude Code's records file and runs no `claude plugin` command: those can write
+# Claude Code's state, and doctor changes nothing. Only plugin ids and fixed messages are printed, never a record field.
+check_claude_plugins() {
+  local_only claude-plugins && return
+  if ! has claude; then
+    report skip claude-plugins "the claude CLI is not on PATH, see the claude-code check"
+    return
+  fi
+  local jq settings=$ROOT/.claude/settings.json
+  if ! jq=$(find_jq); then
+    report warn claude-plugins "jq is needed to read the plugin install records and is not installed" "mise install"
+    return
+  fi
+  local enabled
+  if ! enabled=$("$jq" -r '(.enabledPlugins // {}) | if type == "object" then to_entries[] | select(.value == true) | .key
+    else empty end' "$settings" 2>/dev/null | sort); then
+    report warn claude-plugins ".claude/settings.json cannot be read as JSON, so the enabled plugins are unknown" \
+      "restore it: git restore .claude/settings.json"
+    return
+  fi
+  if [[ -z $enabled ]]; then
+    report ok claude-plugins "no plugin is enabled in .claude/settings.json"
+    return
+  fi
+
+  # An id is printed and put into a command that a contributor copies, so it must be a plain <plugin>@<marketplace>.
+  # A key that is not is counted and never echoed: a committed key can carry terminal control characters.
+  local id malformed=0 ids=()
+  while IFS= read -r id; do
+    if [[ $id =~ ^[A-Za-z0-9][A-Za-z0-9._-]*@[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+      ids+=("$id")
+    else
+      malformed=$((malformed + 1))
+    fi
+  done <<<"$enabled"
+  if ((malformed > 0)); then
+    local noun=entry verb=is
+    if ((malformed > 1)); then
+      noun=entries
+      verb=are
+    fi
+    report fail claude-plugins \
+      "$malformed enabledPlugins $noun in .claude/settings.json $verb not of the form <plugin>@<marketplace>" \
+      "correct the key in .claude/settings.json"
+    return
+  fi
+
+  local records=${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/installed_plugins.json
+  # An absent file is a Claude Code that has installed nothing. One that cannot be read, is not JSON or is not format
+  # version 2 is Claude Code's own format changing, which is one warning for the whole check.
+  if [[ -e $records ]] &&
+    ! "$jq" -e '.version == 2 and (.plugins | type) == "object"' "$records" >/dev/null 2>&1; then
+    report warn claude-plugins "the install records of Claude Code cannot be read, so the installs are unknown" \
+      "claude plugin list --json shows the install state"
+    return
+  fi
+
+  local -a candidates=("$(resolve_dir "$ROOT")")
+  local common
+  if has git && common=$(git -C "$ROOT" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) &&
+    [[ $common == */.git ]]; then
+    candidates+=("$(resolve_dir "${common%/.git}")")
+  fi
+
+  local scope path candidate installed missing=0
+  for id in "${ids[@]}"; do
+    installed=false
+    if [[ -e $records ]]; then
+      # shellcheck disable=SC2016 # $id in the jq program is a jq variable bound by --arg
+      while IFS=$'\t' read -r scope path; do
+        if [[ $scope == user ]]; then
+          installed=true
+        elif [[ $scope == project || $scope == local ]]; then
+          path=$(resolve_dir "$path")
+          for candidate in "${candidates[@]}"; do
+            if [[ $path == "$candidate" ]]; then installed=true; fi
+          done
+        fi
+      done < <("$jq" -r --arg id "$id" '(.plugins[$id] // []) | .[] | [.scope, (.projectPath // "")] | @tsv' "$records")
+    fi
+    if ! $installed; then
+      missing=$((missing + 1))
+      report warn claude-plugins "$id is enabled in .claude/settings.json but not installed for this clone" \
+        "claude plugin install $id --scope project (once per clone, in the main checkout)" \
+        "then run /reload-plugins in Claude Code"
+    fi
+  done
+  if ((missing == 0)); then
+    local list phrase="enabled plugins are"
+    list=$(printf '%s, ' "${ids[@]}")
+    if ((${#ids[@]} == 1)); then
+      phrase="enabled plugin is"
+    fi
+    report ok claude-plugins "${#ids[@]} $phrase installed for this clone (${list%, })"
+  fi
+}
+
 # The only place the minimum git version lives. It is the git release the governance hooks need (ADR-0015):
 # scripts/governance/ask-governed-edit.sh calls `git worktree list --porcelain -z` (git 2.36) and
 # `git rev-parse --path-format=absolute` (git 2.31). On an older git the edit hook fails closed and asks for every
@@ -829,6 +942,7 @@ main() {
   check_mcp
   check_platform_token
   check_claude_code
+  check_claude_plugins
   check_git
   check_claude_tracking
   check_upstream_removal
