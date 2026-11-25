@@ -4,10 +4,10 @@ current_phase: 02
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: executing
 stopped_at: Phase 2 context gathered
-last_updated: "2026-11-25T04:16:57.249Z"
+last_updated: "2026-11-25T07:32:15.049Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 02 execution started
-state_head: e45269c8271bb77e1b7163856789c17a602c26a8
+state_head: a6d0761068b35e0de1a3cdd99fd692a69465f991
 progress:
   total_phases: 13
   completed_phases: 1
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-11-22)
 Phase: 02 (Runtime Infrastructure & DCB Spikes) — EXECUTING
 Plan: 24 of 31
 Status: Executing Phase 02
-Last activity: 2026-11-25 — Phase 02 execution started
+Last activity: 2026-11-25 - Completed quick task 261125-k0a: Discourse forum posting rule recorded in ADR-0013; gap plans 02-24..02-27, 02-30, 02-31 done, 02-28 waits on forum moderation (account on hold)
 
 Progress: [█░░░░░░░░░] 8%
 
@@ -182,6 +182,7 @@ Recent decisions affecting current work:
 | 261125-bha | Move the build-logic TestKit suite into its own parallel CI job (functional-test) to cut the Build job from about 13.5 to 4-5 minutes | 2026-11-25 | 7ae6619 | [261125-bha-move-build-logic-functionaltest-into-its](./quick/261125-bha-move-build-logic-functionaltest-into-its/) |
 | 31 | Translate quoted author answers in Phase 1 artifacts to English and drop the conversation-language note | 2026-11-25 | e4db42e | — |
 | 32 | Ignore the .build/ Swift Package Manager cache left by the pre-commit hooks | 2026-11-25 | a8e8c2e | — |
+| 261125-k0a | Record the Discourse forum posting rule (TL0 typing-speed moderation) in ADR-0013 Publication (UPS-03) and the upstream issue template | 2026-11-25 | a6d0761 | [261125-k0a-record-the-discourse-forum-posting-rule-](./quick/261125-k0a-record-the-discourse-forum-posting-rule-/) |
 
 ## Deferred Items
 
