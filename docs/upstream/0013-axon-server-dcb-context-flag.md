@@ -4,8 +4,10 @@ product: "image-axonserver"
 product-version: "2026.1.8"
 status: "reported"
 workaround: false
-# prettier-ignore
-upstream: ["https://discuss.axoniq.io/t/axon-server-2026-1-8-get-v1-public-context-reports-dcbcontext-false-for-a-dcb-default-context/6853"]
+upstream:
+  [
+    "https://discuss.axoniq.io/t/axon-server-2026-1-8-get-v1-public-context-reports-dcbcontext-false-for-a-dcb-default-context/6853",
+  ]
 reported: "2026-11-25"
 updated: "2026-11-25"
 ---

@@ -13,8 +13,9 @@ updated: "YYYY-MM-DD"
 Template for a record in docs/upstream/. Copy it to docs/upstream/NNNN-<slug>.md (four digits, lowercase slug),
 replace every placeholder, and delete this comment. `./gradlew checkUpstreamRecords` validates the result.
 
-Front matter: only flat `key: value` lines and one-line lists are accepted, with double-quoted or bare strings, `true`,
-`false` and `null`. All eight keys are required and `id` must be UP-NNNN with the file's number.
+Front matter: only flat `key: value` lines and lists, on one line or in the multi-line form Prettier writes for a long
+list, are accepted, with double-quoted or bare strings, `true`, `false` and `null`. All eight keys are required and `id`
+must be UP-NNNN with the file's number.
 
 Product key: name the key the dependency-update advisory matches, that is a version alias of
 gradle/libs.versions.toml, a tool key of mise.toml, or `gradle`, `java`, `node`, or `action:<owner>/<repo>` for a GitHub

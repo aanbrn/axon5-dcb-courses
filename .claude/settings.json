@@ -73,6 +73,7 @@
       "Edit(/.prettierrc.yaml)",
       "Edit(/.taplo.toml)",
       "Edit(/config/spotless/**)",
+      "Edit(/build-logic/src/main/kotlin/io/github/aanbrn/courses/buildlogic/GitIgnoredPaths.kt)",
       "Edit(/.gitleaks.toml)",
       "Edit(/.gitleaksignore)",
       "Edit(/qodana.yaml)",

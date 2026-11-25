@@ -29,7 +29,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # UPSTREAM: UP-0010 the CodeQL Kotlin extractor does not cover Kotlin 2.4.21 and found no sources here.
+          # UPSTREAM: UP-0010 the CodeQL Kotlin extractor found no sources in this Kotlin 2.4.21 Gradle build; an
+          # Isolated Projects interaction is suspected, since the extractor documents Kotlin up to 2.4.2x.
           - language: actions
             build-mode: none
     steps:

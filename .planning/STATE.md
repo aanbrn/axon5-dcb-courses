@@ -4,10 +4,10 @@ current_phase: 3
 current_phase_name: Command Walking Skeleton
 status: planning
 stopped_at: Phase 02 complete, ready to plan Phase 3
-last_updated: "2026-11-25T09:26:55.482Z"
+last_updated: "2026-11-25T10:24:57.562Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: 6f5de1ef1dd3c328b3af82cb6c1d3c365277e8d2
+state_head: 9458367551c28b12da65b6113898dca2b0bdd7c0
 progress:
   total_phases: 13
   completed_phases: 2
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-11-22)
 Phase: 3 — Command Walking Skeleton
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-25 — Phase 02 complete, transitioned to Phase 3
+Last activity: 2026-11-25 - Completed quick task 261125-mwg: Phase 02 review follow-ups (IN-01, IN-03, IN-04, front matter lists, Spotless and git-ignored files)
 
 Progress: [██░░░░░░░░] 15%
 
@@ -186,6 +186,7 @@ Recent decisions affecting current work:
 | 261125-k0a | Record the Discourse forum posting rule (TL0 typing-speed moderation) in ADR-0013 Publication (UPS-03) and the upstream issue template | 2026-11-25 | a6d0761 | [261125-k0a-record-the-discourse-forum-posting-rule-](./quick/261125-k0a-record-the-discourse-forum-posting-rule-/) |
 | 34 | Disclose AI assistance in the UP-0013 forum draft (reviewed and approved by the author) | 2026-11-25 | 334f3d7 | — |
 | 261125-lqw | Fix Phase 02 review findings WR-01 (locale scoped to the 429 grep) and IN-02 (host-neutral retry message) in the CI rate-limit wrapper | 2026-11-25 | 29a5ad4 | [261125-lqw-fix-phase-02-review-findings-wr-01-and-i](./quick/261125-lqw-fix-phase-02-review-findings-wr-01-and-i/) |
+| 261125-mwg | Close Phase 02 follow-ups: IN-01, IN-03, IN-04, multi-line front matter lists, Spotless skips git-ignored files | 2026-11-25 | 9458367 | [261125-mwg-close-the-open-phase-02-follow-ups-in-01](./quick/261125-mwg-close-the-open-phase-02-follow-ups-in-01/) |
 
 ## Deferred Items
 

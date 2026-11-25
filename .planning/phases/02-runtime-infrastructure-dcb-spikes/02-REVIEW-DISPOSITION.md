@@ -120,7 +120,7 @@ earlier review's findings of the same IDs.
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
 | WR-01 | warning | fixed | 02-REVIEW.md (2026-11-25) — fixed by quick task 261125-lqw in ec2b3f4 (`LC_ALL=C` prefixes the 429 grep only; test case 13 proves the wrapped command keeps the caller's locale) |
-| IN-01 | info | open | 02-REVIEW.md (2026-11-25) — UP-0011 title, ADR-0008, docs/tooling.md and the doctor marker still state the colima AAAA stall as fact; follow-up with the author's UP-0011 decision |
+| IN-01 | info | fixed | 02-REVIEW.md (2026-11-25) — fixed by quick task 261125-mwg in bfa1c20 (UP-0011 titles, ADR-0008, docs/tooling.md and the doctor marker word the stall as observed once, not reproduced on a clean profile) |
 | IN-02 | info | fixed | 02-REVIEW.md (2026-11-25) — fixed by quick task 261125-lqw in 39822f5 (host-neutral announcement and annotation title `Dependency download rate limit`) |
-| IN-03 | info | open | 02-REVIEW.md (2026-11-25) — stale "does not cover Kotlin 2.4.21" marker text in `.github/workflows/codeql.yml:32`; follow-up |
-| IN-04 | info | open | 02-REVIEW.md (2026-11-25) — five identical mirror steps in ci.yml (composite action candidate) and a hand-copied preset `ignorePaths` list in renovate.json5; follow-up |
+| IN-03 | info | fixed | 02-REVIEW.md (2026-11-25) — fixed by quick task 261125-mwg in 4fc8521 (comment lines of codeql.yml only) |
+| IN-04 | info | fixed | 02-REVIEW.md (2026-11-25) — fixed by quick task 261125-mwg in b8061f1 (one composite action for the five jobs) and 1ae2c76 (the scripts/ci exclusion scoped to the gradle manager; the stale preset copy removed) |
