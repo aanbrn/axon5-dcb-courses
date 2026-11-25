@@ -278,6 +278,7 @@ Architecture not yet mapped. Follow existing patterns found in the codebase.
 ## Project Skills
 
 - **Spike findings for axon5-dcb-courses** (implementation patterns, constraints, gotchas) → `Skill("spike-findings-axon5-dcb-courses")`
+- **Dynamic Consistency Boundaries** (DCB concepts and their mapping onto Axon Framework 5 and the Axon Server DCB API; vendored from AxonIQ/AxonFramework, provenance in its README.md) → `Skill("dynamic-consistency-boundaries")`
 <!-- GSD:skills-end -->
 
 <!-- GSD:workflow-start source:GSD defaults -->
