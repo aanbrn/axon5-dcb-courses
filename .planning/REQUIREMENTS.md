@@ -153,7 +153,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **CICD-06**: Secret leaks are detected in the repository (full history) and in PRs
 - [ ] **CICD-07**: SBOMs are generated and images are signed with provenance attestations
 - [x] **CICD-08**: Workflows and scripts are linted locally (pre-commit) and in CI: actionlint for GitHub Actions workflows (with shellcheck for `run:` blocks), zizmor for Actions security issues (template injection, excessive permissions, unpinned actions, cache poisoning, dangerous triggers), shellcheck for all shell scripts, and `docker compose config` validation for compose files; tool versions pinned in `mise.toml`
-- [ ] **CICD-09**: Dependency licences (JVM and npm) are reported and checked in CI against an allowlist, with Axoniq commercial-terms modules explicitly listed and justified; a NOTICE file lists third-party attributions and the Axoniq terms
+- [x] **CICD-09**: Dependency licences (JVM and npm) are reported and checked in CI against an allowlist, with Axoniq commercial-terms modules explicitly listed and justified; a NOTICE file lists third-party attributions and the Axoniq terms
 
 ### Observability
 
@@ -195,7 +195,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Upstream-first
 
 - [x] **UPS-01**: Each upstream case (defect, gap or documentation issue in a used product) has its own record `docs/upstream/NNNN-<slug>.md` with machine-readable front matter (ID `UP-NNNN`, product and version, status `open` → `reported` → `fixed-upstream` → `workaround-removed` / `wont-fix`, upstream issue/PR links, dates) and a full body: symptom, minimal reproduction, root-cause analysis, workaround and all its code locations, removal criteria and how to verify them
-- [ ] **UPS-02**: Workarounds are marked in code/config by record ID (`UPSTREAM: UP-NNNN`), and a CI check enforces consistency in both directions (every marker references an existing record; open records with a workaround have markers; closed records have none); the index with statuses is generated for the documentation site
+- [x] **UPS-02**: Workarounds are marked in code/config by record ID (`UPSTREAM: UP-NNNN`), and a CI check enforces consistency in both directions (every marker references an existing record; open records with a workaround have markers; closed records have none); the index with statuses is generated for the documentation site
 - [x] **UPS-03**: Defects and documentation gaps found in used products are reported upstream with a minimal reproduction (issue or PR), preferring upstream fixes over local workarounds; drafts are prepared by the AI and published only after the author's explicit approval
 - [x] **UPS-04**: Dependency updates include a check whether recorded workarounds can be removed according to their removal criteria
 
@@ -204,7 +204,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **TOOL-01**: All developer and CI tools are inventoried in `docs/tooling.md` (purpose, version source, installation): git, gh, Docker-compatible engine (colima/OrbStack/Docker Desktop), docker compose, pack, JDK, Node.js/pnpm, lefthook, gitleaks, trivy, grype, syft, cosign, Structurizr, act, etc.
 - [x] **TOOL-02**: CLI tools not managed by Gradle are pinned in `mise.toml` and kept up to date by Renovate
 - [x] **TOOL-03**: A `doctor` command verifies the local environment (required tools and versions, Docker engine, Testcontainers connectivity) and explains how to fix problems
-- [ ] **TOOL-04**: The setup works with colima (Testcontainers `DOCKER_HOST`/Ryuk configuration documented and verified) as well as Docker Desktop
+- [x] **TOOL-04**: The setup works with colima (Testcontainers `DOCKER_HOST`/Ryuk configuration documented and verified) as well as Docker Desktop
 
 ### AI Development Tooling
 
@@ -375,7 +375,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CICD-06 | Phase 1 | Complete |
 | CICD-07 | Phase 12 | Pending |
 | CICD-08 | Phase 1 | Complete |
-| CICD-09 | Phase 2 (JVM), Phase 5 (npm) | Pending (JVM half verified in Phase 2; npm half is Phase 5) |
+| CICD-09 | Phase 2 (JVM), Phase 5 (npm) | Complete |
 | OBS-01 | Phase 12 | Pending |
 | OBS-02 | Phase 12 | Pending |
 | OBS-03 | Phase 12 | Pending |
@@ -405,13 +405,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GH-06 | Phase 1 | Complete |
 | GH-07 | Phase 1 | Complete |
 | UPS-01 | Phase 2 | Complete |
-| UPS-02 | Phase 2 (markers, check, index), Phase 5 (index on the documentation site) | Pending (Phase 2 part verified; the documentation-site index is Phase 5) |
+| UPS-02 | Phase 2 (markers, check, index), Phase 5 (index on the documentation site) | Complete |
 | UPS-03 | Phase 2 | Complete |
 | UPS-04 | Phase 2 | Complete |
 | TOOL-01 | Phase 1 | Complete |
 | TOOL-02 | Phase 1 | Complete |
 | TOOL-03 | Phase 2 | Complete |
-| TOOL-04 | Phase 2 | Pending (verified on colima; human UAT 6 open: Docker Desktop) |
+| TOOL-04 | Phase 2 | Complete |
 | AIDEV-01 | Phase 2 | Complete |
 | AIDEV-02 | Phase 8 | Pending |
 | AIDEV-03 | Phase 2 | Complete |

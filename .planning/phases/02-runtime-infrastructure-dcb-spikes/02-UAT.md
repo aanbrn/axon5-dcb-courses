@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: complete
 phase: 02-runtime-infrastructure-dcb-spikes
 source: [02-VERIFICATION.md]
 started: 2026-11-23T06:58:20.881Z
-updated: 2026-11-25T03:15:43.000Z
+updated: 2026-11-25T09:30:00.000Z
 ---
 
 ## Current Test
@@ -57,8 +57,9 @@ blocked: 0
 ## Gaps
 
 - gap_id: G-02-1
+  resolved_by: "plans 02-24, 02-30, 02-31 (429 retry wrapper, CI mirror; CI green at 07f309d and 6d6cd2a)"
   truth: "Jobs integration-test, compose-smoke, doctor and upstream-records pass on a GitHub runner, and ci-success (which needs all of them) is green"
-  status: failed
+  status: resolved
   reason: "User reported: Wait, actually. The Compose smoke test failed in CI."
   severity: blocker
   test: 1
@@ -74,8 +75,9 @@ blocked: 0
   debug_session: ".planning/debug/compose-smoke-ci-failure.md"
 
 - gap_id: G-02-2
+  resolved_by: "plan 02-25 (doctor claude-plugins check, docs); plugins installed at project scope"
   truth: "Both plugins install and list their skills; the 'global:' agent_skills entries in .planning/config.json resolve through gsd-tools query agent-skills"
-  status: failed
+  status: resolved
   reason: "User reported: I can see the skills, but they are inactive, and an update attempt says they are not installed."
   severity: major
   test: 2
@@ -97,8 +99,9 @@ blocked: 0
   debug_session: ".planning/debug/plugins-inactive-not-installed.md"
 
 - gap_id: G-02-5
+  resolved_by: "plans 02-26..02-29 (UP-0010 and UP-0011 decided open; UP-0006 topic 6851 and UP-0013 topic 6853 reported)"
   truth: "Each upstream record moves to status reported with a non-empty upstream list and a reported date, and checkUpstreamRecords stays green"
-  status: failed
+  status: resolved
   reason: "User reported: What do you want from me here? If it is not done, do it yourself."
   severity: major
   test: 5
