@@ -70,6 +70,7 @@ testing {
                             "../.editorconfig",
                             "../.nvmrc",
                             "../renovate.json5",
+                            "../scripts/ci/maven-central-mirror.init.gradle.kts",
                         )
                         .withPropertyName("repoFiles")
                         .withPathSensitivity(PathSensitivity.RELATIVE)
