@@ -63,14 +63,15 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-      # Compile, unit and component tests (Testcontainers needs only the runner's Docker), TestKit tests,
-      # Spotless, detekt, Dokka and the governance checks. The integration tests run in the parallel
-      # `integration-test` job (D-20). Build Scans are never published from CI.
+      # Compile, unit and component tests (Testcontainers needs only the runner's Docker), Spotless, detekt,
+      # Dokka and the governance checks. The integration tests run in the parallel `integration-test` job and
+      # the TestKit tests of build-logic in the parallel `functional-test` job (D-20); locally, `check` still
+      # runs both (D-19). Build Scans are never published from CI.
       # `checkDependencyLicences` is named although `check` already runs it in every module: Gradle fails
       # with "Task 'checkDependencyLicences' not found" when no module registers it, so a build that lost
       # the licence gate fails instead of skipping it. The check does not run a second time.
       - name: Build
-        run: ./gradlew build checkDependencyLicences -x integrationTest --console=plain
+        run: ./gradlew build checkDependencyLicences -x integrationTest -x :build-logic:functionalTest --console=plain
 
       - name: Upload build reports
         if: failure()
@@ -116,6 +117,65 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: integration-test-reports
+          path: "**/build/reports/**"
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # The TestKit tests of build-logic, in their own job so that they run in parallel with `build` (D-20). The suite
+  # runs its fixtures one at a time because each includes the real build-logic, and at about nine minutes it was
+  # most of the `build` job. Locally, `check` still runs it (D-19).
+  functional-test:
+    name: Functional tests (build-logic)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      # The JDK comes from .java-version and Node.js from .nvmrc through setup-java and setup-node;
+      # mise only provides the CLI tools (INFRA-09).
+      MISE_DISABLE_TOOLS: java,node
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version-file: .java-version
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Read the mise version
+        id: mise-version
+        run: |
+          version="$(sed -nE 's/^min_version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' mise.toml)"
+          test -n "${version}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      # The fixtures run Spotless with Prettier, taplo and shfmt and resolve node, taplo and shfmt from PATH.
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
+        with:
+          version: ${{ steps.mise-version.outputs.version }}
+          install_args: aqua:mvdan/sh aqua:tamasfe/taplo
+
+      # The cache is written from main only, so a pull request can never poison what main restores.
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          cache-provider: basic
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: Functional tests
+        run: ./gradlew :build-logic:functionalTest --console=plain
+
+      - name: Upload functional test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: functional-test-reports
           path: "**/build/reports/**"
           retention-days: 7
           if-no-files-found: ignore
@@ -387,7 +447,7 @@ jobs:
 
   ci-success:
     name: ci-success
-    needs: [build, lint, secrets, qodana, integration-test, compose-smoke, doctor, upstream-records]
+    needs: [build, functional-test, lint, secrets, qodana, integration-test, compose-smoke, doctor, upstream-records]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
