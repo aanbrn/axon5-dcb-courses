@@ -2,10 +2,11 @@
 id: "UP-0013"
 product: "image-axonserver"
 product-version: "2026.1.8"
-status: "open"
+status: "reported"
 workaround: false
-upstream: []
-reported: null
+# prettier-ignore
+upstream: ["https://discuss.axoniq.io/t/axon-server-2026-1-8-get-v1-public-context-reports-dcbcontext-false-for-a-dcb-default-context/6853"]
+reported: "2026-11-25"
 updated: "2026-11-25"
 ---
 
@@ -64,13 +65,20 @@ functional proof.
 
 ## Upstream issue draft
 
-Target: the AxonIQ forum, category Axon Server, or AxonIQ support, because Axon Server has no public issue tracker. Not
-published; publication needs the approval of the author (plan 02-22).
+Target: the AxonIQ forum, category Axon Server, or AxonIQ support, because Axon Server has no public issue tracker. A
+search of the forum on 2026-11-25 (`dcbContext`) found one earlier mention of the same symptom: a reply to the
+2025.2.0-EAP1 release announcement ([topic 6177](https://discuss.axoniq.io/t/axon-server-2025-2-0-eap1/6177/2), 2025-10-21,
+unanswered).
 
-Publication status (2026-11-25): the forum refused a second topic while the UP-0006 post was pending, and the account is
-on hold until staff review it. The author wrote to AxonIQ developer relations the same day and mentioned this report.
-It is posted, under the forum posting rule of ADR-0013 ("Publication (UPS-03)"), once the hold is lifted; that step is a
-follow-up outside Phase 2.
+Publication status (2026-11-25): the forum refused a second topic while the UP-0006 post was pending, and the account
+was on hold until staff reviewed it. After the account was released, the author approved the text below and posted it
+himself on 2026-11-25 as a new topic in category Axon Server, under the forum posting rule of ADR-0013 ("Publication
+(UPS-03)"). The topic was public at once, with no moderation hold, and links the earlier 6177 mention. The topic is
+[Axon Server 2026.1.8: GET /v1/public/context reports dcbContext false for a DCB default context](https://discuss.axoniq.io/t/axon-server-2026-1-8-get-v1-public-context-reports-dcbcontext-false-for-a-dcb-default-context/6853).
+The first post (`https://discuss.axoniq.io/raw/6853/1`) matches the draft below word for word; the forum text differs
+only by joined lines (Discourse renders single newlines as line breaks) and editor normalizations (list markers `-`
+became `*`, `_italic_` became `*italic*`, spaces were added inside the parentheses around the 6177 link). The text below
+therefore stays as the published text.
 
 ### Axon Server 2026.1.8: GET /v1/public/context reports dcbContext false for a DCB default context
 
@@ -95,6 +103,9 @@ Both endpoints describe the `default` context as a DCB context, because the log 
 
 `/v1/public/context` returns `{"context":"default","dcbContext":false,...}`, while `/v2/contexts` returns
 `{"contextName":"default","dcbContext":true,...}`.
+
+The same symptom was mentioned on 2025.2.0-EAP1 in a reply to the release announcement
+(<https://discuss.axoniq.io/t/axon-server-2025-2-0-eap1/6177/2>); it still occurs on 2026.1.8.
 
 #### Minimal reproduction
 
