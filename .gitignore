@@ -8,6 +8,8 @@
 !/.claude/skills/
 /.claude/skills/*
 !/.claude/skills/spike-findings-*/
+# ADR-0014: the vendored dynamic-consistency-boundaries skill of AxonIQ/AxonFramework is a second narrow exception
+!/.claude/skills/dynamic-consistency-boundaries/
 
 # GSD state-contract snapshot: derived from ROADMAP.md/STATE.md and rewritten at every step boundary
 /.planning/state.json

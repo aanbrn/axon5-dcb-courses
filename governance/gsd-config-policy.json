@@ -86,16 +86,19 @@
   "agent_skills": {
     "gsd-planner": [
       ".claude/skills/spike-findings-axon5-dcb-courses",
+      ".claude/skills/dynamic-consistency-boundaries",
       "global:axoniq-app-development:axoniq-app-dev",
       "global:gradle-skills:gradle-best-practices"
     ],
     "gsd-executor": [
       ".claude/skills/spike-findings-axon5-dcb-courses",
+      ".claude/skills/dynamic-consistency-boundaries",
       "global:axoniq-app-development:axoniq-app-dev",
       "global:gradle-skills:gradle-best-practices"
     ],
     "gsd-phase-researcher": [
       ".claude/skills/spike-findings-axon5-dcb-courses",
+      ".claude/skills/dynamic-consistency-boundaries",
       "global:axoniq-app-development:axoniq-app-dev"
     ],
     "gsd-pattern-mapper": [".claude/skills/spike-findings-axon5-dcb-courses"],
@@ -103,7 +106,7 @@
       ".claude/skills/spike-findings-axon5-dcb-courses",
       "global:gradle-skills:gradle-best-practices"
     ],
-    "gsd-verifier": [".claude/skills/spike-findings-axon5-dcb-courses"]
+    "gsd-verifier": [".claude/skills/spike-findings-axon5-dcb-courses", ".claude/skills/dynamic-consistency-boundaries"]
   },
   "claude_md_path": "./.claude/CLAUDE.md",
   "plan_review": {

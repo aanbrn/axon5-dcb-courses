@@ -36,3 +36,15 @@ path = "backend/contracts/kernel/src/test/resources/typeid/*.yml"
 precedence = "override"
 SPDX-FileCopyrightText = "Jetify Inc. and the TypeID contributors"
 SPDX-License-Identifier = "Apache-2.0"
+
+# The dynamic-consistency-boundaries agent skill is copied byte for byte from AxonIQ/AxonFramework. Its README.md names
+# the pinned commit and the update procedure. The copies stay under the upstream licence and cannot carry a header
+# without ceasing to be byte-identical; the README itself is the project's own file and keeps the aggregate annotation.
+[[annotations]]
+path = [
+  ".claude/skills/dynamic-consistency-boundaries/SKILL.md",
+  ".claude/skills/dynamic-consistency-boundaries/references/**",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 AxonIQ B.V. and the Axon Framework contributors"
+SPDX-License-Identifier = "Apache-2.0"
