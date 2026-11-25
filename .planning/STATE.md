@@ -4,10 +4,10 @@ current_phase: 02
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: executing
 stopped_at: Phase 2 context gathered
-last_updated: "2026-11-25T01:44:29.686Z"
+last_updated: "2026-11-25T02:06:53.872Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 02 execution started
-state_head: e4db42e690154d5163ae936004fd15fcdfe1a1d5
+state_head: a8e8c2edcf42ac0086053b5e0c54587fd3e826f5
 progress:
   total_phases: 13
   completed_phases: 1
@@ -181,6 +181,7 @@ Recent decisions affecting current work:
 | 261125-a09 | Fix Phase 2 review findings WR-01 (doctor warns for containerd below Docker 29.9.0), IN-01 (MCP server with neither command nor url fails) and IN-03 (compose line-order test); IN-02 noted for Phase 6 | 2026-11-25 | 6028435 | [261125-a09-fix-phase-2-review-findings-wr-01-in-01-](./quick/261125-a09-fix-phase-2-review-findings-wr-01-in-01-/) |
 | 261125-bha | Move the build-logic TestKit suite into its own parallel CI job (functional-test) to cut the Build job from about 13.5 to 4-5 minutes | 2026-11-25 | 7ae6619 | [261125-bha-move-build-logic-functionaltest-into-its](./quick/261125-bha-move-build-logic-functionaltest-into-its/) |
 | 31 | Translate quoted author answers in Phase 1 artifacts to English and drop the conversation-language note | 2026-11-25 | e4db42e | — |
+| 32 | Ignore the .build/ Swift Package Manager cache left by the pre-commit hooks | 2026-11-25 | a8e8c2e | — |
 
 ## Deferred Items
 
