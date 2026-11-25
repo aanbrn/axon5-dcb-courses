@@ -14,7 +14,7 @@ created: "2026-11-23"
 
 > Per-phase security contract: threat register, accepted risks, and audit trail.
 
-The register merges the `<threat_model>` blocks of plans 02-01 to 02-23. `T-02-SC` (npm/pip/cargo installs) appears in
+The register merges the `<threat_model>` blocks of plans 02-01 to 02-31 (02-24 to 02-31 are the UAT gap-closure plans; 02-28 and 02-29 are halted, see follow-up DF-02-1 in the UAT). `T-02-SC` (npm/pip/cargo installs) appears in
 every plan and is listed once. No `## Threat Flags` entry in any SUMMARY raised a new threat. Verification is at ASVS
 level 1 (grep depth against the implementation, tests and configuration).
 
@@ -105,6 +105,27 @@ level 1 (grep depth against the implementation, tests and configuration).
 | T-02-58 | Elevation of Privilege | Switching off the per-module licence gate | medium | mitigate | `courses.licences.gradle.kts` governed (`governed-paths.txt:159`) with ask rule (`.claude/settings.json:43`); CI names `checkDependencyLicences` | closed |
 | T-02-59 | Elevation of Privilege | `courses.licences.gradle.kts` ungoverned window | low | accept | See Accepted Risks AR-02-03; window now closed by T-02-58 | closed |
 | T-02-60 | Tampering | Silently relaxing detekt | medium | mitigate | `config/detekt/**` governed (`governed-paths.txt:182`) with one ask rule (`.claude/settings.json:57`) | closed |
+| T-02-61 | Tampering | `scripts/ci/retry-on-rate-limit.sh` | high | mitigate | `scripts/ci/**` governed (`governed-paths.txt:249`) with ask rule (`.claude/settings.json:83`); `test-retry-on-rate-limit.sh` proves the exit status in every case (48 assertions) | closed |
+| T-02-62 | Repudiation | Retry hiding a real failure | medium | mitigate | Retries only on Gradle's 429 message, once, second result final; fixed-text warning annotation (tested) | closed |
+| T-02-63 | Tampering | Workflow-command injection through logged output | low | mitigate | Annotation is fixed text (`retry-on-rate-limit.sh:73`); command run as `"$@"`, no `eval` call (the one match is a comment); injection case tested | closed |
+| T-02-64 | Tampering | Dependency sources (plan 02-24) | medium | mitigate | Plan 02-24 changed no repository declaration; the mirror is T-02-78..T-02-81 | closed |
+| T-02-65 | Denial of Service | Job duration | low | accept | See Accepted Risks AR-02-04 | closed |
+| T-02-66 | Tampering | `enabledPlugins` key reaching a printed command | medium | mitigate | Strict id pattern before printing; malformed keys fail and are not echoed (`test-doctor.sh`) | closed |
+| T-02-67 | Spoofing | Another project's install record counted | low | mitigate | Only `user` scope or a matching `projectPath` (symlinks resolved) counts; foreign-path case in `test-doctor.sh` | closed |
+| T-02-68 | Information Disclosure | Record contents in doctor output | low | mitigate | Only plugin ids and fixed messages printed; `doctor.sh` never runs `claude plugin` (0 matches outside comments and messages) | closed |
+| T-02-69 | Denial of Service | Author's colima profile `default` | medium | mitigate | Work confined to profile `dns-check`, deleted by trap; `colima list` shows only `default`, Stopped (checked 2026-11-25) | closed |
+| T-02-70 | Information Disclosure | Private network data in records | medium | mitigate | Grep gate for `100.64.`, `/Users/`, `/home/` returns 0 in UP-0011 | closed |
+| T-02-71 | Repudiation | Publication without consent (UP-0011) | high | mitigate | Blocking decision checkpoint; author answered `none`; nothing published | closed |
+| T-02-72 | Information Disclosure | Private data in a published issue | medium | mitigate | Private-data scan of the final text clean; nothing published | closed |
+| T-02-73 | Spoofing | Recording a URL that is not the author's post | low | mitigate | Plan 02-28 halted; UP-0006 stays `open` with no URL until the anonymous 200 and raw-text checks run (follow-up DF-02-1) | closed |
+| T-02-74 | Repudiation | Posting without consent (UP-0013) | high | mitigate | Plan 02-29 halted, nothing posted; its posting step requires approval and the ADR-0013 forum posting rule | closed |
+| T-02-75 | Information Disclosure | Credentials or private data in the browser session | medium | mitigate | No browser session ran; plan keeps the isolated Playwright profile and author-typed credentials | closed |
+| T-02-76 | Tampering | History of the pushed branch | medium | mitigate | Plain pushes `729dcff..07f309d` and `07f309d..e5b5a2f` after the author's consent, no force | closed |
+| T-02-77 | Denial of Service | Cancelling the evidence run | low | mitigate | Attempt 2 of run 45532702352 concluded (success) before the push (02-30 SUMMARY) | closed |
+| T-02-78 | Tampering | Artifacts served by the CI mirror | high | accept | See Accepted Risks AR-02-05; ADR-0016 | closed |
+| T-02-79 | Tampering | `scripts/ci/maven-central-mirror.init.gradle.kts` | high | mitigate | Governed by `scripts/ci/**`; `CiMavenMirrorFunctionalTest` pins the repository order; no `allowInsecureContinueWhenDisabled` (0 matches) | closed |
+| T-02-80 | Denial of Service | Mirror availability | medium | accept | See Accepted Risks AR-02-06; ADR-0016 | closed |
+| T-02-81 | Information Disclosure | Dependency coordinates sent to Google | low | accept | See Accepted Risks AR-02-07 | closed |
 
 *Status: open · closed · open — below high threshold (non-blocking)*
 *Severity: critical > high > medium > low — only open threats at or above workflow.security_block_on count toward threats_open*
@@ -119,6 +140,10 @@ level 1 (grep depth against the implementation, tests and configuration).
 | AR-02-01 | T-02-16 | Testcontainers and Ryuk need the Docker socket; development and CI only, no privileged Ryuk configuration, nothing runs in production | Plan 02-07 threat model (author-approved plan) | 2026-11-23 |
 | AR-02-02 | T-02-27 | Development database passwords are documented as non-secret, overridable from `.env`, and bound to loopback; production deployment is out of scope | Plan 02-10 threat model (author-approved plan) | 2026-11-23 |
 | AR-02-03 | T-02-59 | Ungoverned window for `courses.licences.gradle.kts` existed only on the phase branch between plans 02-13 and 02-20; the file is now governed (T-02-58), so the residual is historical | Plan 02-13 threat model (author-approved plan) | 2026-11-23 |
+| AR-02-04 | T-02-65 | One 60 s delay plus one rerun fits every job timeout (15 to 30 minutes) | Plan 02-24 threat model | 2026-11-25 |
+| AR-02-05 | T-02-78 | The CI-only mirror is an additional, unverified download source until dependency verification (Phase 6, CICD-05); integrity rests on HTTPS and the operator, as for Maven Central | Author, 2026-11-25 (plan 02-31) | 2026-11-25 |
+| AR-02-06 | T-02-80 | A mirror 5xx fails the build without moving on; the Google-hosted mirror's outage risk is lower than Maven Central's per-IP rate limit on shared runners | Author, 2026-11-25 (plan 02-31) | 2026-11-25 |
+| AR-02-07 | T-02-81 | The repository and its dependency list are public | Plan 02-31 threat model | 2026-11-25 |
 
 *Accepted risks do not resurface in future audit runs.*
 
@@ -155,3 +180,11 @@ sets `allWarningsAsErrors` for every module, is governed since quick task 261124
 - [x] `status: verified` set in frontmatter
 
 **Approval:** verified 2026-11-23
+
+## Security Audit 2026-11-25
+
+| Metric | Count |
+|---|---|
+| Threats found | 21 |
+| Closed | 21 |
+| Open | 0 |
