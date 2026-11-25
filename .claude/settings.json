@@ -80,6 +80,7 @@
       "Edit(/scripts/qodana.sh)",
       "Edit(/scripts/doctor.sh)",
       "Edit(/tooling/doctor/**)",
+      "Edit(/scripts/ci/**)",
       "Edit(/gradlew)",
       "Edit(/gradle/wrapper/**)",
       "Edit(/gradle/gradle-daemon-jvm.properties)",

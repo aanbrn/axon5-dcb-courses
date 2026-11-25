@@ -243,6 +243,11 @@ scripts/qodana.sh
 scripts/doctor.sh
 tooling/doctor/**
 
+# The CI launchers of the required jobs. scripts/ci/retry-on-rate-limit.sh decides the exit status of every Gradle step of
+# `build`, `integration-test`, `functional-test`, `compose-smoke` and `doctor`: an edit to it alone can make those jobs
+# pass without running Gradle or fail on a retry that hides a real failure.
+scripts/ci/**
+
 # The launcher CI runs the checks with. A no-op gradlew alone would make the build step green.
 gradlew
 gradle/wrapper/**
