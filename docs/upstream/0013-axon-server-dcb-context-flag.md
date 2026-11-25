@@ -82,6 +82,11 @@ only by joined lines (Discourse renders single newlines as line breaks) and edit
 became `*`, `_italic_` became `*italic*`, spaces were added inside the parentheses around the 6177 link). The text below
 therefore stays as the published text.
 
+Maintainer response on 2026-11-25 (Marc Gathier, AxonIQ,
+[reply](https://discuss.axoniq.io/t/axon-server-2026-1-8-get-v1-public-context-reports-dcbcontext-false-for-a-dcb-default-context/6853/2)):
+"we will fix the output of the /v1/publlic/context endpoint in the next release" (quoted as written). The record stays
+`reported` and the workaround stays until an Axon Server release ships the fix and meets the removal criteria.
+
 ### Axon Server 2026.1.8: GET /v1/public/context reports dcbContext false for a DCB default context
 
 #### Environment and versions

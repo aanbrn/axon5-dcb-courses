@@ -112,6 +112,12 @@ the forum title adds the `Axon Server 2026.1.8:` prefix to the draft heading. Th
 published text. The same day the author edited the post to add the AI-assistance disclosure line at its end, as in
 UP-0013.
 
+Maintainer response on 2026-11-25 (Marc Gathier, AxonIQ,
+[reply](https://discuss.axoniq.io/t/axon-server-2026-1-8-empty-axoniq-platform-authentication-is-treated-as-configured-and-crashes-the-startup-runner/6851/2)):
+"In the next release we will ensure that a blank authentication value is treated the same as when it is not set." The
+record stays `reported` and the workaround stays until an Axon Server release ships the fix and meets the removal
+criteria.
+
 ````markdown
 # Empty `AXONIQ_PLATFORM_AUTHENTICATION` is treated as configured and crashes the startup runner
 
