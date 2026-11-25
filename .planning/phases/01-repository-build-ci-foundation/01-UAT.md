@@ -22,7 +22,7 @@ note: "Exercised by Claude on a detached HEAD in the phase worktree (hook alread
 expected: After a green `./gradlew spotlessCheck`, switching the Node version, or changing the taplo or shfmt version, `.taplo.toml` or `.editorconfig`, makes the next run re-execute the affected Spotless steps instead of reporting them up to date; Node is verified before Prettier runs
 covers: [01-04 D4, 01-05 D6]
 result: issue
-reported: "На поиск exec-ом бинаря по PATH полагаться нельзя. Нужно резолвить PATH, используя System.getenv(\"PATH\"), и самому находить полный путь до бинаря. Потом уже пользоваться exec. Это уже рабочий способ."
+reported: "Do not rely on exec to look the binary up on PATH. Resolve PATH yourself with System.getenv(\"PATH\"), find the full path to the binary, and only then call exec. That approach works."
 severity: major
 note: "Exercised by Claude: .editorconfig re-ran spotlessShell+spotlessMisc; .taplo.toml re-ran spotlessToml; taplo/shfmt version change (PATH shim) re-ran spotlessToml+spotlessShell; .nvmrc=22 with Node 24 failed verifyNodeVersion before any Prettier task. With a warm Gradle daemon a Node switch on PATH was NOT seen: verifyNodeVersion's exec(\"node\") resolved the binary from the daemon's startup PATH and still reported Node 24; only --no-daemon made it see v22 and re-run spotlessPrettier. Prettier invalidation is by Node major only (by design)."
 
@@ -586,7 +586,7 @@ blocked: 0
 - gap_id: G-01-2
   truth: "A Node switch on PATH is seen by the build: verifyNodeVersion checks, and Prettier runs with, the node binary on the current build's PATH, so the Prettier cache is invalidated on a Node major change even with a warm Gradle daemon"
   status: resolved
-  reason: "User reported: На поиск exec-ом бинаря по PATH полагаться нельзя. Нужно резолвить PATH, используя System.getenv(\"PATH\"), и самому находить полный путь до бинаря. Потом уже пользоваться exec. Это уже рабочий способ."
+  reason: "User reported: Do not rely on exec to look the binary up on PATH. Resolve PATH yourself with System.getenv(\"PATH\"), find the full path to the binary, and only then call exec. That approach works."
   severity: major
   test: 2
   resolved_by: "01-21-PLAN.md"
