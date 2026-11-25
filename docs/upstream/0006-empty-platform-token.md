@@ -107,7 +107,8 @@ Server on 2026-11-25. Discourse held it for moderation because the account was n
 [Axon Server 2026.1.8: empty AXONIQ_PLATFORM_AUTHENTICATION is treated as configured and crashes the startup runner](https://discuss.axoniq.io/t/axon-server-2026-1-8-empty-axoniq-platform-authentication-is-treated-as-configured-and-crashes-the-startup-runner/6851).
 The first post (`https://discuss.axoniq.io/raw/6851/1`) matches the draft below word for word, apart from line wrapping;
 the forum title adds the `Axon Server 2026.1.8:` prefix to the draft heading. The text below therefore stays as the
-published text.
+published text. The same day the author edited the post to add the AI-assistance disclosure line at its end, as in
+UP-0013.
 
 ````markdown
 # Empty `AXONIQ_PLATFORM_AUTHENTICATION` is treated as configured and crashes the startup runner
@@ -162,4 +163,6 @@ defeats restart policies and needs a healthcheck to be noticed.
 
 Treat a blank `axoniq.platform.authentication` as unset, and validate the `<environment-id>:<token>` shape up front
 with an error message that names the property. Make a failed startup runner always terminate the process.
+
+_This report was prepared with an AI coding agent; I reviewed and approved the findings and the text before posting._
 ````
