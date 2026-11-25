@@ -66,15 +66,17 @@ FAKE
 exit 0
 FAKE
 
-  # The context comes from `docker-context`; `docker-down` makes `docker info` fail like a stopped engine.
+  # The context comes from `docker-context` and the server version from `docker-server-version`; `docker-down` makes
+  # `docker info` fail like a stopped engine.
   echo colima >"$dir/docker-context"
+  echo "29.0.0" >"$dir/docker-server-version"
   cat >"$dir/bin/docker" <<'FAKE'
 #!/usr/bin/env bash
 case "$*" in
 "context show") cat "$FAKE_DIR/docker-context" ;;
 "info --format {{.ServerVersion}}")
   [[ -e $FAKE_DIR/docker-down ]] && exit 1
-  echo "29.0.0"
+  cat "$FAKE_DIR/docker-server-version"
   ;;
 "info --format {{.OperatingSystem}}") echo "Ubuntu 24.04" ;;
 "info --format {{.Driver}}") cat "$FAKE_DIR/docker-driver" ;;
@@ -621,13 +623,70 @@ else
   skip_unreadable "unreadable colima configuration"
 fi
 
+# The containerd image store needs Docker 29.9.0 or newer (docs/tooling.md, UP-0012); below that, or on a version that
+# cannot be compared, the check warns (WR-01 of the Phase 2 review). A `-` or `+` suffix is dropped before comparing.
+use_containerd_store() {
+  echo overlayfs >"$ENV/docker-driver"
+  echo '[["driver-type","io.containerd.snapshotter.v1"]]' >"$ENV/docker-driver-status"
+}
+
+for version in 29.8.2 28.5.2; do
+  fresh
+  echo "$version" >"$ENV/docker-server-version"
+  use_containerd_store
+  run_doctor "$ENV"
+  assert_code "containerd image store on Docker $version" 0
+  assert_out "containerd image store on Docker $version" \
+    "^warn  image-store: the containerd image store is active on Docker ${version//./\\.}, which is older than 29\\.9\\.0"
+  assert_out "containerd image store on Docker $version" "^      fix: upgrade the Docker engine to 29\\.9\\.0 or newer"
+  assert_out "containerd image store on Docker $version" \
+    "^      fix: or use the classic image store, colima: .*containerd-snapshotter: false"
+  assert_no_out "containerd image store on Docker $version" "^ok  image-store:"
+done
+
 fresh
-echo overlayfs >"$ENV/docker-driver"
-echo '[["driver-type","io.containerd.snapshotter.v1"]]' >"$ENV/docker-driver-status"
+echo 29.9.0 >"$ENV/docker-server-version"
+use_containerd_store
 run_doctor "$ENV"
-assert_code "containerd image store" 0
-assert_out "containerd image store" "^ok  image-store: the containerd image store is active"
-assert_no_out "containerd image store" "^warn  image-store:"
+assert_code "containerd image store on the minimum" 0
+assert_out "containerd image store on the minimum" \
+  "^ok  image-store: the containerd image store is active on Docker 29\\.9\\.0 \\(driver overlayfs\\), which meets its minimum 29\\.9\\.0"
+assert_no_out "containerd image store on the minimum" "^warn  image-store:"
+
+# As text, 29.10.0 sorts before 29.9.0; the comparison is numeric.
+fresh
+echo 29.10.0 >"$ENV/docker-server-version"
+use_containerd_store
+run_doctor "$ENV"
+assert_code "containerd image store on a two-digit minor" 0
+assert_out "containerd image store on a two-digit minor" "^ok  image-store: the containerd image store is active on Docker 29\\.10\\.0 "
+assert_no_out "containerd image store on a two-digit minor" "^warn  image-store:"
+
+fresh
+echo 29.10.0+azure-1 >"$ENV/docker-server-version"
+use_containerd_store
+run_doctor "$ENV"
+assert_code "containerd image store on a suffixed version" 0
+assert_out "containerd image store on a suffixed version" "^ok  image-store: .*on Docker 29\\.10\\.0\\+azure-1 "
+assert_no_out "containerd image store on a suffixed version" "^warn  image-store:"
+
+fresh
+echo dev >"$ENV/docker-server-version"
+use_containerd_store
+run_doctor "$ENV"
+assert_code "containerd image store on an uncomparable version" 0
+assert_out "containerd image store on an uncomparable version" \
+  "^warn  image-store: the containerd image store is active on Docker 'dev', a version that cannot be compared with its minimum 29\\.9\\.0"
+assert_out "containerd image store on an uncomparable version" "^      fix: upgrade the Docker engine to 29\\.9\\.0 or newer"
+assert_no_out "containerd image store on an uncomparable version" "^ok  image-store:"
+assert_out "containerd image store on an uncomparable version" "^summary: "
+
+fresh
+echo 29.5.2 >"$ENV/docker-server-version"
+run_doctor "$ENV"
+assert_code "classic image store" 0
+assert_out "classic image store" "^ok  image-store: the classic image store is active on Docker 29\\.5\\.2 \\(driver overlay2\\)"
+assert_no_out "classic image store" "^warn  image-store:"
 
 # Another engine than colima has no colima configuration to check.
 fresh

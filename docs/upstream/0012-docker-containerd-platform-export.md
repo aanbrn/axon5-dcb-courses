@@ -6,7 +6,7 @@ status: "workaround-removed"
 workaround: true
 upstream: ["https://github.com/moby/moby/issues/52193", "https://github.com/docker/cli/issues/6457"]
 reported: "2026-03-19"
-updated: "2026-11-24"
+updated: "2026-11-25"
 ---
 
 # UP-0012: Docker 29's containerd image store cannot `docker save --platform` the Paketo noble run image
@@ -62,7 +62,8 @@ removed the workaround on 2026-11-24:
 
 - `scripts/doctor.sh`: the `image-store` check warned when the engine reported the `overlayfs` driver or the
   `io.containerd.snapshotter` entry, with the fix for colima and for Docker Desktop, and carried `UPSTREAM: UP-0012`.
-  It now reports `ok` for both stores and names the one that is active.
+  It now reports `ok` for the classic store and for the containerd store on Docker 29.9.0 or newer, and warns for the
+  containerd store on an older engine or on a version it cannot compare (quick task 261125-a09, review WR-01).
 - `scripts/doctor.sh`: the `colima` check reported `docker.features.containerd-snapshotter` when it was not `false`,
   and carried `UPSTREAM: UP-0012`. It now checks only `network.dns` (UP-0011).
 - `docs/tooling.md` states that either image store works and that the containerd store needs Docker 29.9.0 or newer.
@@ -76,7 +77,8 @@ Every engine that builds this project's images runs Docker 29.9.0 or newer (the 
 Decision: the author removed the workaround on 2026-11-24 on the strength of the released fix and the verification
 below. The author's colima engine was upgraded to Docker 29.10.0 on 2026-11-24 (classic store, which the defect never
 affected), so the developer engine meets the criterion. No CI job builds an image yet (CICD-02). Residual: an engine
-older than 29.9.0 with the containerd store can still fail, and `docs/tooling.md` states the requirement.
+older than 29.9.0 with the containerd store can still fail; `docs/tooling.md` states the requirement and `doctor` warns
+about such an engine.
 
 ## How to verify removal
 

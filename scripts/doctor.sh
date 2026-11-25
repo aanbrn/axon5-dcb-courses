@@ -35,9 +35,10 @@ readonly ROOT
 
 CI_MODE=false
 JAVA_OK=false
-# Set by check_docker: whether the engine answered, and the name of the docker context in use.
+# Set by check_docker: whether the engine answered, the name of the docker context in use and the engine's server version.
 DOCKER_OK=false
 DOCKER_CONTEXT=''
+DOCKER_SERVER_VERSION=''
 COUNT_OK=0
 COUNT_WARN=0
 COUNT_FAIL=0
@@ -224,25 +225,50 @@ check_docker() {
   *) if [[ $operating_system == *"Docker Desktop"* ]]; then engine="Docker Desktop"; else engine="engine"; fi ;;
   esac
   DOCKER_OK=true
+  DOCKER_SERVER_VERSION=$version
   report ok docker "$engine reachable through context ${context:-unknown}, server $version"
 }
 
+# The lowest Docker engine that exports the Paketo noble run image on the containerd image store (docs/tooling.md,
+# UP-0012). A requirement, not a workaround: the UP-0012 record is workaround-removed, so no UPSTREAM marker here.
+readonly CONTAINERD_STORE_MIN_DOCKER=29.9.0
+
 # image-store: which image store the engine uses. Both work: the classic store is the one on which the Testcontainers and
 # Paketo setup was verified, and the containerd store needs Docker 29.9.0 or newer, because older engines cannot export
-# the Paketo noble run image (docs/tooling.md, UP-0012). The containerd store reports the driver `overlayfs` and a
-# snapshotter entry in the driver status.
+# the Paketo noble run image (docs/tooling.md, UP-0012). So below that, or on a version that cannot be compared, the
+# check warns. A `-` or `+` suffix of the server version (29.10.0+azure-1, 29.9.0-rc.1) is dropped before comparing.
+# The containerd store reports the driver `overlayfs` and a snapshotter entry in the driver status. The server version
+# comes from check_docker, which only sets DOCKER_OK with a non-empty one.
 check_image_store() {
   if [[ $DOCKER_OK != true ]]; then
     report skip image-store "the engine does not answer, see the docker check"
     return
   fi
-  local driver status
+  local driver status version=$DOCKER_SERVER_VERSION core lowest
   driver=$(docker_field Driver)
   status=$(docker info --format '{{json .DriverStatus}}' 2>/dev/null || true)
-  if [[ $driver == overlayfs || $status == *io.containerd.snapshotter* ]]; then
-    report ok image-store "the containerd image store is active (driver ${driver:-unknown}; it needs Docker 29.9.0 or newer, see docs/tooling.md)"
+  if [[ $driver != overlayfs && $status != *io.containerd.snapshotter* ]]; then
+    report ok image-store "the classic image store is active on Docker $version (driver ${driver:-unknown})"
+    return
+  fi
+  core=${version%%[-+]*}
+  if [[ ! $core =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    report warn image-store \
+      "the containerd image store is active on Docker '$version', a version that cannot be compared with its minimum $CONTAINERD_STORE_MIN_DOCKER" \
+      "upgrade the Docker engine to $CONTAINERD_STORE_MIN_DOCKER or newer (docker version shows it), see docs/tooling.md" \
+      "or use the classic image store, colima: colima stop && colima start --edit, then set docker.features.containerd-snapshotter: false" \
+      "or use the classic image store, Docker Desktop: Settings > General, turn off 'Use containerd for pulling and storing images'"
+    return
+  fi
+  lowest=$(printf '%s\n%s\n' "$CONTAINERD_STORE_MIN_DOCKER" "$core" | sort -V | sed -n 1p)
+  if [[ $lowest == "$CONTAINERD_STORE_MIN_DOCKER" ]]; then
+    report ok image-store "the containerd image store is active on Docker $version (driver ${driver:-unknown}), which meets its minimum $CONTAINERD_STORE_MIN_DOCKER"
   else
-    report ok image-store "the classic image store is active (driver ${driver:-unknown})"
+    report warn image-store \
+      "the containerd image store is active on Docker $version, which is older than $CONTAINERD_STORE_MIN_DOCKER and cannot export the Paketo noble run image (UP-0012)" \
+      "upgrade the Docker engine to $CONTAINERD_STORE_MIN_DOCKER or newer (docker version shows it), see docs/tooling.md" \
+      "or use the classic image store, colima: colima stop && colima start --edit, then set docker.features.containerd-snapshotter: false" \
+      "or use the classic image store, Docker Desktop: Settings > General, turn off 'Use containerd for pulling and storing images'"
   fi
 }
 
