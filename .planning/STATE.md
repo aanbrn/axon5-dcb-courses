@@ -4,10 +4,10 @@ current_phase: 02
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: executing
 stopped_at: Phase 2 context gathered
-last_updated: "2026-11-25T07:47:10.288Z"
+last_updated: "2026-11-25T08:54:25.158Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 02 execution started
-state_head: 334f3d7dc93086f93d928c482078ba7203940c5b
+state_head: 29a5ad47aaa896a4172ec3b041eb4a756980bfb5
 progress:
   total_phases: 13
   completed_phases: 1
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-11-22)
 Phase: 02 (Runtime Infrastructure & DCB Spikes) — EXECUTING
 Plan: 24 of 31
 Status: Executing Phase 02
-Last activity: 2026-11-25 - Completed quick task 261125-k0a: Discourse forum posting rule recorded in ADR-0013; gap plans 02-24..02-27, 02-30, 02-31 done, 02-28 and 02-29 published UP-0006 and UP-0013 on the AxonIQ forum
+Last activity: 2026-11-25 - Completed quick task 261125-lqw: WR-01 and IN-02 fixed in the CI rate-limit wrapper; all gap plans 02-24..02-31 complete
 
 Progress: [█░░░░░░░░░] 8%
 
@@ -184,6 +184,7 @@ Recent decisions affecting current work:
 | 32 | Ignore the .build/ Swift Package Manager cache left by the pre-commit hooks | 2026-11-25 | a8e8c2e | — |
 | 261125-k0a | Record the Discourse forum posting rule (TL0 typing-speed moderation) in ADR-0013 Publication (UPS-03) and the upstream issue template | 2026-11-25 | a6d0761 | [261125-k0a-record-the-discourse-forum-posting-rule-](./quick/261125-k0a-record-the-discourse-forum-posting-rule-/) |
 | 34 | Disclose AI assistance in the UP-0013 forum draft (reviewed and approved by the author) | 2026-11-25 | 334f3d7 | — |
+| 261125-lqw | Fix Phase 02 review findings WR-01 (locale scoped to the 429 grep) and IN-02 (host-neutral retry message) in the CI rate-limit wrapper | 2026-11-25 | 29a5ad4 | [261125-lqw-fix-phase-02-review-findings-wr-01-and-i](./quick/261125-lqw-fix-phase-02-review-findings-wr-01-and-i/) |
 
 ## Deferred Items
 
