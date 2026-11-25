@@ -72,7 +72,8 @@ For those rows the `Tool` column also carries the exact `mise.toml` key in backt
 | Gradle skills (`gradle-skills@gradle-skills`)                 | Gradle build best practices and wrapper-upgrade guidance for Claude Code                                | `.claude/settings.json (ref)`              | Claude Code marketplace plugin                                                                                                                                                             | local (Claude Code) |
 
 For a fast loop while developing, run `./gradlew test` or `./gradlew componentTest`; `./gradlew check` and
-`./gradlew build` run every suite, including the integration tests (CI runs those in their own job).
+`./gradlew build` run every suite, including the integration tests and the TestKit functional tests of `build-logic` (CI
+runs each of these in a parallel job of its own).
 
 The `architectureTest` suite of `:tooling:architecture` runs from `check` and scans the Kotlin sources of the whole
 repository with Konsist. Its rule classes are `ContractsArchitectureTest` (no framework logic in the contracts),

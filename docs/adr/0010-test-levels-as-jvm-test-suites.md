@@ -52,8 +52,12 @@ settle the details:
 - **`check` and `build` run every suite (D-19).** The convention adds every suite's test task to `check`, and orders them
   with `mustRunAfter`. There is no `quickCheck` and no `fullCheck`. A human who wants a fast loop runs `./gradlew test` or
   `componentTest`. The Gradle build cache keeps unchanged integration tests from re-running.
-- **Two parallel CI jobs (D-20).** `build` runs `./gradlew build checkDependencyLicences -x integrationTest` and
-  `integration-test` runs `./gradlew integrationTest`; `ci-success` aggregates both, so together they are `check`.
+- **Parallel CI jobs (D-20).** `build` runs
+  `./gradlew build checkDependencyLicences -x integrationTest -x :build-logic:functionalTest`, `integration-test` runs
+  `./gradlew integrationTest` and `functional-test` runs `./gradlew :build-logic:functionalTest`; `ci-success`
+  aggregates all three, so together they are `check`. The TestKit suite of `build-logic` got its own job on 2026-11-25:
+  it runs its fixtures one at a time and took about 9 of the 13.5 minutes of the `build` job (CI run 45507745588).
+  Locally, `check` still runs it (D-19).
 - **Shared infrastructure.** Testcontainers singletons live in a small `:tooling:test-support` module (D-18), because
   they belong to no module's types. Helpers for a module's own types live in that module's `testFixtures`: ID fixtures and
   `Arb` generators in the kernel, builders in events, the capture fixtures in the command service. The module owns its
@@ -99,7 +103,7 @@ settle the details:
 - `TestNamingArchitectureTest` enforces the suffix rule and the block bodies.
 - `koverXmlReport` of any module that applies the convention lists the code reached by every suite; no module needs
   coverage configuration of its own.
-- `ci.yml` has the two jobs and the `ci-success` aggregate, which makes both required through ADR-0001.
+- `ci.yml` has the three jobs and the `ci-success` aggregate, which makes all three required through ADR-0001.
 
 ## Pros and Cons of the Options
 
@@ -124,7 +128,8 @@ settle the details:
 ### One CI job, or one job per suite
 
 - A single job would serialize the unit and integration levels, and a job per suite would repeat the checkout and Gradle
-  setup for every level. Two parallel jobs split the cost where the cost is, at the Axon Server boundary.
+  setup for every level. Parallel jobs split the cost where the cost is: at the Axon Server boundary, and at the serial
+  TestKit suite of `build-logic`, which alone was about two thirds of a single `build` job.
 
 ### The shared container holder of `axoniq-testcontainer`
 
