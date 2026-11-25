@@ -6,7 +6,7 @@ status: "reported"
 workaround: true
 upstream: ["https://github.com/AxonIQ/AxonFramework/issues/5326"]
 reported: "2026-11-23"
-updated: "2026-11-24"
+updated: "2026-11-25"
 ---
 
 # UP-0001: No public extension point to observe the conditional append of a decision
@@ -122,6 +122,15 @@ Follow-up on 2026-11-24: the author asked where the decorator belongs and how it
 `axon-eventsourcing` module, in the `org.axonframework.eventsourcing.eventstore` package next to `EventStorageEngine`
 itself; a configurable callback is welcome, with a default callback that logs, and the author may propose otherwise. The
 issue is assigned to the author, and the pull request targets `main`, which is the 5.5.0 line.
+
+Pull request on 2026-11-25: the author opened [AxonIQ/AxonFramework#5338](https://github.com/AxonIQ/AxonFramework/pull/5338)
+as a draft. It adds an opt-in `AppendObservingEventStorageEngine` decorator in `org.axonframework.eventsourcing.eventstore`
+that reports each append at most once to an `AppendObserver` as an `AppendObservation`: the append condition with its
+criteria and consistency marker, the tagged events, the `ProcessingContext`, and the outcome (committed with the
+resulting marker, rejected, failed, or rolled back). A `LoggingAppendObserver` is the default. It does not observe
+`source()` or a unit of work that fails before the append phase, so after a release with the change the command service
+can replace the append half of its decorator, and the sourced-events part of a decision record needs another route.
+The pull request lists the open design questions for the maintainers. The record stays `reported` until it merges.
 
 ### Public extension point to observe the conditional append of a decision
 
