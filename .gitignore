@@ -52,5 +52,8 @@ coverage/
 profile-out/
 gradle-user-home/
 
+# Swift Package Manager cache tag that a tool run by the pre-commit hooks leaves in the working directory
+/.build/
+
 # OS files
 .DS_Store
