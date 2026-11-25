@@ -110,3 +110,5 @@ conditional append, so the v1 field looks stale for contexts that the server cre
 
 Report `dcbContext` consistently on both endpoints, or document that `/v1/public/context` is not authoritative for DCB
 and point to `/v2/contexts`.
+
+_This report was prepared with an AI coding agent; I reviewed and approved the findings and the text before posting._
