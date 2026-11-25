@@ -72,6 +72,7 @@ For those rows the `Tool` column also carries the exact `mise.toml` key in backt
 | Playwright MCP server (`npm:@playwright/mcp`)                 | Browser-driven UI verification for Claude Code                                                          | `mise`                                     | `mise install`                                                                                                                                                                             | local (Claude Code) |
 | AxonIQ agent skills (`axoniq-app-development@axoniq`)         | Axon 5 entity, DCB, event store and testing guidance for Claude Code                                    | `.claude/settings.json (ref)`              | Claude Code marketplace plugin, installed once per clone with `claude plugin install axoniq-app-development@axoniq --scope project`                                                        | local (Claude Code) |
 | Gradle skills (`gradle-skills@gradle-skills`)                 | Gradle build best practices and wrapper-upgrade guidance for Claude Code                                | `.claude/settings.json (ref)`              | Claude Code marketplace plugin, installed once per clone with `claude plugin install gradle-skills@gradle-skills --scope project`                                                          | local (Claude Code) |
+| DCB skill (`dynamic-consistency-boundaries`)                  | DCB concepts and their mapping onto Axon Framework 5 and the Axon Server DCB API, for Claude Code       | `dynamic-consistency-boundaries/README.md` | Vendored byte for byte in `.claude/skills/dynamic-consistency-boundaries/` and tracked in git; nothing to install                                                                          | local (Claude Code) |
 
 For a fast loop while developing, run `./gradlew test` or `./gradlew componentTest`; `./gradlew check` and
 `./gradlew build` run every suite, including the integration tests and the TestKit functional tests of `build-logic` (CI
@@ -225,10 +226,11 @@ other area records its decision here and waits for its phase.
 
 ### How skills are installed
 
-- A skill is installed only as a marketplace plugin. The marketplace is registered in
+- A third-party skill is installed as a marketplace plugin. The marketplace is registered in
   `.claude/settings.json` under `extraKnownMarketplaces`, with `ref` set to a full 40-character
   commit SHA, and the plugin is enabled under `enabledPlugins`. A branch, a tag or `latest` is never
-  used as `ref`.
+  used as `ref`. A vetted skill that no marketplace publishes is vendored instead (see
+  [Vendored skills](#vendored-skills)).
 - Registering and enabling is not installing. Claude Code never installs a plugin that only repository settings enable
   when its marketplace is a remote source, so each contributor installs both plugins once per clone, in the main
   checkout:
@@ -247,7 +249,7 @@ other area records its decision here and waits for its phase.
 - Without the install, `/plugin` shows the plugin as on in the project settings but not installed, an update fails with
   `Plugin "<id>" is not installed`, and the skills do not load. `scripts/doctor.sh` warns about every enabled plugin
   that has no install for the clone and prints the command above as its fix.
-- Nothing is copied into `.claude/`. A plugin lives in Claude Code's own plugin cache.
+- A plugin is never copied into `.claude/`; it lives in Claude Code's own plugin cache.
 - Updates are deliberate pull requests that change the SHA after the new content has been reviewed
   against the criteria below. Nothing updates itself.
 - Pinning a marketplace by commit needs a minimum Claude Code version. `scripts/doctor.sh` checks
@@ -256,6 +258,31 @@ other area records its decision here and waits for its phase.
   `claude-code@latest`).
 - A plugin is enabled only after the author approved that candidate and that commit. The approval is
   recorded in the pull request.
+
+### Vendored skills
+
+- When: a skill that passed the review criteria and that the author approved, but that no marketplace publishes. Its
+  files are copied byte for byte from a full 40-character commit SHA into `.claude/skills/<upstream name>/` and are
+  never edited. Today there is one such skill: `dynamic-consistency-boundaries` from `AxonIQ/AxonFramework`.
+- Provenance: a project-owned `README.md` beside the copied files records the source, the pinned commit, the licence,
+  the approval and the verify and update steps. It is the only place where the commit is written.
+- Tracking and licence: a narrow `.gitignore` exception tracks the directory, and the `claude-tracking` check of
+  `scripts/doctor.sh` mirrors it. `REUSE.toml` annotates the copied files with their upstream licence and `NOTICE`
+  names them. `.claude/` is outside Spotless and editorconfig-checker, so no formatter rewrites the upstream text.
+- Loading: Claude Code loads it as a project skill in every session, and `agent_skills` maps it to GSD agents
+  ([ADR-0004](adr/0004-gsd-configuration.md)). There is nothing to install.
+- Updates: No Renovate manager tracks the vendored skill. A custom manager could change only the commit in the README,
+  because copying the new files needs post-upgrade commands, which Renovate runs only where its operator allows them,
+  so its pull request would leave the pin and the content disagreeing. A tracker of the framework's main branch would
+  also propose nearly every framework commit, although the skill has changed in one commit so far. The marketplace
+  plugin pins are updated by hand for the same reason of review. The procedure in the README applies instead: check
+  whenever Renovate proposes an Axon Framework update and before planning a phase that designs DCB decisions, review
+  the upstream diff against the review criteria, re-copy the files, and record the author's approval in the pull
+  request.
+- Precedence and exit: the skill targets the framework's main branch, ahead of the release the project pins, so where
+  it disagrees with the `spike-findings-axon5-dcb-courses` skill or an ADR, those win. Once a marketplace publishes it,
+  a plugin pinned by commit replaces the copy and the exception is removed
+  ([ADR-0014](adr/0014-claude-code-skills-and-mcp-servers.md)).
 
 ### Review criteria
 
@@ -277,12 +304,14 @@ quality gate.
 Areas follow the order of the tooling requirement. A verdict is one of approve, defer to its phase,
 reject, or none found. A plugin whose verdict reads "approved" is pinned in `.claude/settings.json`
 under `extraKnownMarketplaces` (`ref`) and enabled there; each contributor installs an approved plugin once per
-clone.
+clone. A skill whose verdict reads "approved (vendored ...)" is copied at a pinned commit as
+[Vendored skills](#vendored-skills) describes and needs no install.
 
 | Area           | Candidate                                                                                 | Evidence                                                                                                                                                                                                                                                                                                                    | Verdict                                                                     | Phase  |
 | -------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------ |
 | Axon           | `AxonIQ/agent-skills`, plugin `axoniq-app-development`                                    | Official AxonIQ organisation, Apache-2.0. The plugin directory holds Markdown and `plugin.json` only; the hooks and settings at the repository root are the maintainers' own development files, outside the plugin. Covers entities, DCB decision models, the event store and testing. Its README warns about wrong output. | Approved (pinned commit in `.claude/settings.json`; install once per clone) | 2 to 4 |
 | Axon           | `AxonIQ/agent-skills`, plugins `axoniq-migration` and `axoniq-framework-contribution`     | Same repository. Aimed at Axon 4 to 5 migration and at contributors to the framework; the migration plugin also ships scripts.                                                                                                                                                                                              | Reject (not applicable)                                                     | none   |
+| Axon           | `AxonIQ/AxonFramework`, skill `dynamic-consistency-boundaries`                            | Official AxonIQ repository, Apache-2.0, added by an AxonIQ engineer. `SKILL.md` and four reference files, Markdown only: no hooks, scripts, MCP or LSP configuration. Explains DCB and maps it onto Axon Framework 5 and the Axon Server DCB API. Written for the framework's main branch; no marketplace publishes it.     | Approved (vendored at a pinned commit; tracked, nothing to install)         | 3 to 4 |
 | Kotlin         | `Kotlin/kotlin-agent-skills`                                                              | Official organisation, Apache-2.0. Skills cover JPA entity mapping and Android Gradle plugin migration, neither of which is used here. The plugin bundles an `.mcp.json` that points at an unpinned remote server.                                                                                                          | Reject (not applicable, unpinned remote MCP)                                | none   |
 | Kotlin         | Kotlin idioms                                                                             | No official skill found; the search returned only aggregator listings of community skills.                                                                                                                                                                                                                                  | None found (Context7 supplies Kotlin docs)                                  | none   |
 | Gradle         | `gradle/gradle-skills`, plugin `gradle-skills`                                            | Official Gradle organisation, Apache-2.0. Two Markdown skills (build best practices, wrapper upgrade) with reference files. The plugin source is the repository root, so CI-only scripts and evaluation notes come along but are never run. No hooks, MCP or LSP configuration.                                             | Approved (pinned commit in `.claude/settings.json`; install once per clone) | 2 to 4 |
@@ -305,6 +334,8 @@ Only these files under `.claude/` are tracked:
 - `.claude/CLAUDE.md`, the project instructions.
 - `.claude/skills/spike-findings-*/`, the spike wrap-up skill that GSD generates (a narrow exception
   from the rule that ignores everything else there).
+- `.claude/skills/dynamic-consistency-boundaries/`, the vendored DCB skill of [Vendored skills](#vendored-skills), a
+  second narrow exception.
 
 The GSD installation and `settings.local.json` stay ignored. The project's own skills will live in a
 repository-local plugin outside `.claude/`, introduced in Phase 8.
