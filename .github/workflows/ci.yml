@@ -211,9 +211,11 @@ jobs:
       - name: Start the stack
         run: docker compose up -d --wait
 
+      # Runs through the rate-limit wrapper; scripts/ci/retry-on-rate-limit.sh explains why.
       - name: Host scenario (test against localhost:8124)
         run: >-
-          ./gradlew :command-service:integrationTest -Pcourses.axonserver.external=localhost:8124
+          scripts/ci/retry-on-rate-limit.sh ./gradlew :command-service:integrationTest
+          -Pcourses.axonserver.external=localhost:8124
           --tests '*ConditionalAppendIntegrationTest*' --console=plain
 
       - name: In-network scenario (probe on the compose network)
