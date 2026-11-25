@@ -196,7 +196,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **UPS-01**: Each upstream case (defect, gap or documentation issue in a used product) has its own record `docs/upstream/NNNN-<slug>.md` with machine-readable front matter (ID `UP-NNNN`, product and version, status `open` → `reported` → `fixed-upstream` → `workaround-removed` / `wont-fix`, upstream issue/PR links, dates) and a full body: symptom, minimal reproduction, root-cause analysis, workaround and all its code locations, removal criteria and how to verify them
 - [ ] **UPS-02**: Workarounds are marked in code/config by record ID (`UPSTREAM: UP-NNNN`), and a CI check enforces consistency in both directions (every marker references an existing record; open records with a workaround have markers; closed records have none); the index with statuses is generated for the documentation site
-- [ ] **UPS-03**: Defects and documentation gaps found in used products are reported upstream with a minimal reproduction (issue or PR), preferring upstream fixes over local workarounds; drafts are prepared by the AI and published only after the author's explicit approval
+- [x] **UPS-03**: Defects and documentation gaps found in used products are reported upstream with a minimal reproduction (issue or PR), preferring upstream fixes over local workarounds; drafts are prepared by the AI and published only after the author's explicit approval
 - [x] **UPS-04**: Dependency updates include a check whether recorded workarounds can be removed according to their removal criteria
 
 ### Developer Tooling
@@ -406,7 +406,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GH-07 | Phase 1 | Complete |
 | UPS-01 | Phase 2 | Complete |
 | UPS-02 | Phase 2 (markers, check, index), Phase 5 (index on the documentation site) | Pending (Phase 2 part verified; the documentation-site index is Phase 5) |
-| UPS-03 | Phase 2 | Pending (human UAT 5 open: four drafts unreported) |
+| UPS-03 | Phase 2 | Complete |
 | UPS-04 | Phase 2 | Complete |
 | TOOL-01 | Phase 1 | Complete |
 | TOOL-02 | Phase 1 | Complete |

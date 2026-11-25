@@ -100,12 +100,12 @@ Filled by the planner per task; the requirement-level map is in `02-RESEARCH.md`
 | 2-26-01 | 26 | 1 (gap) | UPS-01, UPS-03 | T-02-69 | UP-0010 dated bundle check; workflow untouched | check | `checkUpstreamRecords spotlessCheck`; `git diff` on codeql.yml empty | ✅ | ✅ green |
 | 2-26-02 | 26 | 1 (gap) | UPS-01, UPS-03 | T-02-70 | Throwaway colima profile deleted; no private data in record | check + manual | `checkUpstreamRecords`; `colima list` guard; private-data grep | ✅ | ✅ green |
 | 2-27-01 | 27 | 2 (gap) | UPS-03 | T-02-71, T-02-72 | Nothing published without approval (answer: none) | checkpoint (blocking-human) | — (manual decision) | n/a | 🔒 manual (decided: none) |
-| 2-28-01 | 28 | 4 (gap) | UPS-01, UPS-03 | T-02-73 | Record changes only with a public URL | checkpoint (blocking) | — (halted: forum moderation, follow-up DF-02-1) | n/a | ⏸ halted |
-| 2-29-01 | 29 | 5 (gap) | UPS-01, UPS-03 | T-02-74, T-02-75 | Posted only after approval, per ADR-0013 forum rule | checkpoint (blocking) | — (halted: account on hold, follow-up DF-02-1) | n/a | ⏸ halted |
+| 2-28-01 | 28 | 4 (gap) | UPS-01, UPS-03 | T-02-73 | Record changes only with a public URL | check + checkpoint | `checkUpstreamRecords spotlessCheck`; anonymous HTTP 200 and raw-text comparison (topic 6851) | ✅ | ✅ green |
+| 2-29-01 | 29 | 5 (gap) | UPS-01, UPS-03 | T-02-74, T-02-75 | Posted only after approval, per ADR-0013 forum rule | check + checkpoint | `checkUpstreamRecords spotlessCheck`; anonymous HTTP 200 and raw-text comparison (topic 6853) | ✅ | ✅ green |
 | 2-30-01 | 30 | 3 (gap) | INFRA-03, INFRA-04, TOOL-03 | T-02-76, T-02-77 | Push only after consent; never force | external CI | `gh pr checks 21 --required`; CI 45563826333, Governance 45563826409 | ✅ | ✅ green |
 | 2-31-01 | 31 | 2 (gap) | INFRA-03, INFRA-04, TOOL-03 | T-02-78..T-02-81 | Mirror first, CI only, no insecure continue; CC and isolated projects compatible | functional | `mise x -- ./gradlew :build-logic:functionalTest --tests '*CiMavenMirrorFunctionalTest*'` | ✅ | ✅ green |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky · 🔒 manual approval gate (see Manual-Only) · ⏸ halted by design (deferred follow-up)*
+*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky · 🔒 manual approval gate (see Manual-Only)*
 
 ---
 

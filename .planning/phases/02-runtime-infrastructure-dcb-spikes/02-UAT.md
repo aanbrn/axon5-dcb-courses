@@ -129,3 +129,4 @@ blocked: 0
   reason: "Author decision: forum moderation is an external event of unknown duration and does not hold Phase 2. UP-0006 is held as pending post 70 and the account is on hold (https://discuss.axoniq.io/t/account-temporarily-on-hold/6850); the author wrote to devrel@axoniq.io. Both plans are status halted; their records carry a dated publication status."
   done_in_phase_2: "UP-0010 (plan 02-26: bundle range documented, record stays open) and UP-0011 (plans 02-26 and 02-27: not reproduced on a clean profile, nothing published) are resolved."
   tracked_in: ".planning/STATE.md Pending Todos"
+  resolved: "2026-11-25: the forum account was released the same day; plan 02-28 recorded UP-0006 as reported (topic 6851) and plan 02-29 posted UP-0013 (topic 6853); both plans complete"
