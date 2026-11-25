@@ -111,3 +111,16 @@ recorded: 2026-11-25T02:15:37.235Z
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
 Re-running the gate keeps every row it can. A row the current review no longer reports is kept and its Source cell flagged, so a finding does not leave this record silently. ONE exception: when a finding id is REUSED by a different finding, the earlier decision cannot keep a row — the id is taken — and it is dropped. A RECORDED decision (anything but `open`) is named on the console when that happens; a row still at `open` is replaced silently, because `open` records no decision to lose.
+
+## Review of 2026-11-25 (gap-closure changes, diff base 7790881)
+
+The current `02-REVIEW.md` reuses the IDs WR-01 and IN-01 to IN-04 for new findings; the rows above describe the
+earlier review's findings of the same IDs.
+
+| Finding | Severity | Disposition | Source |
+|---------|----------|-------------|--------|
+| WR-01 | warning | fixed | 02-REVIEW.md (2026-11-25) — fixed by quick task 261125-lqw in ec2b3f4 (`LC_ALL=C` prefixes the 429 grep only; test case 13 proves the wrapped command keeps the caller's locale) |
+| IN-01 | info | open | 02-REVIEW.md (2026-11-25) — UP-0011 title, ADR-0008, docs/tooling.md and the doctor marker still state the colima AAAA stall as fact; follow-up with the author's UP-0011 decision |
+| IN-02 | info | fixed | 02-REVIEW.md (2026-11-25) — fixed by quick task 261125-lqw in 39822f5 (host-neutral announcement and annotation title `Dependency download rate limit`) |
+| IN-03 | info | open | 02-REVIEW.md (2026-11-25) — stale "does not cover Kotlin 2.4.21" marker text in `.github/workflows/codeql.yml:32`; follow-up |
+| IN-04 | info | open | 02-REVIEW.md (2026-11-25) — five identical mirror steps in ci.yml (composite action candidate) and a hand-copied preset `ignorePaths` list in renovate.json5; follow-up |
