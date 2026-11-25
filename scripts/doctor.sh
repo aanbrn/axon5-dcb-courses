@@ -296,9 +296,10 @@ END { printf "%d\n", dns }
 AWK
 readonly COLIMA_AWK
 
-# UPSTREAM: UP-0011 the colima DNS forwarder never answers AAAA queries, which stalls Go tools for 10 s per lookup.
+# UPSTREAM: UP-0011 a colima profile without explicit resolvers once stalled Go DNS lookups for about 10 s each
+# (AAAA suspected); a clean profile did not reproduce it, so the cause is not established.
 # colima (local only): the setting of the colima VM that the image pulls and the Testcontainers runs depend on: an
-# explicit DNS list, because the default forwarder stalls on AAAA lookups. The image store is the image-store check's.
+# explicit DNS list, the UP-0011 workaround kept until the cause is known. The image store is the image-store check's.
 check_colima() {
   local_only colima && return
   case $DOCKER_CONTEXT in

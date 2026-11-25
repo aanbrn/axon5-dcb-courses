@@ -9,7 +9,7 @@ reported: null
 updated: "2026-11-25"
 ---
 
-# UP-0011: The default colima DNS forwarder never answers AAAA queries and stalls Go tools
+# UP-0011: A colima profile without explicit resolvers once stalled Go DNS lookups for about 10 s, not reproduced on a clean profile
 
 ## Symptom
 
@@ -74,6 +74,10 @@ by themselves. What differed in the spike is not known: the host's own upstream 
 user template (Kubernetes, Rosetta, VirtioFS mounts) or the history of that VM are candidates, and none was tested.
 Which component drops the AAAA query, the forwarder of Lima or colima's own configuration, was not investigated.
 
+The author's assessment of 2026-11-25 is that the stall most likely came from a nuance of the local DNS settings of the
+spike's machine, not from a colima default. That assessment is untested, so the record stays open, and the explicit
+`network.dns` workaround and the `colima` check stay.
+
 ## Workaround
 
 Explicit `network.dns` in the colima VM (`colima start --dns <resolver> --dns <resolver>`, persisted by colima in its
@@ -115,7 +119,7 @@ has the environment and the measured numbers of the clean-profile run, and keeps
 seen once.
 
 ````markdown
-# Default DNS forwarder never answers AAAA queries; Go programs wait about 10 seconds per lookup
+# Go DNS lookups in containers took about 10 seconds on a colima profile without explicit resolvers (AAAA suspected)
 
 ## Environment and versions
 

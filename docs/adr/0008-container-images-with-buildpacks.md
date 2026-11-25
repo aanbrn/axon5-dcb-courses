@@ -81,12 +81,14 @@ nginx and JVM setting visible in the repository. The settings that the spike pro
 
 ### Local prerequisites
 
-Two defects of the local engine broke the spike's first builds. Neither is part of the repository, so `doctor` checks the
+Two problems of the local engine broke the spike's first builds. Neither is part of the repository, so `doctor` checks the
 DNS setting and prints the fix, and reports the image store:
 
-- **colima DNS.** The built-in resolver of colima never answers AAAA queries, and Go-based tools wait for both A and AAAA,
-  so every lookup took 10 seconds and the buildpacks timed out downloading the JRE. The fix is explicit resolvers,
-  `colima start --dns <resolver> --dns <resolver>`. Tracked as UP-0011.
+- **colima DNS.** In the spike, Go-based tools on a colima profile without explicit resolvers waited about 10 seconds
+  per lookup: the built-in forwarder appeared not to answer AAAA queries in time, and Go waits for both A and AAAA. So
+  the buildpacks timed out downloading the JRE. A clean profile did not reproduce it, and the cause is not established.
+  The workaround is explicit resolvers, `colima start --dns <resolver> --dns <resolver>`, which `doctor` checks.
+  Tracked as UP-0011.
 - **Docker 29 containerd image store.** Exporting an image onto `ubuntu-noble-run` fails with `no suitable export target
 found` on both `pack` and `BootBuildImage`. The fix is the classic image store (`overlay2`): in colima
   `docker.features.containerd-snapshotter: false`. Tracked as UP-0012, which is fixed upstream in Docker 29.9.0. The
@@ -107,7 +109,8 @@ found` on both `pack` and `BootBuildImage`. The fix is the classic image store (
   image, and the health check needs the same variables again in compose.
 - Bad, because a first image build takes about four minutes cold (about 20 seconds warm) and needs a Docker daemon, which
   is why the images are built by a separate task and CI job, not by `check` (decision for Phase 6).
-- Bad, because the colima DNS defect (UP-0011) must be fixed by hand until upstream moves.
+- Bad, because the colima DNS workaround (UP-0011) is set by hand on each machine while the cause of the stall is
+  unknown.
 
 ### Confirmation
 
