@@ -118,7 +118,7 @@ internal object FrontMatter {
         var next = index + 1
         while (parts.isEmpty() || !closesList(parts.joinToString(" "))) {
             val continuation = block.getOrNull(next)
-            if (continuation == null || continuation.isBlank() || !continuation.first().isWhitespace()) {
+            if (continuation.isNullOrBlank() || !continuation.first().isWhitespace()) {
                 fail(file, index + 1, "unterminated list")
             }
             parts += continuation.trim()

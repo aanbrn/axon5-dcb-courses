@@ -86,6 +86,7 @@ abstract class GitIgnoredPaths @Inject constructor(private val exec: ExecOperati
     private fun toPatterns(root: File, entries: List<String>): List<String> {
         val covered = parameters.coveredDirectoryNames.get()
         return entries
+            .asSequence()
             .filterNot { entry -> entry.split('/').any { isCovered(covered, it) } }
             // Ant patterns have no escape, so an entry with a wildcard stays formatted.
             .filterNot { '*' in it || '?' in it }
@@ -94,6 +95,7 @@ abstract class GitIgnoredPaths @Inject constructor(private val exec: ExecOperati
             .filterNot { it.endsWith("/") && !holdsUncoveredFile(File(root, it), covered) }
             .map { if (it.endsWith("/")) "$it**" else it }
             .sorted()
+            .toList()
     }
 
     private fun isCovered(covered: Set<String>, segment: String): Boolean = covered.any {
