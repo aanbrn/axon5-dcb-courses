@@ -6,13 +6,17 @@ name: CI
 # path filters on purpose: a documentation-only pull request still runs every job and still reports
 # `ci-success`.
 #
-# Every Gradle step of a required job runs through scripts/ci/retry-on-rate-limit.sh, which runs the step once more
-# after a delay, and only then, when Gradle reports HTTP 429 from Maven Central; any other failure fails at once.
-# Pull-request runs of the jobs that main does not run yet start with an empty cache (the `cache-read-only` comment
-# below explains why a pull request never writes the cache) and download the whole classpath, which is when Maven
-# Central rate-limits a runner. The header of the script explains why Gradle's own retry does not cover it. The
-# `qodana` job is the exception: it runs Gradle inside its own container through scripts/qodana.sh, a retry would
-# repeat an analysis of up to 60 minutes, and its cache is restored from main, where the job already runs.
+# Dependency downloads of the five Gradle jobs (docs/adr/0016-ci-dependency-downloads.md). Pull-request runs of the
+# jobs that main does not run yet start with an empty cache (the `cache-read-only` comment below explains why a pull
+# request never writes the cache) and download the whole classpath, which is when Maven Central rate-limits a runner.
+# Gradle does not move on to the next repository after an HTTP 429 or 5xx, so two mechanisms cover it. First, a step
+# after setup-gradle installs scripts/ci/maven-central-mirror.init.gradle.kts into the runner's Gradle user home, which
+# puts Google's Maven Central mirror first in every build's plugin and dependency repositories with the declared ones
+# behind it; local builds and Renovate never see it. Second, every Gradle step runs through
+# scripts/ci/retry-on-rate-limit.sh, which runs the step once more after a delay, and only then, when Gradle reports
+# HTTP 429; any other failure fails at once. The cache is written from main only. The `qodana` job is the exception to
+# both: it runs Gradle inside its own container through scripts/qodana.sh, a retry would repeat an analysis of up to 60
+# minutes, and its cache is restored from main, where the job already runs.
 on:
   push:
     branches: [main]
@@ -71,6 +75,12 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
+      # See docs/adr/0016-ci-dependency-downloads.md.
+      - name: Use the Maven Central mirror (CI only)
+        run: >-
+          install -D -m 0644 scripts/ci/maven-central-mirror.init.gradle.kts
+          "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/maven-central-mirror.init.gradle.kts"
+
       # Compile, unit and component tests (Testcontainers needs only the runner's Docker), Spotless, detekt,
       # Dokka and the governance checks. The integration tests run in the parallel `integration-test` job and
       # the TestKit tests of build-logic in the parallel `functional-test` job (D-20); locally, `check` still
@@ -118,6 +128,12 @@ jobs:
           cache-provider: basic
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # See docs/adr/0016-ci-dependency-downloads.md.
+      - name: Use the Maven Central mirror (CI only)
+        run: >-
+          install -D -m 0644 scripts/ci/maven-central-mirror.init.gradle.kts
+          "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/maven-central-mirror.init.gradle.kts"
 
       - name: Integration tests
         run: scripts/ci/retry-on-rate-limit.sh ./gradlew integrationTest --console=plain
@@ -178,6 +194,12 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
+      # See docs/adr/0016-ci-dependency-downloads.md.
+      - name: Use the Maven Central mirror (CI only)
+        run: >-
+          install -D -m 0644 scripts/ci/maven-central-mirror.init.gradle.kts
+          "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/maven-central-mirror.init.gradle.kts"
+
       - name: Functional tests
         run: scripts/ci/retry-on-rate-limit.sh ./gradlew :build-logic:functionalTest --console=plain
 
@@ -217,6 +239,12 @@ jobs:
           cache-provider: basic
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # See docs/adr/0016-ci-dependency-downloads.md.
+      - name: Use the Maven Central mirror (CI only)
+        run: >-
+          install -D -m 0644 scripts/ci/maven-central-mirror.init.gradle.kts
+          "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/maven-central-mirror.init.gradle.kts"
 
       - name: Start the stack
         run: docker compose up -d --wait
@@ -358,6 +386,12 @@ jobs:
           cache-provider: basic
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # See docs/adr/0016-ci-dependency-downloads.md.
+      - name: Use the Maven Central mirror (CI only)
+        run: >-
+          install -D -m 0644 scripts/ci/maven-central-mirror.init.gradle.kts
+          "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/maven-central-mirror.init.gradle.kts"
 
       - name: Diagnose the environment
         run: scripts/ci/retry-on-rate-limit.sh scripts/doctor.sh --ci

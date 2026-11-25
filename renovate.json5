@@ -10,6 +10,21 @@
   minimumReleaseAge: "7 days",
   // Do not let a pending minimum-release-age check create a branch or PR early.
   internalChecksFilter: "strict",
+  // The CI-only Maven Central mirror init script (docs/adr/0016-ci-dependency-downloads.md) is a Gradle file, so the
+  // gradle manager would add its mirror URL to the registries it looks every Gradle dependency up in. Renovate must
+  // read only the repositories the settings files declare. An array here replaces the one `config:best-practices`
+  // brings through `:ignoreModulesAndTests`, so that preset's paths are listed again first.
+  ignorePaths: [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "**/examples/**",
+    "**/__tests__/**",
+    "**/test/**",
+    "**/tests/**",
+    "**/__fixtures__/**",
+    "scripts/ci/**",
+  ],
 
   // PR conventions: titles read `build(deps): ...`, every PR carries `deps` plus an ecosystem label
   // from .github/labels.yml, and nothing merges itself unless a rule below opts in (D-12).
