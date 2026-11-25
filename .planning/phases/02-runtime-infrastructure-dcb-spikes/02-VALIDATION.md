@@ -93,8 +93,19 @@ Filled by the planner per task; the requirement-level map is in `02-RESEARCH.md`
 | 2-23-01 | 23 | 11 | INFRA-05, DOC-03 | T-02-46 | No credentials in ADRs | check | `checkAdrs spotlessCheck`; quick-start link grep | ✅ | ✅ green |
 | 2-23-02 | 23 | 11 | DOC-03 | T-02-47 | — | check | `checkAdrs spotlessCheck` | ✅ | ✅ green |
 | 2-23-03 | 23 | 11 | DOC-03, IDEM-04 | T-02-47 | — | check | `checkAdrs spotlessCheck`; IDEM-04 wording grep | ✅ | ✅ green |
+| 2-24-01 | 24 | 1 (gap) | INFRA-03, TOOL-03 | T-02-61..T-02-64 | Retries once only on Gradle's 429 message; other failures keep their status; no eval | shell | `bash scripts/ci/test-retry-on-rate-limit.sh` (48 assertions) | ✅ | ✅ green |
+| 2-24-02 | 24 | 1 (gap) | INFRA-04 | T-02-65, T-02-78 | Every Gradle step of the required jobs wrapped; launcher governed | lint + check | `actionlint`, `zizmor --offline`, `checkClaudeAskRules`; CI run 45563826333 green | ✅ | ✅ green |
+| 2-25-01 | 25 | 1 (gap) | AIDEV-01, TOOL-03 | T-02-66, T-02-67 | Read-only check; never runs `claude plugin`; no ids echoed from malformed keys | shell | `bash scripts/test-doctor.sh` (365 assertions) | ✅ | ✅ green |
+| 2-25-02 | 25 | 1 (gap) | AIDEV-01 | T-02-68 | Docs say enabling is not installing | check | `checkAdrs checkToolingInventory spotlessCheck` | ✅ | ✅ green |
+| 2-26-01 | 26 | 1 (gap) | UPS-01, UPS-03 | T-02-69 | UP-0010 dated bundle check; workflow untouched | check | `checkUpstreamRecords spotlessCheck`; `git diff` on codeql.yml empty | ✅ | ✅ green |
+| 2-26-02 | 26 | 1 (gap) | UPS-01, UPS-03 | T-02-70 | Throwaway colima profile deleted; no private data in record | check + manual | `checkUpstreamRecords`; `colima list` guard; private-data grep | ✅ | ✅ green |
+| 2-27-01 | 27 | 2 (gap) | UPS-03 | T-02-71, T-02-72 | Nothing published without approval (answer: none) | checkpoint (blocking-human) | — (manual decision) | n/a | 🔒 manual (decided: none) |
+| 2-28-01 | 28 | 4 (gap) | UPS-01, UPS-03 | T-02-73 | Record changes only with a public URL | checkpoint (blocking) | — (halted: forum moderation, follow-up DF-02-1) | n/a | ⏸ halted |
+| 2-29-01 | 29 | 5 (gap) | UPS-01, UPS-03 | T-02-74, T-02-75 | Posted only after approval, per ADR-0013 forum rule | checkpoint (blocking) | — (halted: account on hold, follow-up DF-02-1) | n/a | ⏸ halted |
+| 2-30-01 | 30 | 3 (gap) | INFRA-03, INFRA-04, TOOL-03 | T-02-76, T-02-77 | Push only after consent; never force | external CI | `gh pr checks 21 --required`; CI 45563826333, Governance 45563826409 | ✅ | ✅ green |
+| 2-31-01 | 31 | 2 (gap) | INFRA-03, INFRA-04, TOOL-03 | T-02-78..T-02-81 | Mirror first, CI only, no insecure continue; CC and isolated projects compatible | functional | `mise x -- ./gradlew :build-logic:functionalTest --tests '*CiMavenMirrorFunctionalTest*'` | ✅ | ✅ green |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky · 🔒 manual approval gate (see Manual-Only)*
+*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky · 🔒 manual approval gate (see Manual-Only) · ⏸ halted by design (deferred follow-up)*
 
 ---
 
