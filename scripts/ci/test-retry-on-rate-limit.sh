@@ -18,8 +18,8 @@ failed=0
 
 # The 429 line exactly as Gradle 9.9.2 prints it (see .planning/debug/compose-smoke-ci-failure.md).
 RATE_LIMIT_LINE='Received status code 429 from server: Too Many Requests'
-RETRY_MARKER='retry-on-rate-limit: Maven Central answered HTTP 429'
-WARNING_PREFIX='::warning title=Maven Central rate limit::'
+RETRY_MARKER='retry-on-rate-limit: a server answered HTTP 429'
+WARNING_PREFIX='::warning title=Dependency download rate limit::'
 
 # --- fake commands -------------------------------------------------------------------------------
 
@@ -156,6 +156,7 @@ expect "429 then success: runs the command twice" runs_is 2
 expect "429 then success: streams the output of both runs" contains 'BUILD SUCCESSFUL in 1m 2s'
 expect "429 then success: prints one warning annotation" line_count_is "$WARNING_PREFIX" 1
 expect "429 then success: the annotation names the delay" contains "${WARNING_PREFIX}$RETRY_MARKER (Too Many Requests); running the command once more in 0 s"
+expect "429 then success: the announcement names no host" absent 'Maven Central'
 
 # 4. A 429 on both runs: exactly two runs, the second run's status is final.
 new_case

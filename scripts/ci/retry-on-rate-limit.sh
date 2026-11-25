@@ -14,6 +14,9 @@
 # with an empty Gradle cache, because the cache is written from main only, and downloads the whole classpath.
 # A delayed rerun of the step is the smallest mechanism that turns that failure into a wait.
 #
+# Gradle prints the same message whichever host answered (Maven Central, the CI mirror that ADR-0016 puts in front
+# of it, or the Gradle Plugin Portal), so neither the match nor the announcement names a host.
+#
 # What it never does: retry a failure whose output lacks the 429 message, run the command a third time, change
 # a dependency source or an option of Gradle, change the command's environment (its locale included), or evaluate
 # or re-quote the arguments. A test, compile or check failure therefore fails at once with its own exit status.
@@ -67,10 +70,10 @@ if ! LC_ALL=C grep -aqF -- "$RATE_LIMIT_MESSAGE" "$log"; then
   exit "$status"
 fi
 
-message="retry-on-rate-limit: Maven Central answered HTTP 429 (Too Many Requests); running the command once more in ${delay} s"
+message="retry-on-rate-limit: a server answered HTTP 429 (Too Many Requests); running the command once more in ${delay} s"
 echo "$message"
 if [[ ${GITHUB_ACTIONS:-} == true ]]; then
-  echo "::warning title=Maven Central rate limit::$message"
+  echo "::warning title=Dependency download rate limit::$message"
 fi
 
 sleep "$delay"
