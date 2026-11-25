@@ -24,7 +24,7 @@ editorconfig-checker = "4.0.2"
 # installs need uv >= 0.12.10 and a mise-installed interpreter, so both are pinned here instead of
 # relying on whatever uv or Python the machine or runner happens to have.
 python = "3.15.2"
-uv = "0.13.8"
+uv = "0.13.9"
 "pipx:reuse" = { version = "6.3.0", extras = "charset-normalizer" }
 "github:gradle/gradle-profiler" = "0.26.0"
 # Formatter binaries Spotless runs for shell scripts and TOML.
@@ -37,9 +37,9 @@ uv = "0.13.8"
 # (3.2.0 had it), which trips trustPolicy=no-downgrade. Remove once renovate no longer pulls it.
 "npm:renovate" = { version = "44.252.8", trust_policy_excludes = ["@yarnpkg/libzip@3.2.2"] }
 jq = "1.8.2"
-gh = "2.104.0"
+gh = "2.105.0"
 # Shared MCP servers for Claude Code (AIDEV-04), started by `.mcp.json` through `mise x --`.
 # Approved by the author with these exact versions (newest releases at least seven days old at
 # planning time); Renovate proposes updates without automerge.
-"npm:@upstash/context7-mcp" = "4.7.0"
+"npm:@upstash/context7-mcp" = "4.7.3"
 "npm:@playwright/mcp" = "0.0.85"
