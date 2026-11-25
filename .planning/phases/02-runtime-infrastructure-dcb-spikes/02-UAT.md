@@ -119,3 +119,13 @@ blocked: 0
     - "UP-0011: re-run the Go lookup on a throwaway colima profile without --dns; if the stall reproduces, open an issue in abiosoft/colima with gh after the author approves the text and record it as reported; if not, update the record with the finding"
     - "checkUpstreamRecords stays green after every record change"
   debug_session: ""
+
+## Deferred Follow-Ups
+
+- id: DF-02-1
+  gap: G-02-5
+  items: "UP-0006 recorded as reported (plan 02-28) and UP-0013 posted and recorded (plan 02-29)"
+  deferred: 2026-11-25
+  reason: "Author decision: forum moderation is an external event of unknown duration and does not hold Phase 2. UP-0006 is held as pending post 70 and the account is on hold (https://discuss.axoniq.io/t/account-temporarily-on-hold/6850); the author wrote to devrel@axoniq.io. Both plans are status halted; their records carry a dated publication status."
+  done_in_phase_2: "UP-0010 (plan 02-26: bundle range documented, record stays open) and UP-0011 (plans 02-26 and 02-27: not reproduced on a clean profile, nothing published) are resolved."
+  tracked_in: ".planning/STATE.md Pending Todos"

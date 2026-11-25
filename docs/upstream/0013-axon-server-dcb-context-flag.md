@@ -6,7 +6,7 @@ status: "open"
 workaround: false
 upstream: []
 reported: null
-updated: "2026-11-23"
+updated: "2026-11-25"
 ---
 
 # UP-0013: GET /v1/public/context reports dcbContext false for the DCB default context
@@ -66,6 +66,11 @@ functional proof.
 
 Target: the AxonIQ forum, category Axon Server, or AxonIQ support, because Axon Server has no public issue tracker. Not
 published; publication needs the approval of the author (plan 02-22).
+
+Publication status (2026-11-25): the forum refused a second topic while the UP-0006 post was pending, and the account is
+on hold until staff review it. The author wrote to AxonIQ developer relations the same day and mentioned this report.
+It is posted, under the forum posting rule of ADR-0013 ("Publication (UPS-03)"), once the hold is lifted; that step is a
+follow-up outside Phase 2.
 
 ### Axon Server 2026.1.8: GET /v1/public/context reports dcbContext false for a DCB default context
 

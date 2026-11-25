@@ -6,7 +6,7 @@ status: "open"
 workaround: true
 upstream: []
 reported: null
-updated: "2026-11-23"
+updated: "2026-11-25"
 ---
 
 # UP-0006: An empty AxonIQ Platform token leaves Axon Server running with dead HTTP and gRPC endpoints
@@ -98,6 +98,12 @@ Axon Server is not open source and has no public issue tracker, so the target is
 (`https://discuss.axoniq.io`, category for Axon Server) or AxonIQ support. A search of the forum on 2026-11-23 found no
 report of this behavior; the one topic about the Platform variable concerns a Raft pre-vote loop with a valid token on
 a fresh volume, which is a different defect.
+
+Publication status (2026-11-25): the author approved the text below and it was submitted to the forum in category Axon
+Server. Discourse held it for moderation as pending post 70 and placed the new account on hold until staff review it
+(see the forum posting rule in ADR-0013, "Publication (UPS-03)"). The author also wrote to AxonIQ developer relations
+the same day. The record moves to `reported` with the topic link once the post is public; that step is a follow-up
+outside Phase 2.
 
 ````markdown
 # Empty `AXONIQ_PLATFORM_AUTHENTICATION` is treated as configured and crashes the startup runner
