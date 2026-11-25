@@ -305,10 +305,10 @@ checksum = "sha256:82bb96078a24ca50b9c9a38f2379e6be6d87171fcd400fc14c8934b3bce96
 url = "https://nodejs.org/dist/v26.13.1/node-v26.13.1-darwin-x64.tar.gz"
 
 [[tools."npm:@playwright/mcp"]]
-version = "0.0.85"
-aube = { path = ".mise/locks/npm-playwright-mcp/0.0.85", digest = "sha256:b51d397992c591819149beaf266194c7307b4f8115ba708fc3079e501880884a" }
+version = "0.0.86"
+aube = { path = ".mise/locks/npm-playwright-mcp/0.0.86", digest = "sha256:833a668722c5306dad6fb5374fd25e1030dffdb6d62103aac502ab69576d7dd7" }
 backend = "npm:@playwright/mcp"
-specifiers = ["0.0.85"]
+specifiers = ["0.0.86"]
 
 [[tools."npm:@upstash/context7-mcp"]]
 version = "4.7.3"
