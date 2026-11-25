@@ -2,6 +2,7 @@
 Skeleton for an upstream issue, written for the maintainers of the product, who do not know this repository. Fill it
 into the "Upstream issue draft" section of the record in docs/upstream/ and publish it only after the author has
 approved it (UPS-03). It must contain no tokens, local paths with user names, e-mail addresses or other private data.
+A forum draft is posted as ADR-0013 prescribes under "Publication (UPS-03)", never filled in one automated action.
 -->
 
 # <short summary of the defect>
