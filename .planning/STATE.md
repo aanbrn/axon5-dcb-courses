@@ -4,10 +4,10 @@ current_phase: 3
 current_phase_name: Command Walking Skeleton
 status: planning
 stopped_at: Phase 02 complete, ready to plan Phase 3
-last_updated: "2026-11-25T10:24:57.562Z"
+last_updated: "2026-11-25T11:20:58.316Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: 9458367551c28b12da65b6113898dca2b0bdd7c0
+state_head: dd0bf7a8f8091110273bb792c34700e1f86c8ffc
 progress:
   total_phases: 13
   completed_phases: 2
@@ -187,6 +187,7 @@ Recent decisions affecting current work:
 | 34 | Disclose AI assistance in the UP-0013 forum draft (reviewed and approved by the author) | 2026-11-25 | 334f3d7 | — |
 | 261125-lqw | Fix Phase 02 review findings WR-01 (locale scoped to the 429 grep) and IN-02 (host-neutral retry message) in the CI rate-limit wrapper | 2026-11-25 | 29a5ad4 | [261125-lqw-fix-phase-02-review-findings-wr-01-and-i](./quick/261125-lqw-fix-phase-02-review-findings-wr-01-and-i/) |
 | 261125-mwg | Close Phase 02 follow-ups: IN-01, IN-03, IN-04, multi-line front matter lists, Spotless skips git-ignored files | 2026-11-25 | 9458367 | [261125-mwg-close-the-open-phase-02-follow-ups-in-01](./quick/261125-mwg-close-the-open-phase-02-follow-ups-in-01/) |
+| 37 | Record the AxonIQ maintainer replies on UP-0006 and UP-0013 (fixes promised for the next Axon Server release) | 2026-11-25 | dd0bf7a | — |
 
 ## Deferred Items
 
