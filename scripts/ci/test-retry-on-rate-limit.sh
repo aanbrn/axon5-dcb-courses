@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
 # Self-contained tests for retry-on-rate-limit.sh. Every case runs the real wrapper around a fake command whose
-# output and exit status per run are scripted, and proves three things: a command that fails with Gradle's HTTP 429
+# output and exit status per run are scripted, and proves four things: a command that fails with Gradle's HTTP 429
 # message is run exactly once more and the second result is final; any other failure, and any success, is never
 # retried and keeps the command's own exit status; the arguments reach the command unchanged and every retry is
-# announced with a fixed text.
+# announced with a fixed text; the command sees the caller's environment unchanged, its locale included.
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -24,7 +24,8 @@ WARNING_PREFIX='::warning title=Maven Central rate limit::'
 # --- fake commands -------------------------------------------------------------------------------
 
 # fake-command: counts its runs in $FAKE_DIR/count and, for run N, prints $FAKE_DIR/run.N.stdout to standard output
-# and $FAKE_DIR/run.N.stderr to standard error, then exits with the number in $FAKE_DIR/run.N.status (default 0).
+# and $FAKE_DIR/run.N.stderr to standard error, then exits with the number in $FAKE_DIR/run.N.status (default 0). It
+# also records the LC_ALL each run sees in $FAKE_DIR/run.N.lc_all.
 cat >"$TMP/fake-command" <<'FAKE'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -34,6 +35,7 @@ if [[ -f "$FAKE_DIR/count" ]]; then
 fi
 count=$((count + 1))
 echo "$count" >"$FAKE_DIR/count"
+printf '%s\n' "${LC_ALL-<unset>}" >"$FAKE_DIR/run.$count.lc_all"
 if [[ -f "$FAKE_DIR/run.$count.stdout" ]]; then
   cat "$FAKE_DIR/run.$count.stdout"
 fi
@@ -247,6 +249,24 @@ script_run 2 0
 run_wrapper 0 true "$TMP/fake-command"
 expect "fixed text: only the wrapper's own warning carries its title" line_count_is "$WARNING_PREFIX" 1
 expect "fixed text: runs the command twice" runs_is 2
+
+# 13. The wrapped command runs in the caller's locale in both runs (review WR-01). Unset is what a GitHub runner has
+# (LANG only). POSIX exists on every system and differs from `C` as a string, so an overwrite shows.
+for caller_lc_all in '<unset>' POSIX; do
+  new_case
+  script_run 1 1 stdout "$RATE_LIMIT_LINE"
+  script_run 2 0 stdout 'BUILD SUCCESSFUL in 5s'
+  locale_env=(LC_ALL="$caller_lc_all")
+  if [[ $caller_lc_all == '<unset>' ]]; then
+    locale_env=(-u LC_ALL)
+  fi
+  CODE=0
+  OUT=$(env -u GITHUB_ACTIONS "${locale_env[@]}" FAKE_DIR="$FAKE_DIR" RATE_LIMIT_RETRY_DELAY_SECONDS=0 "$WRAPPER" "$TMP/fake-command" 2>&1) || CODE=$?
+  expect "caller LC_ALL $caller_lc_all: exits 0" exit_code_is 0
+  expect "caller LC_ALL $caller_lc_all: runs the command twice" runs_is 2
+  expect "caller LC_ALL $caller_lc_all: the first run sees the caller's LC_ALL" [ "$(cat "$FAKE_DIR/run.1.lc_all" 2>/dev/null || echo missing)" = "$caller_lc_all" ]
+  expect "caller LC_ALL $caller_lc_all: the second run sees the caller's LC_ALL" [ "$(cat "$FAKE_DIR/run.2.lc_all" 2>/dev/null || echo missing)" = "$caller_lc_all" ]
+done
 
 echo
 echo "$passed passed, $failed failed"

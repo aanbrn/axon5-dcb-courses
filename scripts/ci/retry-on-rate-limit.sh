@@ -15,8 +15,8 @@
 # A delayed rerun of the step is the smallest mechanism that turns that failure into a wait.
 #
 # What it never does: retry a failure whose output lacks the 429 message, run the command a third time, change
-# a dependency source or an option of Gradle, or evaluate or re-quote the arguments. A test, compile or check
-# failure therefore fails at once with its own exit status.
+# a dependency source or an option of Gradle, change the command's environment (its locale included), or evaluate
+# or re-quote the arguments. A test, compile or check failure therefore fails at once with its own exit status.
 #
 # Usage: retry-on-rate-limit.sh <command> [<argument>...]
 #
@@ -31,9 +31,6 @@
 #
 # Exit codes: the command's own status (of the second run after a retry); 2 for a usage error.
 set -euo pipefail
-
-# Byte-wise comparison regardless of the caller's locale.
-export LC_ALL=C
 
 # The line Gradle prints for the failed request, for example
 # "Received status code 429 from server: Too Many Requests".
@@ -63,7 +60,10 @@ if [[ $status -eq 0 ]]; then
   exit 0
 fi
 
-if ! grep -aqF -- "$RATE_LIMIT_MESSAGE" "$log"; then
+# The C locale applies to this grep alone, so the match is byte-wise whatever the caller's locale. Exporting it would
+# put both runs of the command, Gradle included, into the C locale (console and file-name encodings, the default
+# Locale), unlike a local run.
+if ! LC_ALL=C grep -aqF -- "$RATE_LIMIT_MESSAGE" "$log"; then
   exit "$status"
 fi
 
