@@ -5,6 +5,14 @@ name: CI
 # `governance-success`, see docs/adr/0001-workflow-permissions-and-required-checks.md). There are no
 # path filters on purpose: a documentation-only pull request still runs every job and still reports
 # `ci-success`.
+#
+# Every Gradle step of a required job runs through scripts/ci/retry-on-rate-limit.sh, which runs the step once more
+# after a delay, and only then, when Gradle reports HTTP 429 from Maven Central; any other failure fails at once.
+# Pull-request runs of the jobs that main does not run yet start with an empty cache (the `cache-read-only` comment
+# below explains why a pull request never writes the cache) and download the whole classpath, which is when Maven
+# Central rate-limits a runner. The header of the script explains why Gradle's own retry does not cover it. The
+# `qodana` job is the exception: it runs Gradle inside its own container through scripts/qodana.sh, a retry would
+# repeat an analysis of up to 60 minutes, and its cache is restored from main, where the job already runs.
 on:
   push:
     branches: [main]
@@ -71,7 +79,9 @@ jobs:
       # with "Task 'checkDependencyLicences' not found" when no module registers it, so a build that lost
       # the licence gate fails instead of skipping it. The check does not run a second time.
       - name: Build
-        run: ./gradlew build checkDependencyLicences -x integrationTest -x :build-logic:functionalTest --console=plain
+        run: >-
+          scripts/ci/retry-on-rate-limit.sh ./gradlew build checkDependencyLicences
+          -x integrationTest -x :build-logic:functionalTest --console=plain
 
       - name: Upload build reports
         if: failure()
@@ -110,7 +120,7 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       - name: Integration tests
-        run: ./gradlew integrationTest --console=plain
+        run: scripts/ci/retry-on-rate-limit.sh ./gradlew integrationTest --console=plain
 
       - name: Upload integration test reports
         if: failure()
@@ -169,7 +179,7 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       - name: Functional tests
-        run: ./gradlew :build-logic:functionalTest --console=plain
+        run: scripts/ci/retry-on-rate-limit.sh ./gradlew :build-logic:functionalTest --console=plain
 
       - name: Upload functional test reports
         if: failure()
@@ -211,7 +221,7 @@ jobs:
       - name: Start the stack
         run: docker compose up -d --wait
 
-      # Runs through the rate-limit wrapper; scripts/ci/retry-on-rate-limit.sh explains why.
+      # Through the rate-limit wrapper like every Gradle step, see the header of this file.
       - name: Host scenario (test against localhost:8124)
         run: >-
           scripts/ci/retry-on-rate-limit.sh ./gradlew :command-service:integrationTest
@@ -350,7 +360,7 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       - name: Diagnose the environment
-        run: scripts/doctor.sh --ci
+        run: scripts/ci/retry-on-rate-limit.sh scripts/doctor.sh --ci
 
   # Advisory only (UPS-04, D-32): when a change moves a pinned version, lists the upstream records of that product
   # (docs/upstream) with their removal criteria in the job summary and as warnings, so a reviewer can see which
