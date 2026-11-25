@@ -53,10 +53,11 @@ what local builds and Renovate read or weakening the cache policy.
   settings files declare follow it in their original order. The Gradle Plugin Portal is added back behind the mirror in
   the plugin list, because it is Gradle's implicit default and disappears once that list is not empty. A file the mirror
   lacks (HTTP 404, for example a Plugin Portal marker) is found in the repositories behind it.
-- The workflow installs the script into `${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/` in a step after setup-gradle in each
-  of the five Gradle jobs. A file there reaches every Gradle invocation of a job, including the one inside
-  `scripts/doctor.sh --ci`, with no change to any command line. The step is identical in every job, on `main` and on pull
-  requests, so the init script's contribution to the configuration-cache fingerprint is the same everywhere.
+- The local composite action `.github/actions/maven-central-mirror` installs the script into
+  `${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/`, and each of the five Gradle jobs calls it after setup-gradle. A file
+  there reaches every Gradle invocation of a job, including the one inside `scripts/doctor.sh --ci`, with no change to
+  any command line. One definition replaces five copies, so the step cannot drift between jobs, and the init script's
+  contribution to the configuration-cache fingerprint is the same everywhere, on `main` and on pull requests.
 - `scripts/ci/retry-on-rate-limit.sh` (plan 02-24) stays as the second line: it reruns a Gradle step once, after a delay,
   when Gradle reports HTTP 429 from whichever host answered.
 - `cache-provider: basic` and `cache-read-only` on pull requests stay as they are.

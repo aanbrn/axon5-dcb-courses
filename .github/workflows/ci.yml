@@ -9,14 +9,16 @@ name: CI
 # Dependency downloads of the five Gradle jobs (docs/adr/0016-ci-dependency-downloads.md). Pull-request runs of the
 # jobs that main does not run yet start with an empty cache (the `cache-read-only` comment below explains why a pull
 # request never writes the cache) and download the whole classpath, which is when Maven Central rate-limits a runner.
-# Gradle does not move on to the next repository after an HTTP 429 or 5xx, so two mechanisms cover it. First, a step
-# after setup-gradle installs scripts/ci/maven-central-mirror.init.gradle.kts into the runner's Gradle user home, which
-# puts Google's Maven Central mirror first in every build's plugin and dependency repositories with the declared ones
-# behind it; local builds and Renovate never see it. Second, every Gradle step runs through
-# scripts/ci/retry-on-rate-limit.sh, which runs the step once more after a delay, and only then, when Gradle reports
-# HTTP 429; any other failure fails at once. The cache is written from main only. The `qodana` job is the exception to
-# both: it runs Gradle inside its own container through scripts/qodana.sh, a retry would repeat an analysis of up to 60
-# minutes, and its cache is restored from main, where the job already runs.
+# Gradle does not move on to the next repository after an HTTP 429 or 5xx, so two mechanisms cover it. First, the local
+# composite action .github/actions/maven-central-mirror, called after setup-gradle in each of these jobs, installs
+# scripts/ci/maven-central-mirror.init.gradle.kts into the runner's Gradle user home, which puts Google's Maven Central
+# mirror first in every build's plugin and dependency repositories with the declared ones behind it; local builds and
+# Renovate never see it. The action is referenced as `./.github/actions/...`, with a zizmor ignore for its
+# self-repository audit, because actionlint does not parse the `$/...` form that audit asks for yet. Second, every
+# Gradle step runs through scripts/ci/retry-on-rate-limit.sh, which runs the step once more after a delay, and only
+# then, when Gradle reports HTTP 429; any other failure fails at once. The cache is written from main only. The
+# `qodana` job is the exception to both: it runs Gradle inside its own container through scripts/qodana.sh, a retry
+# would repeat an analysis of up to 60 minutes, and its cache is restored from main, where the job already runs.
 on:
   push:
     branches: [main]
@@ -77,9 +79,7 @@ jobs:
 
       # See docs/adr/0016-ci-dependency-downloads.md.
       - name: Use the Maven Central mirror (CI only)
-        run: >-
-          install -D -m 0644 scripts/ci/maven-central-mirror.init.gradle.kts
-          "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/maven-central-mirror.init.gradle.kts"
+        uses: ./.github/actions/maven-central-mirror # zizmor: ignore[self-repository]
 
       # Compile, unit and component tests (Testcontainers needs only the runner's Docker), Spotless, detekt,
       # Dokka and the governance checks. The integration tests run in the parallel `integration-test` job and
@@ -131,9 +131,7 @@ jobs:
 
       # See docs/adr/0016-ci-dependency-downloads.md.
       - name: Use the Maven Central mirror (CI only)
-        run: >-
-          install -D -m 0644 scripts/ci/maven-central-mirror.init.gradle.kts
-          "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/maven-central-mirror.init.gradle.kts"
+        uses: ./.github/actions/maven-central-mirror # zizmor: ignore[self-repository]
 
       - name: Integration tests
         run: scripts/ci/retry-on-rate-limit.sh ./gradlew integrationTest --console=plain
@@ -196,9 +194,7 @@ jobs:
 
       # See docs/adr/0016-ci-dependency-downloads.md.
       - name: Use the Maven Central mirror (CI only)
-        run: >-
-          install -D -m 0644 scripts/ci/maven-central-mirror.init.gradle.kts
-          "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/maven-central-mirror.init.gradle.kts"
+        uses: ./.github/actions/maven-central-mirror # zizmor: ignore[self-repository]
 
       - name: Functional tests
         run: scripts/ci/retry-on-rate-limit.sh ./gradlew :build-logic:functionalTest --console=plain
@@ -242,9 +238,7 @@ jobs:
 
       # See docs/adr/0016-ci-dependency-downloads.md.
       - name: Use the Maven Central mirror (CI only)
-        run: >-
-          install -D -m 0644 scripts/ci/maven-central-mirror.init.gradle.kts
-          "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/maven-central-mirror.init.gradle.kts"
+        uses: ./.github/actions/maven-central-mirror # zizmor: ignore[self-repository]
 
       - name: Start the stack
         run: docker compose up -d --wait
@@ -304,10 +298,10 @@ jobs:
         run: actionlint
 
       # Online audits (impostor commits, ref confusion) need the job token to query the GitHub API.
-      - name: Audit workflows (zizmor)
+      - name: Audit workflows and actions (zizmor)
         env:
           GH_TOKEN: ${{ github.token }}
-        run: zizmor --no-progress .github/workflows
+        run: zizmor --no-progress .github/workflows .github/actions
 
       - name: Lint shell scripts (shellcheck)
         run: git ls-files -z '*.sh' | xargs -0 -r shellcheck
@@ -389,9 +383,7 @@ jobs:
 
       # See docs/adr/0016-ci-dependency-downloads.md.
       - name: Use the Maven Central mirror (CI only)
-        run: >-
-          install -D -m 0644 scripts/ci/maven-central-mirror.init.gradle.kts
-          "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/maven-central-mirror.init.gradle.kts"
+        uses: ./.github/actions/maven-central-mirror # zizmor: ignore[self-repository]
 
       - name: Diagnose the environment
         run: scripts/ci/retry-on-rate-limit.sh scripts/doctor.sh --ci
