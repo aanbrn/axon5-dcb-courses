@@ -115,7 +115,7 @@ found` on both `pack` and `BootBuildImage`. The fix is the classic image store (
   (fallback, immutable assets, 404 for a missing asset, `/healthz`, the streaming proxy), the health check and the
   labels. Until then the spike is the evidence, and no test in this repository builds an image.
 - `scripts/doctor.sh` has the `colima` check (DNS, carrying the `UPSTREAM` marker of UP-0011) and the `image-store`
-  check, which reports the active image store.
+  check, which reports the active image store and warns when the containerd store runs on an engine older than 29.9.0.
 - A Konsist rule keeps image names out of source literals, so every image comes from the version catalog.
 
 ## Pros and Cons of the Options

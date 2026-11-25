@@ -300,6 +300,25 @@ class ImageReferenceCheckFunctionalTest {
     }
 
     @Test
+    fun `compose findings of one file are listed by numeric line number, not as text`() {
+        val padding = (1..8).map { "    # padding-$it" }
+        fixture.file(
+            INFRA,
+            services("    image: postgres:18", *padding.toTypedArray(), "    image: redis:8"),
+        )
+        val early = "compose/infra.yaml:3: image 'postgres:18'"
+        val late = "compose/infra.yaml:12: image 'redis:8'"
+
+        val output = fixture.runAndFail(TASK).output
+
+        output shouldContain early
+        output shouldContain late
+        withClue("the finding on line 3 comes before the one on line 12") {
+            (output.indexOf(early) < output.indexOf(late)) shouldBe true
+        }
+    }
+
+    @Test
     fun `the image regex of renovate json5 reads every line reported as read elsewhere and no silent control`() {
         val regex = renovateImageRegex()
 

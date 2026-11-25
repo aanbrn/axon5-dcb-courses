@@ -5,19 +5,19 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`doctor` reports `ok` for the containerd image store on an engine older than 29.9.0, the combination UP-0012 still documents as failing"
   - id: IN-01
     severity: info
-    disposition: open
+    disposition: fixed
     title: "A server without a usable `command` is counted as resolved, so a broken stdio server is reported `ok`"
   - id: IN-02
     severity: info
-    disposition: open
+    disposition: deferred
     title: "The UP-0012 removal evidence cannot tell a fixed engine from a broken one, and part of the record's own verification list was not run"
   - id: IN-03
     severity: info
-    disposition: open
+    disposition: fixed
     title: "The numeric-order test covers only catalog findings, not compose findings"
   - id: WR-02
     severity: warning
@@ -79,7 +79,7 @@ findings:
     severity: info
     disposition: skipped
     title: "Necessity (judgment) - the empty `contracts-queries` module and its rule entries have no instantiation yet"
-open: 4
+open: 0
 total: 19
 recorded: 2026-11-24T23:39:39.145Z
 ---
@@ -88,10 +88,10 @@ recorded: 2026-11-24T23:39:39.145Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
-| IN-01 | info | open | - |
-| IN-02 | info | open | - |
-| IN-03 | info | open | - |
+| WR-01 | warning | fixed | 02-REVIEW.md — fixed by quick task 261125-a09 in 1e9c0fc (server version kept from check_docker; warn below 29.9.0 and on an uncomparable version; tests on both sides of the boundary) |
+| IN-01 | info | fixed | 02-REVIEW.md — fixed by quick task 261125-a09 in a3b156c (only a server with a url has no command to resolve; one with neither fails; tests) |
+| IN-02 | info | deferred | recorded as a Phase 6 CICD-02 acceptance note in STATE.md |
+| IN-03 | info | fixed | 02-REVIEW.md — fixed by quick task 261125-a09 in eac6cd9 (compose findings on lines 3 and 12 keep numeric order) |
 | WR-02 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-oyk in 9392b29 (KDoc states the observed raw-UUID map key; JsonRoundTripTest pins it; key form left to an ADR when a contract first holds an ID-keyed map) (not in the current review) |
 | WR-03 | warning | fixed | 02-REVIEW.md — fixed by quick task 261124-oyk in b61e980 (check accepts exactly the form the Renovate image manager reads, rejects registry ports; parity test reads the regex from renovate.json5) (not in the current review) |
 | CR-01 | critical | fixed | 02-REVIEW.md — fixed by quick task 261124-kh6 in 9f8be86 (shell option clusters and value-taking long options parsed as bash does; unknown forms ask) (not in the current review) |

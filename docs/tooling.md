@@ -132,7 +132,8 @@ Desktop is available on the author's machine.
   - Either image store works. The classic store (`docker.features.containerd-snapshotter: false`) is the one this
     repository was verified on. The containerd store needs Docker Engine 29.9.0 or newer, because older engines cannot
     export the Paketo noble run image
-    ([UP-0012](upstream/0012-docker-containerd-platform-export.md)). `doctor` reports which store is active.
+    ([UP-0012](upstream/0012-docker-containerd-platform-export.md)). `doctor` reports which store is active and warns
+    when the containerd store runs on an engine older than 29.9.0 or on a version it cannot compare.
 - colima, the documented Testcontainers alternative: start colima with `--network-address`, export `DOCKER_HOST` with the
   colima socket (`unix://$HOME/.colima/default/docker.sock`), `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock`
   and `TESTCONTAINERS_HOST_OVERRIDE` with the address from `colima ls -j`.

@@ -35,9 +35,10 @@ readonly ROOT
 
 CI_MODE=false
 JAVA_OK=false
-# Set by check_docker: whether the engine answered, and the name of the docker context in use.
+# Set by check_docker: whether the engine answered, the name of the docker context in use and the engine's server version.
 DOCKER_OK=false
 DOCKER_CONTEXT=''
+DOCKER_SERVER_VERSION=''
 COUNT_OK=0
 COUNT_WARN=0
 COUNT_FAIL=0
@@ -224,25 +225,50 @@ check_docker() {
   *) if [[ $operating_system == *"Docker Desktop"* ]]; then engine="Docker Desktop"; else engine="engine"; fi ;;
   esac
   DOCKER_OK=true
+  DOCKER_SERVER_VERSION=$version
   report ok docker "$engine reachable through context ${context:-unknown}, server $version"
 }
 
+# The lowest Docker engine that exports the Paketo noble run image on the containerd image store (docs/tooling.md,
+# UP-0012). A requirement, not a workaround: the UP-0012 record is workaround-removed, so no UPSTREAM marker here.
+readonly CONTAINERD_STORE_MIN_DOCKER=29.9.0
+
 # image-store: which image store the engine uses. Both work: the classic store is the one on which the Testcontainers and
 # Paketo setup was verified, and the containerd store needs Docker 29.9.0 or newer, because older engines cannot export
-# the Paketo noble run image (docs/tooling.md, UP-0012). The containerd store reports the driver `overlayfs` and a
-# snapshotter entry in the driver status.
+# the Paketo noble run image (docs/tooling.md, UP-0012). So below that, or on a version that cannot be compared, the
+# check warns. A `-` or `+` suffix of the server version (29.10.0+azure-1, 29.9.0-rc.1) is dropped before comparing.
+# The containerd store reports the driver `overlayfs` and a snapshotter entry in the driver status. The server version
+# comes from check_docker, which only sets DOCKER_OK with a non-empty one.
 check_image_store() {
   if [[ $DOCKER_OK != true ]]; then
     report skip image-store "the engine does not answer, see the docker check"
     return
   fi
-  local driver status
+  local driver status version=$DOCKER_SERVER_VERSION core lowest
   driver=$(docker_field Driver)
   status=$(docker info --format '{{json .DriverStatus}}' 2>/dev/null || true)
-  if [[ $driver == overlayfs || $status == *io.containerd.snapshotter* ]]; then
-    report ok image-store "the containerd image store is active (driver ${driver:-unknown}; it needs Docker 29.9.0 or newer, see docs/tooling.md)"
+  if [[ $driver != overlayfs && $status != *io.containerd.snapshotter* ]]; then
+    report ok image-store "the classic image store is active on Docker $version (driver ${driver:-unknown})"
+    return
+  fi
+  core=${version%%[-+]*}
+  if [[ ! $core =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    report warn image-store \
+      "the containerd image store is active on Docker '$version', a version that cannot be compared with its minimum $CONTAINERD_STORE_MIN_DOCKER" \
+      "upgrade the Docker engine to $CONTAINERD_STORE_MIN_DOCKER or newer (docker version shows it), see docs/tooling.md" \
+      "or use the classic image store, colima: colima stop && colima start --edit, then set docker.features.containerd-snapshotter: false" \
+      "or use the classic image store, Docker Desktop: Settings > General, turn off 'Use containerd for pulling and storing images'"
+    return
+  fi
+  lowest=$(printf '%s\n%s\n' "$CONTAINERD_STORE_MIN_DOCKER" "$core" | sort -V | sed -n 1p)
+  if [[ $lowest == "$CONTAINERD_STORE_MIN_DOCKER" ]]; then
+    report ok image-store "the containerd image store is active on Docker $version (driver ${driver:-unknown}), which meets its minimum $CONTAINERD_STORE_MIN_DOCKER"
   else
-    report ok image-store "the classic image store is active (driver ${driver:-unknown})"
+    report warn image-store \
+      "the containerd image store is active on Docker $version, which is older than $CONTAINERD_STORE_MIN_DOCKER and cannot export the Paketo noble run image (UP-0012)" \
+      "upgrade the Docker engine to $CONTAINERD_STORE_MIN_DOCKER or newer (docker version shows it), see docs/tooling.md" \
+      "or use the classic image store, colima: colima stop && colima start --edit, then set docker.features.containerd-snapshotter: false" \
+      "or use the classic image store, Docker Desktop: Settings > General, turn off 'Use containerd for pulling and storing images'"
   fi
 }
 
@@ -479,10 +505,12 @@ check_gsd_defaults() {
 
 # mcp (local only, AIDEV-04): the binary of every server in .mcp.json resolves. A server started through
 # `mise x -- <binary>` is resolved with `mise which`, any other command through PATH. A server without a `command` (an
-# HTTP or SSE server that has a url) has no binary to resolve; its url can carry a credential and is never read.
+# HTTP or SSE server) must have a url and then has no binary to resolve; its url can carry a credential and never leaves
+# jq. A server with neither a command nor a url can never start: a defect of the committed .mcp.json, so the check fails,
+# while an unresolved binary of a well-formed server is a warning that `mise install` fixes.
 check_mcp() {
   local_only mcp && return
-  local file=$ROOT/.mcp.json jq servers kind name binary total=0 remote=0 unresolved=''
+  local file=$ROOT/.mcp.json jq servers kind name binary total=0 remote=0 unresolved='' missing=''
   if [[ ! -f $file ]]; then
     report ok mcp "no .mcp.json, so no project MCP servers"
     return
@@ -493,9 +521,10 @@ check_mcp() {
   fi
   # The shape check: an object whose `mcpServers`, when present, is an object of server objects. Anything else would end
   # the run under set -e (or, for an array of servers, be counted as zero servers).
-  # Every server is one line of three tab-separated fields: its kind (mise, path or none), its name and the binary to
-  # resolve. No field is ever empty, because `read` with a tab as separator would drop an empty field and shift the
-  # ones behind it; a server that has nothing to resolve gets `-` as its binary, and the url never leaves jq.
+  # Every server is one line of three tab-separated fields: its kind (mise, path, none or missing), its name and the
+  # binary to resolve. `none` is a server with a url and no command, `missing` one with neither. No field is ever empty,
+  # because `read` with a tab as separator would drop an empty field and shift the ones behind it; a server that has
+  # nothing to resolve gets `-` as its binary, and the url never leaves jq.
   # shellcheck disable=SC2016 # a jq program, not shell
   if ! servers=$("$jq" -r '
     def text: if type == "string" and . != "" then . else null end;
@@ -504,7 +533,7 @@ check_mcp() {
       | ((.value.args // []) | if type == "array" then . else [] end) as $args
       | (.value.command | text) as $command
       | (.key | text // "(unnamed)") as $name
-      | if $command == null then ["none", $name, "-"]
+      | if $command == null then (if (.value.url | text) != null then ["none", $name, "-"] else ["missing", $name, "-"] end)
         elif $command == "mise" and ($args[0] == "x" or $args[0] == "exec") and $args[1] == "--"
             and ($args[2] | text) != null then ["mise", $name, $args[2]]
         else ["path", $name, $command] end | @tsv
@@ -518,6 +547,7 @@ check_mcp() {
     total=$((total + 1))
     case $kind in
     none) remote=$((remote + 1)) ;;
+    missing) missing+="${missing:+, }$name" ;;
     mise)
       if ! has mise || ! (cd "$ROOT" && mise which "$binary" >/dev/null 2>&1); then
         unresolved+="${unresolved:+, }$name ($binary)"
@@ -530,7 +560,15 @@ check_mcp() {
       ;;
     esac
   done <<<"$servers"
-  if [[ -n $unresolved ]]; then
+  if [[ -n $missing ]]; then
+    local detail="servers in .mcp.json with neither a command nor a url: $missing"
+    local restore="give each of them a command, or a url for an HTTP or SSE server, or restore the committed version: git restore .mcp.json"
+    if [[ -n $unresolved ]]; then
+      report fail mcp "$detail; servers whose binary cannot be resolved: $unresolved" "$restore" "mise install"
+    else
+      report fail mcp "$detail" "$restore"
+    fi
+  elif [[ -n $unresolved ]]; then
     report warn mcp "servers in .mcp.json whose binary cannot be resolved: $unresolved" "mise install"
   elif [[ $remote -gt 0 ]]; then
     report ok mcp "all $total servers in .mcp.json resolve through mise or PATH, or have no command to resolve ($remote)"
