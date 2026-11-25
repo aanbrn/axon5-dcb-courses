@@ -790,7 +790,8 @@ check_git() {
 }
 
 # claude-tracking (AIDEV-03, also in --ci): the only tracked content under .claude/ is the project-owned settings.json
-# and CLAUDE.md and the spike-findings skills (D-39). The GSD installation and local settings stay untracked.
+# and CLAUDE.md, the spike-findings skills (D-39) and the vendored dynamic-consistency-boundaries skill (ADR-0014).
+# The GSD installation and local settings stay untracked.
 check_claude_tracking() {
   if ! has git || ! git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     report skip claude-tracking "the repository is not a git work tree"
@@ -799,14 +800,14 @@ check_claude_tracking() {
   local tracked unexpected path count
   tracked=$(git -C "$ROOT" ls-files -- .claude)
   unexpected=$(printf '%s\n' "$tracked" |
-    grep -vE '^$|^\.claude/(settings\.json|CLAUDE\.md|skills/spike-findings-[^/]+/.*)$' || true)
+    grep -vE '^$|^\.claude/(settings\.json|CLAUDE\.md|skills/spike-findings-[^/]+/.*|skills/dynamic-consistency-boundaries/.*)$' || true)
   if [[ -z $unexpected ]]; then
     count=$(printf '%s\n' "$tracked" | grep -c . || true)
     report ok claude-tracking "only project-owned files are tracked under .claude ($count files)"
     return
   fi
   while IFS= read -r path; do
-    report fail claude-tracking "$path is tracked, but only settings.json, CLAUDE.md and skills/spike-findings-* may be (AIDEV-03)" \
+    report fail claude-tracking "$path is tracked, but only settings.json, CLAUDE.md, skills/spike-findings-* and skills/dynamic-consistency-boundaries may be (AIDEV-03)" \
       "git rm --cached $path"
   done <<<"$unexpected"
 }

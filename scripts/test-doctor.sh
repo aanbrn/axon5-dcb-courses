@@ -993,6 +993,27 @@ run_doctor "$ENV"
 assert_code "tracked spike skill" 0
 assert_out "tracked spike skill" "^ok  claude-tracking: "
 
+fresh
+mkdir -p "$ENV/repo/.claude/skills/dynamic-consistency-boundaries/references"
+echo "skill" >"$ENV/repo/.claude/skills/dynamic-consistency-boundaries/SKILL.md"
+echo "concepts" >"$ENV/repo/.claude/skills/dynamic-consistency-boundaries/references/concepts.md"
+echo "readme" >"$ENV/repo/.claude/skills/dynamic-consistency-boundaries/README.md"
+git -C "$ENV/repo" add -f .claude/skills/dynamic-consistency-boundaries/SKILL.md
+git -C "$ENV/repo" add -f .claude/skills/dynamic-consistency-boundaries/references/concepts.md
+git -C "$ENV/repo" add -f .claude/skills/dynamic-consistency-boundaries/README.md
+run_doctor "$ENV"
+assert_code "tracked vendored skill" 0
+assert_out "tracked vendored skill" "^ok  claude-tracking: "
+
+fresh
+mkdir -p "$ENV/repo/.claude/skills/dynamic-consistency-boundaries-x"
+echo "skill" >"$ENV/repo/.claude/skills/dynamic-consistency-boundaries-x/SKILL.md"
+git -C "$ENV/repo" add -f .claude/skills/dynamic-consistency-boundaries-x/SKILL.md
+run_doctor "$ENV"
+assert_code "tracked lookalike skill" 1
+assert_out "tracked lookalike skill" "^fail  claude-tracking: .claude/skills/dynamic-consistency-boundaries-x/SKILL\\.md is tracked"
+assert_out "tracked lookalike skill" "^      fix: git rm --cached .claude/skills/dynamic-consistency-boundaries-x/SKILL\\.md"
+
 # --- upstream-removal ----------------------------------------------------------------------------
 
 # The marker word lives in a variable: written out after a comment opener, it would itself be a marker, and the

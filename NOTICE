@@ -34,6 +34,13 @@ Test data
   https://github.com/jetify-com/typeid (spec/valid.yml and spec/invalid.yml, spec v0.3.0) and stay under the Apache-2.0
   licence of that project; REUSE.toml records this.
 
+Agent skill
+
+  The Claude Code skill in .claude/skills/dynamic-consistency-boundaries/ (SKILL.md and references/) is copied byte for
+  byte from https://github.com/AxonIQ/AxonFramework (.claude/skills/dynamic-consistency-boundaries) and stays under the
+  Apache-2.0 licence of that project; the README.md beside it names the pinned commit and REUSE.toml records the
+  licence.
+
 Axoniq Framework terms
 
   The Axoniq Framework modules and the Axon Server client are not open source. They are provided under the Axoniq
