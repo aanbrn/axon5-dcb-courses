@@ -130,8 +130,9 @@ Desktop is available on the author's machine.
   - `~/.testcontainers.properties` holds `tc.host=unix:///var/run/docker.sock`. Testcontainers has no docker-context
     discovery, so it gets the colima daemon explicitly. The `/var/run` path is the daemon socket inside the VM, so Ryuk
     can mount it. `scripts/doctor.sh` reports the `tc.host` and `docker.host` keys by name and never their values.
-  - `network.dns` in the colima configuration lists at least one resolver (`colima start --dns <address>`), because the
-    default forwarder can stall image pulls on AAAA lookups.
+  - `network.dns` in the colima configuration lists at least one resolver (`colima start --dns <address>`), because a
+    profile without explicit resolvers once stalled Go DNS lookups in containers for about 10 s each and broke the
+    buildpack downloads; a clean profile did not reproduce it ([UP-0011](upstream/0011-colima-aaaa-dns.md)).
   - Either image store works. The classic store (`docker.features.containerd-snapshotter: false`) is the one this
     repository was verified on. The containerd store needs Docker Engine 29.9.0 or newer, because older engines cannot
     export the Paketo noble run image

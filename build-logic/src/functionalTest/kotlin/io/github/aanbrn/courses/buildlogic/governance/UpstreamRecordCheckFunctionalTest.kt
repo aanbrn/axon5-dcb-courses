@@ -286,7 +286,80 @@ class UpstreamRecordCheckFunctionalTest {
                     "---\nupstream: [a,\n---\n",
                     "0001-a.md:2: unsupported front matter: unterminated list",
                 ),
+                Triple(
+                    "indented line after a closed list",
+                    "---\nupstream: [a]\n  [b]\n---\n",
+                    "0001-a.md:3: unsupported front matter: indented line",
+                ),
+                Triple(
+                    "key followed by an unindented bracket",
+                    "---\nupstream:\n[a]\n---\n",
+                    "0001-a.md:2: unsupported front matter: `upstream` has no value",
+                ),
             )
+        assertFrontMatterFails(cases)
+    }
+
+    @Test
+    fun `front matter lists outside the supported subset fail with the line`() {
+        val cases =
+            listOf(
+                Triple(
+                    "multi-line list closed by the front matter delimiter",
+                    "---\nupstream: [\n  a,\n---\n",
+                    "0001-a.md:2: unsupported front matter: unterminated list",
+                ),
+                Triple(
+                    "blank line inside an open list",
+                    "---\nupstream:\n  [\n\n    a,\n  ]\n---\n",
+                    "0001-a.md:2: unsupported front matter: unterminated list",
+                ),
+                Triple(
+                    "unindented line inside an open list",
+                    "---\nupstream: [\n  a,\nb: c\n  ]\n---\n",
+                    "0001-a.md:2: unsupported front matter: unterminated list",
+                ),
+                Triple(
+                    "whole-line comment inside a list",
+                    "---\nupstream: [\n  # note\n  a,\n  ]\n---\n",
+                    "0001-a.md:2: unsupported front matter: comments inside a list are not supported",
+                ),
+                Triple(
+                    "trailing comment inside a list",
+                    "---\nupstream: [\n  a, # note\n  b\n  ]\n---\n",
+                    "0001-a.md:2: unsupported front matter: comments inside a list are not supported",
+                ),
+                Triple(
+                    "trailing comment after an item without a comma",
+                    "---\nupstream: [\n  a # note\n  ]\n---\n",
+                    "0001-a.md:2: unsupported front matter: comments inside a list are not supported",
+                ),
+                Triple(
+                    "bare item that starts with a hash",
+                    "---\nupstream: [#a]\n---\n",
+                    "0001-a.md:2: unsupported front matter: comments inside a list are not supported",
+                ),
+                Triple(
+                    "text after the closing bracket of a multi-line list",
+                    "---\nupstream: [\n  a,\n  ] trailing\n---\n",
+                    "0001-a.md:2: unsupported front matter: unexpected text after the value",
+                ),
+                Triple(
+                    "empty list item",
+                    "---\nupstream: [a,,]\n---\n",
+                    "0001-a.md:2: unsupported front matter: empty list item",
+                ),
+                Triple(
+                    "only a comma",
+                    "---\nupstream: [,]\n---\n",
+                    "0001-a.md:2: unsupported front matter: empty list item",
+                ),
+            )
+        assertFrontMatterFails(cases)
+    }
+
+    /** Each case is a name, the content of `docs/upstream/0001-a.md` and a substring the failure must contain. */
+    private fun assertFrontMatterFails(cases: List<Triple<String, String, String>>) {
         cases.forEach { (name, content, expected) ->
             val fixture = fixture()
             fixture.upstream("0001-a.md", content)
@@ -313,6 +386,49 @@ class UpstreamRecordCheckFunctionalTest {
 
         fixture.read("build/reports/governance/upstream-index.md") shouldContain
             "| UP-0001 | Capture hook | null | open | no | https://a.example/1, https://b.example/2 | 2026-11-22 |"
+    }
+
+    @Test
+    fun `front matter accepts the multi-line lists that Prettier writes and a trailing comma`() {
+        val fixture = fixture()
+        // The shape Prettier 3.10.1 writes for a list longer than 120 columns: the key alone, then an indented bracket.
+        fixture.upstream(
+            "0001-a.md",
+            record(
+                "id" to "\"UP-0001\"",
+                "workaround" to "false",
+                "upstream" to "\n  [\n    https://a.example/1,\n    \"https://b.example/2\",\n  ]",
+                title = "UP-0001: Bracket on its own line",
+            ),
+        )
+        // The shape Prettier writes when the list holds a comment, here without the comment, which is not supported.
+        fixture.upstream(
+            "0002-b.md",
+            record(
+                "id" to "\"UP-0002\"",
+                "workaround" to "false",
+                "upstream" to "[\n    https://c.example/3,\n    https://d.example/4\n  ]  # two links",
+                title = "UP-0002: Bracket after the key",
+            ),
+        )
+        fixture.upstream(
+            "0003-c.md",
+            record(
+                "id" to "\"UP-0003\"",
+                "workaround" to "false",
+                "upstream" to "[https://e.example/5, \"https://f.example/6\",]",
+                title = "UP-0003: Trailing comma",
+            ),
+        )
+
+        fixture.passes()
+
+        val index = fixture.read("build/reports/governance/upstream-index.md")
+        index shouldContain
+            "| UP-0001 | Bracket on its own line | axon | open | no | https://a.example/1, https://b.example/2 |"
+        index shouldContain
+            "| UP-0002 | Bracket after the key | axon | open | no | https://c.example/3, https://d.example/4 |"
+        index shouldContain "| UP-0003 | Trailing comma | axon | open | no | https://e.example/5, https://f.example/6 |"
     }
 
     @Test

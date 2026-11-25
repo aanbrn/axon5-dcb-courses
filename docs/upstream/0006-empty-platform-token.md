@@ -4,8 +4,10 @@ product: "image-axonserver"
 product-version: "2026.1.8"
 status: "reported"
 workaround: true
-# prettier-ignore
-upstream: ["https://discuss.axoniq.io/t/axon-server-2026-1-8-empty-axoniq-platform-authentication-is-treated-as-configured-and-crashes-the-startup-runner/6851"]
+upstream:
+  [
+    "https://discuss.axoniq.io/t/axon-server-2026-1-8-empty-axoniq-platform-authentication-is-treated-as-configured-and-crashes-the-startup-runner/6851",
+  ]
 reported: "2026-11-25"
 updated: "2026-11-25"
 ---

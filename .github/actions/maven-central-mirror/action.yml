@@ -1,0 +1,13 @@
+name: Use the Maven Central mirror (CI only)
+description: Install the Maven Central mirror init script into the runner's Gradle user home.
+
+# CI only. Installs scripts/ci/maven-central-mirror.init.gradle.kts into the runner's Gradle user home. Every Gradle job
+# of ci.yml calls this action after setup-gradle; see docs/adr/0016-ci-dependency-downloads.md.
+runs:
+  using: composite
+  steps:
+    - name: Install the mirror init script
+      shell: bash
+      run: >-
+        install -D -m 0644 "${GITHUB_WORKSPACE}/scripts/ci/maven-central-mirror.init.gradle.kts"
+        "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/maven-central-mirror.init.gradle.kts"
