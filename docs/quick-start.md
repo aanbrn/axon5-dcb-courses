@@ -8,6 +8,8 @@ in containers. The domain services arrive in later phases and join the same comp
 - A Docker engine with Docker Compose: colima or Docker Desktop. See [Tooling](tooling.md) for the details.
 - [mise](https://mise.jdx.dev/) with the repository tools installed: run `mise install` once in the repository root.
   Docker alone is enough to start the runtime; mise and the JDK it provides are needed for the Gradle commands below.
+- Optional, for Claude Code users: install the project's two plugins once per clone, as described in
+  [Tooling](tooling.md#how-skills-are-installed). The diagnosis below warns while one is missing.
 
 No `.env` file and no Gradle run are needed in a fresh clone.
 
