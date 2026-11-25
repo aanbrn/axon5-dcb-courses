@@ -505,10 +505,12 @@ check_gsd_defaults() {
 
 # mcp (local only, AIDEV-04): the binary of every server in .mcp.json resolves. A server started through
 # `mise x -- <binary>` is resolved with `mise which`, any other command through PATH. A server without a `command` (an
-# HTTP or SSE server that has a url) has no binary to resolve; its url can carry a credential and is never read.
+# HTTP or SSE server) must have a url and then has no binary to resolve; its url can carry a credential and never leaves
+# jq. A server with neither a command nor a url can never start: a defect of the committed .mcp.json, so the check fails,
+# while an unresolved binary of a well-formed server is a warning that `mise install` fixes.
 check_mcp() {
   local_only mcp && return
-  local file=$ROOT/.mcp.json jq servers kind name binary total=0 remote=0 unresolved=''
+  local file=$ROOT/.mcp.json jq servers kind name binary total=0 remote=0 unresolved='' missing=''
   if [[ ! -f $file ]]; then
     report ok mcp "no .mcp.json, so no project MCP servers"
     return
@@ -519,9 +521,10 @@ check_mcp() {
   fi
   # The shape check: an object whose `mcpServers`, when present, is an object of server objects. Anything else would end
   # the run under set -e (or, for an array of servers, be counted as zero servers).
-  # Every server is one line of three tab-separated fields: its kind (mise, path or none), its name and the binary to
-  # resolve. No field is ever empty, because `read` with a tab as separator would drop an empty field and shift the
-  # ones behind it; a server that has nothing to resolve gets `-` as its binary, and the url never leaves jq.
+  # Every server is one line of three tab-separated fields: its kind (mise, path, none or missing), its name and the
+  # binary to resolve. `none` is a server with a url and no command, `missing` one with neither. No field is ever empty,
+  # because `read` with a tab as separator would drop an empty field and shift the ones behind it; a server that has
+  # nothing to resolve gets `-` as its binary, and the url never leaves jq.
   # shellcheck disable=SC2016 # a jq program, not shell
   if ! servers=$("$jq" -r '
     def text: if type == "string" and . != "" then . else null end;
@@ -530,7 +533,7 @@ check_mcp() {
       | ((.value.args // []) | if type == "array" then . else [] end) as $args
       | (.value.command | text) as $command
       | (.key | text // "(unnamed)") as $name
-      | if $command == null then ["none", $name, "-"]
+      | if $command == null then (if (.value.url | text) != null then ["none", $name, "-"] else ["missing", $name, "-"] end)
         elif $command == "mise" and ($args[0] == "x" or $args[0] == "exec") and $args[1] == "--"
             and ($args[2] | text) != null then ["mise", $name, $args[2]]
         else ["path", $name, $command] end | @tsv
@@ -544,6 +547,7 @@ check_mcp() {
     total=$((total + 1))
     case $kind in
     none) remote=$((remote + 1)) ;;
+    missing) missing+="${missing:+, }$name" ;;
     mise)
       if ! has mise || ! (cd "$ROOT" && mise which "$binary" >/dev/null 2>&1); then
         unresolved+="${unresolved:+, }$name ($binary)"
@@ -556,7 +560,15 @@ check_mcp() {
       ;;
     esac
   done <<<"$servers"
-  if [[ -n $unresolved ]]; then
+  if [[ -n $missing ]]; then
+    local detail="servers in .mcp.json with neither a command nor a url: $missing"
+    local restore="give each of them a command, or a url for an HTTP or SSE server, or restore the committed version: git restore .mcp.json"
+    if [[ -n $unresolved ]]; then
+      report fail mcp "$detail; servers whose binary cannot be resolved: $unresolved" "$restore" "mise install"
+    else
+      report fail mcp "$detail" "$restore"
+    fi
+  elif [[ -n $unresolved ]]; then
     report warn mcp "servers in .mcp.json whose binary cannot be resolved: $unresolved" "mise install"
   elif [[ $remote -gt 0 ]]; then
     report ok mcp "all $total servers in .mcp.json resolve through mise or PATH, or have no command to resolve ($remote)"

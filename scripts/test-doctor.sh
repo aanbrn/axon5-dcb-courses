@@ -520,6 +520,32 @@ run_doctor "$ENV"
 assert_out "url-only MCP server before an unresolved one" "^warn  mcp: .*context7 \\(missing-mcp\\)"
 assert_no_out "url-only MCP server before an unresolved one" "remote"
 
+# Only a server with a url has no command to resolve. One with neither a command nor a url can never start, so the check
+# fails (IN-01 of the Phase 2 review).
+for content in '{"mcpServers": {"broken": {}}}' '{"mcpServers": {"broken": {"command": ""}}}' \
+  '{"mcpServers": {"broken": {"command": 5}}}' '{"mcpServers": {"broken": {"type": "http", "url": ""}}}'; do
+  fresh
+  printf '%s\n' "$content" >"$ENV/repo/.mcp.json"
+  run_doctor "$ENV"
+  assert_code "MCP server without command and url [$content]" 1
+  assert_out "MCP server without command and url [$content]" \
+    "^fail  mcp: servers in \\.mcp\\.json with neither a command nor a url: broken"
+  assert_out "MCP server without command and url [$content]" "^      fix: .*git restore \\.mcp\\.json"
+  assert_no_out "MCP server without command and url [$content]" "^ok  mcp:"
+  assert_out "MCP server without command and url [$content]" "^summary: "
+done
+
+fresh
+printf '{"mcpServers": {"remote": {"type": "http", "url": "https://example.invalid/mcp?token=secret-value"},
+  "broken": {},
+  "context7": {"command": "mise", "args": ["x", "--", "missing-mcp"]}}}\n' >"$ENV/repo/.mcp.json"
+run_doctor "$ENV"
+assert_code "MCP server without command and url next to an unresolved one" 1
+assert_out "MCP server without command and url next to an unresolved one" "^fail  mcp: .*broken.*context7 \\(missing-mcp\\)"
+assert_out "MCP server without command and url next to an unresolved one" "^      fix: .*git restore \\.mcp\\.json"
+assert_out "MCP server without command and url next to an unresolved one" "^      fix: mise install"
+assert_no_out "MCP server without command and url next to an unresolved one" "secret-value|example\\.invalid"
+
 # `mise x --` without a binary argument resolves `mise` itself.
 fresh
 printf '{"mcpServers": {"bare": {"command": "mise", "args": ["x", "--"]}}}\n' >"$ENV/repo/.mcp.json"
