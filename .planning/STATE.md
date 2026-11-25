@@ -4,10 +4,10 @@ current_phase: 02
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: executing
 stopped_at: Phase 2 context gathered
-last_updated: "2026-11-25T00:45:02.490Z"
+last_updated: "2026-11-25T01:43:39.529Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 02 execution started
-state_head: 6028435d1bdd1e78f97505d7786b976f54f9376c
+state_head: 7ae66195d60efcb40f2aaa9325494ff46d37ee92
 progress:
   total_phases: 13
   completed_phases: 1
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-11-22)
 Phase: 02 (Runtime Infrastructure & DCB Spikes) — VERIFYING
 Plan: 23 of 23 executed (all SUMMARYs present)
 Status: Phase 02 verification human_needed (5/5 success criteria verified, re-verified 2026-11-24 at 6d81294); 02-UAT.md has 6 pending human items; phase PR #21 is open as a draft
-Last activity: 2026-11-25 - Completed quick task 261125-a09: review findings WR-01, IN-01 and IN-03 fixed, IN-02 recorded for Phase 6 (CICD-02); Phase 2 verification stale until re-run
+Last activity: 2026-11-25 - Completed quick task 261125-bha: build-logic TestKit suite moved into a parallel functional-test CI job; Phase 2 verification stale until re-run
 
 Progress: [█░░░░░░░░░] 8%
 
@@ -121,12 +121,14 @@ Recent decisions affecting current work:
 - [Phase 01]: Plan 01-19: governed every Renovate config name and every mise config, rc and sidecar-lock location CI reads (54 entries); the renovate[bot] version-only exemption stays unchanged and its sidecar cost is a recorded follow-up
 - [Phase 01]: WR-06 accepted as a residual for a one-maintainer repository and recorded in ADR-0003: governance.yml keeps pull_request and the merge-ref checkout; revisit on a second maintainer or external contributors
 - [Phase 01]: 01-21: Spotless gets nodeExecutable only; node, taplo and shfmt resolved by ExecutableOnPath over the build's PATH, relative and empty entries skipped; production wiring stays lazy and the value source's cache precision is proven in fixture scripts (F-1)
+- [Quick 261125-bha]: D-20 extended at the author's request: CI runs the build-logic TestKit suite in a third parallel job `functional-test` (needed by `ci-success`); the `build` job excludes it with `-x :build-logic:functionalTest` and still names `checkDependencyLicences`; local `check` is unchanged (D-19)
 
 ### Pending Todos
 
 - [First ID-keyed map in a contract]: Decide the JSON key form of an ID-keyed map (today jackson-module-kotlin writes the raw UUID and rejects the TypeID form; the TypeID form needs a key serializer and a key deserializer) and record it in an ADR. `CoursesJsonModule` KDoc and `JsonRoundTripTest` pin the current behaviour (review WR-02, quick task 261124-oyk).
 - [Renovate, from 2026-11-28]: Merge the open Renovate PRs by hand (automerge is off for them). #19 now updates `npm:renovate` to 44.257.9 (published 2026-11-21, so the 7-day npm cooldown, CICD-04, ends 2026-11-28) and `uv` to 0.13.9; it needs the `governance-approved` label, because the content of the renovate sidecar `aube-lock.yaml` changes, not only versions. #20 lock file maintenance has every check green except `renovate/stability-days`. Plan: merge both after PR #21 merges (Renovate rebases them); if Phase 2 runs past 2026-11-28, merge them earlier and then merge main into the phase branch.
 - [Phase 6, CICD-02 acceptance]: Run `./gradlew bootBuildImage` and the web image task on the containerd image store, on an engine of Docker 29.9.0 or newer, as an acceptance check of CICD-02, and require the image job to run on such an engine or on the classic store (review IN-02 of 2026-11-25). The UP-0012 removal rests on an export observed on Docker 29.10.0; the 29.5.2 control did not reproduce the defect, and the project's own image build has never run on the containerd store. Locally, `doctor` warns for the containerd store below 29.9.0 (quick task 261125-a09). When CICD-02 is planned, add the check to its acceptance criteria and cite it from the decision paragraph of docs/upstream/0012-docker-containerd-platform-export.md.
+- [Before Phase 3, CI and local speed]: Parallelise the build-logic TestKit suite itself: switch the fixtures from `includeBuild` of the real build-logic (`GradleFixture.writeSettings`) to `withPluginClasspath()` or a pre-built plugin, then set `maxParallelForks > 1` on `functionalTest` in `build-logic/build.gradle.kts` (governed). Expected about 9 -> 3-4 minutes, locally and in the CI `functional-test` job (quick task 261125-bha moved the suite into that parallel job).
 - [Phase 4 discuss]: Choose the documentation-site tool. Docusaurus 3.10.2 with Mermaid is only a research recommendation (`.planning/research/STACK.md`, SUMMARY.md); PROJECT.md Key Decisions fixes only "docs site as a Gradle subproject" (Pending), and no ADR exists. Needed by INFRA-08 (docs-site skeleton as a Gradle subproject, Phase 4/5), GH-04 (GitHub Pages publication, Phase 8, with Storybook per UI-08), UPS-02's index on the site (Phase 5) and DOC-02 (final docs phase). Record the choice in an ADR and PROJECT.md.
 
 
@@ -177,6 +179,7 @@ Recent decisions affecting current work:
 | 261124-uwn | Fix PR #21 CI failures (edit-hook reason on Linux, 5 Qodana findings), close review findings WR-01, IN-01, IN-02 and remove the UP-0012 workaround | 2026-11-24 | 1aa0bee | [261124-uwn-fix-the-phase-2-pr-21-ci-failures-linux-](./quick/261124-uwn-fix-the-phase-2-pr-21-ci-failures-linux-/) |
 | 261124-wp3 | Enable native access (JEP 472) for every test JVM of the courses.test-suites convention, pinned by a TestSuitesFunctionalTest probe | 2026-11-25 | 5379af2 | [261124-wp3-enable-native-access-for-test-jvms-in-th](./quick/261124-wp3-enable-native-access-for-test-jvms-in-th/) |
 | 261125-a09 | Fix Phase 2 review findings WR-01 (doctor warns for containerd below Docker 29.9.0), IN-01 (MCP server with neither command nor url fails) and IN-03 (compose line-order test); IN-02 noted for Phase 6 | 2026-11-25 | 6028435 | [261125-a09-fix-phase-2-review-findings-wr-01-in-01-](./quick/261125-a09-fix-phase-2-review-findings-wr-01-in-01-/) |
+| 261125-bha | Move the build-logic TestKit suite into its own parallel CI job (functional-test) to cut the Build job from about 13.5 to 4-5 minutes | 2026-11-25 | 7ae6619 | [261125-bha-move-build-logic-functionaltest-into-its](./quick/261125-bha-move-build-logic-functionaltest-into-its/) |
 
 ## Deferred Items
 
