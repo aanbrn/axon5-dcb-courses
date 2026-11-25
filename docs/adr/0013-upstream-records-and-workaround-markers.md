@@ -84,6 +84,14 @@ existing upstream issue (AxonIQ/AxonFramework#3761). UP-0006 and UP-0013 are dra
 later. UP-0010 and UP-0011 are withheld until their reproductions are re-verified on a clean setup, and UP-0008,
 UP-0009 and UP-0012 link upstream issues that already exist.
 
+A draft for a Discourse forum, such as the AxonIQ forum at `discuss.axoniq.io`, is never filled into the composer in one
+automated action. Discourse sends a post from an account at trust level 0 to the moderation queue when its composer was
+filled faster than the forum's minimum first-post typing time (`min_first_post_typing_time`, about 3 seconds by
+default), and while that post is pending the account cannot open another topic. On 2026-11-25 the UP-0006 topic was held
+as pending post 70 and opening the UP-0013 topic was then refused with "Access Denied"; the author's assessment is that
+the text had been entered too fast for a person, which matches that setting. So the author enters the approved text in
+the browser, in parts or with a pause before submitting, or it is typed character by character.
+
 ### Consequences
 
 - Good, because a workaround without a record, or an open record without a workaround, fails the build.
