@@ -4,10 +4,10 @@ current_phase: 02
 current_phase_name: Runtime Infrastructure & DCB Spikes
 status: executing
 stopped_at: Phase 2 context gathered
-last_updated: "2026-11-25T01:43:39.529Z"
+last_updated: "2026-11-25T01:44:29.686Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 02 execution started
-state_head: 7ae66195d60efcb40f2aaa9325494ff46d37ee92
+state_head: e4db42e690154d5163ae936004fd15fcdfe1a1d5
 progress:
   total_phases: 13
   completed_phases: 1
@@ -180,6 +180,7 @@ Recent decisions affecting current work:
 | 261124-wp3 | Enable native access (JEP 472) for every test JVM of the courses.test-suites convention, pinned by a TestSuitesFunctionalTest probe | 2026-11-25 | 5379af2 | [261124-wp3-enable-native-access-for-test-jvms-in-th](./quick/261124-wp3-enable-native-access-for-test-jvms-in-th/) |
 | 261125-a09 | Fix Phase 2 review findings WR-01 (doctor warns for containerd below Docker 29.9.0), IN-01 (MCP server with neither command nor url fails) and IN-03 (compose line-order test); IN-02 noted for Phase 6 | 2026-11-25 | 6028435 | [261125-a09-fix-phase-2-review-findings-wr-01-in-01-](./quick/261125-a09-fix-phase-2-review-findings-wr-01-in-01-/) |
 | 261125-bha | Move the build-logic TestKit suite into its own parallel CI job (functional-test) to cut the Build job from about 13.5 to 4-5 minutes | 2026-11-25 | 7ae6619 | [261125-bha-move-build-logic-functionaltest-into-its](./quick/261125-bha-move-build-logic-functionaltest-into-its/) |
+| 31 | Translate quoted author answers in Phase 1 artifacts to English and drop the conversation-language note | 2026-11-25 | e4db42e | — |
 
 ## Deferred Items
 
