@@ -4,10 +4,10 @@ current_phase: 3
 current_phase_name: Command Walking Skeleton
 status: planning
 stopped_at: Phase 02 complete, ready to plan Phase 3
-last_updated: "2026-11-25T11:20:58.316Z"
+last_updated: "2026-11-25T12:16:38.072Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: dd0bf7a8f8091110273bb792c34700e1f86c8ffc
+state_head: da6cdc418748cfd3fd08aca099eeff2a80c82640
 progress:
   total_phases: 13
   completed_phases: 2
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-11-22)
 Phase: 3 — Command Walking Skeleton
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-25 - Completed quick task 261125-mwg: Phase 02 review follow-ups (IN-01, IN-03, IN-04, front matter lists, Spotless and git-ignored files)
+Last activity: 2026-11-25 - Completed quick task 261125-pep: vendored the AxonFramework DCB skill (pinned) and amended ADR-0014
 
 Progress: [██░░░░░░░░] 15%
 
@@ -188,6 +188,7 @@ Recent decisions affecting current work:
 | 261125-lqw | Fix Phase 02 review findings WR-01 (locale scoped to the 429 grep) and IN-02 (host-neutral retry message) in the CI rate-limit wrapper | 2026-11-25 | 29a5ad4 | [261125-lqw-fix-phase-02-review-findings-wr-01-and-i](./quick/261125-lqw-fix-phase-02-review-findings-wr-01-and-i/) |
 | 261125-mwg | Close Phase 02 follow-ups: IN-01, IN-03, IN-04, multi-line front matter lists, Spotless skips git-ignored files | 2026-11-25 | 9458367 | [261125-mwg-close-the-open-phase-02-follow-ups-in-01](./quick/261125-mwg-close-the-open-phase-02-follow-ups-in-01/) |
 | 37 | Record the AxonIQ maintainer replies on UP-0006 and UP-0013 (fixes promised for the next Axon Server release) | 2026-11-25 | dd0bf7a | — |
+| 261125-pep | Vendor the AxonFramework dynamic-consistency-boundaries skill (pinned f521585), map it to planner/executor/researcher/verifier, amend ADR-0014 | 2026-11-25 | da6cdc4 | [261125-pep-vendor-the-axonframework-dynamic-consist](./quick/261125-pep-vendor-the-axonframework-dynamic-consist/) |
 
 ## Deferred Items
 
