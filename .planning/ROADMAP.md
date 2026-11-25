@@ -101,13 +101,13 @@ Plans:
   3. The contracts modules (commands, events, queries, a shared kernel with the tag registry and sealed result types) contain no Spring or framework logic. Kotlin events with TypeID value-class IDs and tags round-trip through serialization unchanged, and malformed or wrong-prefix TypeIDs are rejected.
   4. MADR ADRs, created from in-repository templates, record the spike outcomes: Axoniq licence behaviour (also reflected in the quick-start notes), the decision-record capture approach, Kotlin serialization and TypeID conventions, and buildpack constraints (pnpm support, image environment defaults). CI checks dependency licences against an allowlist, and NOTICE justifies the Axoniq modules.
   5. Every upstream defect found so far has a `docs/upstream/` record, a CI check keeps workaround markers and records consistent, and dependency update PRs prompt a check of the removal criteria. Vetted Claude Code skills and MCP servers (Context7, Playwright) are installed from pinned sources only after approval and are listed in the tooling inventory. Only `.claude/settings.json` and `.claude/CLAUDE.md` are tracked.
-**Plans:** 23/31 plans executed (8 gap-closure plans from UAT: G-02-1, G-02-2, G-02-5)
+**Plans:** 26/31 plans executed (8 gap-closure plans from UAT: G-02-1, G-02-2, G-02-5)
 
 Plans:
 **Gap closure (UAT)**
-- [ ] 02-24-PLAN.md — G-02-1: `scripts/ci/retry-on-rate-limit.sh` reruns a Gradle step once only on HTTP 429; every Gradle step of the required jobs wrapped; launcher governed (wave 1)
-- [ ] 02-25-PLAN.md — G-02-2: `doctor` `claude-plugins` check (enabled plugin without an install record for this clone, worktree-aware); per-clone `claude plugin install --scope project` documented in tooling, quick start and ADR-0004 (wave 1)
-- [ ] 02-26-PLAN.md — G-02-5: UP-0010 dated CodeQL bundle check (stays open); UP-0011 reproduction on a throwaway colima profile without template or `--dns` (wave 1)
+- [x] 02-24-PLAN.md — G-02-1: `scripts/ci/retry-on-rate-limit.sh` reruns a Gradle step once only on HTTP 429; every Gradle step of the required jobs wrapped; launcher governed (wave 1)
+- [x] 02-25-PLAN.md — G-02-2: `doctor` `claude-plugins` check (enabled plugin without an install record for this clone, worktree-aware); per-clone `claude plugin install --scope project` documented in tooling, quick start and ADR-0004 (wave 1)
+- [x] 02-26-PLAN.md — G-02-5: UP-0010 dated CodeQL bundle check (stays open); UP-0011 reproduction on a throwaway colima profile without template or `--dns` (wave 1)
 - [ ] 02-31-PLAN.md — G-02-1: CI-only Maven Central mirror placed first through a Gradle init script in the five Gradle jobs (plugin and dependency repositories, root and build-logic); TestKit order proof; ADR-0016 (wave 2)
 - [ ] 02-27-PLAN.md — G-02-5: UP-0011 publication gate in abiosoft/colima (approval checkpoint) and record update (wave 2)
 - [ ] 02-30-PLAN.md — G-02-1: same-SHA re-run result, author-approved push, every CI job and `ci-success` green at the PR head (wave 3, checkpoint)
@@ -355,7 +355,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Repository, Build & CI Foundation | 21/21 | Complete    | 2026-11-22 |
-| 2. Runtime Infrastructure & DCB Spikes | 23/31 | In Progress | - |
+| 2. Runtime Infrastructure & DCB Spikes | 26/31 | In Progress | - |
 | 3. Command Walking Skeleton | 0/TBD | Not started | - |
 | 4. Read Side & Live Queries | 0/TBD | Not started | - |
 | 5. BFF & First Live UI | 0/TBD | Not started | - |
