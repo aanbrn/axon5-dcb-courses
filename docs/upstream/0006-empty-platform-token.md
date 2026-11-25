@@ -2,10 +2,11 @@
 id: "UP-0006"
 product: "image-axonserver"
 product-version: "2026.1.8"
-status: "open"
+status: "reported"
 workaround: true
-upstream: []
-reported: null
+# prettier-ignore
+upstream: ["https://discuss.axoniq.io/t/axon-server-2026-1-8-empty-axoniq-platform-authentication-is-treated-as-configured-and-crashes-the-startup-runner/6851"]
+reported: "2026-11-25"
 updated: "2026-11-25"
 ---
 
@@ -99,11 +100,14 @@ Axon Server is not open source and has no public issue tracker, so the target is
 report of this behavior; the one topic about the Platform variable concerns a Raft pre-vote loop with a valid token on
 a fresh volume, which is a different defect.
 
-Publication status (2026-11-25): the author approved the text below and it was submitted to the forum in category Axon
-Server. Discourse held it for moderation as pending post 70 and placed the new account on hold until staff review it
-(see the forum posting rule in ADR-0013, "Publication (UPS-03)"). The author also wrote to AxonIQ developer relations
-the same day. The record moves to `reported` with the topic link once the post is public; that step is a follow-up
-outside Phase 2.
+Publication status (2026-11-25): the author approved the text below and submitted it to the forum in category Axon
+Server on 2026-11-25. Discourse held it for moderation because the account was new, and the topic became public on
+2026-11-25 after forum staff reviewed the account and released it (see the forum posting rule in ADR-0013, "Publication
+(UPS-03)"). The topic is
+[Axon Server 2026.1.8: empty AXONIQ_PLATFORM_AUTHENTICATION is treated as configured and crashes the startup runner](https://discuss.axoniq.io/t/axon-server-2026-1-8-empty-axoniq-platform-authentication-is-treated-as-configured-and-crashes-the-startup-runner/6851).
+The first post (`https://discuss.axoniq.io/raw/6851/1`) matches the draft below word for word, apart from line wrapping;
+the forum title adds the `Axon Server 2026.1.8:` prefix to the draft heading. The text below therefore stays as the
+published text.
 
 ````markdown
 # Empty `AXONIQ_PLATFORM_AUTHENTICATION` is treated as configured and crashes the startup runner
