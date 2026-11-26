@@ -42,4 +42,4 @@ gh = "2.105.0"
 # Approved by the author with these exact versions (newest releases at least seven days old at
 # planning time); Renovate proposes updates without automerge.
 "npm:@upstash/context7-mcp" = "4.7.3"
-"npm:@playwright/mcp" = "0.0.85"
+"npm:@playwright/mcp" = "0.0.86"
