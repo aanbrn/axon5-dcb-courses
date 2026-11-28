@@ -5,7 +5,7 @@
 # version itself lives only in `min_version` below, read by CI and updated by Renovate.
 # Every entry below is locked per platform, with checksums, in `mise.lock`.
 
-min_version = "2026.11.11"
+min_version = "2026.11.12"
 
 [settings]
 idiomatic_version_file_enable_tools = ["node", "java"]
