@@ -35,7 +35,7 @@ uv = "0.13.9"
 # Exact-version trust-policy exception, approved by the author: renovate pulls @yarnpkg/libzip@3.2.2
 # transitively; that release was published manually by the Yarn lead maintainer without provenance
 # (3.2.0 had it), which trips trustPolicy=no-downgrade. Remove once renovate no longer pulls it.
-"npm:renovate" = { version = "44.252.8", trust_policy_excludes = ["@yarnpkg/libzip@3.2.2"] }
+"npm:renovate" = { version = "44.257.6", trust_policy_excludes = ["@yarnpkg/libzip@3.2.2"] }
 jq = "1.8.2"
 gh = "2.105.0"
 # Shared MCP servers for Claude Code (AIDEV-04), started by `.mcp.json` through `mise x --`.
