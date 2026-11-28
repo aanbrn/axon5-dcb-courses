@@ -312,7 +312,7 @@ specifiers = ["0.0.86"]
 
 [[tools."npm:@upstash/context7-mcp"]]
 version = "4.7.3"
-aube = { path = ".mise/locks/npm-upstash-context7-mcp/4.7.3", digest = "sha256:4cd8060ba2bbf544383b25a3b0695c743a4ea59b4b0d8be485e9bf4366dcefc9" }
+aube = { path = ".mise/locks/npm-upstash-context7-mcp/4.7.3", digest = "sha256:9a033e562416a4eac414078fb001775cf87baf4d1f57a314dbe5c07a360a8803" }
 backend = "npm:@upstash/context7-mcp"
 specifiers = ["4.7.3"]
 
