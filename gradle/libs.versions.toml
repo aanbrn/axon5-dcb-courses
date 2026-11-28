@@ -1,6 +1,6 @@
 [versions]
 kotlin = "2.4.21"
-spotless = "8.11.0"
+spotless = "8.12.0"
 # renovate: datasource=maven depName=com.facebook:ktfmt
 ktfmt = "0.65"
 # renovate: datasource=npm depName=prettier
