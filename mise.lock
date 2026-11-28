@@ -317,10 +317,10 @@ backend = "npm:@upstash/context7-mcp"
 specifiers = ["4.7.3"]
 
 [[tools."npm:renovate"]]
-version = "44.257.6"
-aube = { path = ".mise/locks/npm-renovate/44.257.6~aa673d8d", digest = "sha256:707b96f322af01dd23da96d9d8a9ae70e9ee546acc7cb3a288857c3e2f32003c" }
+version = "44.257.9"
+aube = { path = ".mise/locks/npm-renovate/44.257.9~aa673d8d", digest = "sha256:51fd271550ba604ced9b594cdd9cd2923637d7a1878c629882c9bb226849becf" }
 backend = "npm:renovate"
-specifiers = ["44.257.6"]
+specifiers = ["44.257.9"]
 
 [tools."npm:renovate".options]
 trust_policy_excludes = '["@yarnpkg/libzip@3.2.2"]'
